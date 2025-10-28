@@ -94,9 +94,16 @@ fi
 
 # Backup do banco de dados
 log_info "Fazendo backup do banco de dados..."
-if command -v mysql &> /dev/null; then
-    mysqldump -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$BACKUP_DIR/database_backup.sql" 2>/dev/null || true
-    log "✓ Backup do banco criado"
+if command -v mysqldump &> /dev/null; then
+    sudo mysqldump -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" 2>/dev/null > "$BACKUP_DIR/database_backup.sql" || {
+        # Se falhar, tentar como root
+        sudo mysqldump "$DB_NAME" 2>/dev/null > "$BACKUP_DIR/database_backup.sql" || true
+    }
+    if [ -f "$BACKUP_DIR/database_backup.sql" ]; then
+        log "✓ Backup do banco criado"
+    else
+        log_warn "Não foi possível fazer backup do banco"
+    fi
 fi
 
 # 4. Instalar dependências do sistema
@@ -228,7 +235,11 @@ log_info "Instalando dependências NPM (isso pode demorar)..."
 # Tentar com pnpm primeiro, se falhar usar npm
 if command -v pnpm &> /dev/null; then
     log_info "Usando pnpm..."
-    if ! pnpm install --legacy-peer-deps 2>&1 | tee -a "$LOG_FILE"; then
+    # Configurar pnpm para ser mais permissivo
+    pnpm config set auto-install-peers true 2>/dev/null || true
+    pnpm config set strict-peer-dependencies false 2>/dev/null || true
+    
+    if ! pnpm install 2>&1 | tee -a "$LOG_FILE"; then
         log_warn "pnpm falhou, tentando com npm..."
         if ! npm install --legacy-peer-deps 2>&1 | tee -a "$LOG_FILE"; then
             log_error "Erro ao instalar dependências"
@@ -241,6 +252,12 @@ else
         log_error "Erro ao instalar dependências"
         exit 1
     fi
+fi
+
+# Verificar se node_modules foi criado
+if [ ! -d "node_modules" ]; then
+    log_error "node_modules não foi criado - instalação falhou"
+    exit 1
 fi
 
 log "✓ Dependências instaladas"

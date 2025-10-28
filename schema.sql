@@ -475,35 +475,66 @@ ON DUPLICATE KEY UPDATE
 -- Templates de Credenciais
 INSERT INTO `credentialTemplates` (`service`, `fields`, `instructions`, `isActive`) VALUES
 ('GitHub', '{"token": "string", "username": "string"}', 
- 'Para obter um token do GitHub:\n1. Acesse GitHub.com e faça login\n2. Vá em Settings > Developer settings > Personal access tokens\n3. Clique em "Generate new token"\n4. Selecione os escopos necessários (repo, workflow, etc)\n5. Copie o token gerado', 1),
+ 'Para obter um token do GitHub:\n1. Acesse GitHub.com e faça login\n2. Vá em Settings > Developer settings > Personal access tokens\n3. Clique em "Generate new token"\n4. Selecione os escopos necessários (repo, workflow, etc)\n5. Copie o token gerado', 1)
+ON DUPLICATE KEY UPDATE 
+  `fields` = '{"token": "string", "username": "string"}',
+  `instructions` = 'Para obter um token do GitHub:\n1. Acesse GitHub.com e faça login\n2. Vá em Settings > Developer settings > Personal access tokens\n3. Clique em "Generate new token"\n4. Selecione os escopos necessários (repo, workflow, etc)\n5. Copie o token gerado';
 
+INSERT INTO `credentialTemplates` (`service`, `fields`, `instructions`, `isActive`) VALUES
 ('Google Drive', '{"clientId": "string", "clientSecret": "string", "refreshToken": "string"}', 
- 'Para obter credenciais OAuth2 do Google Drive:\n1. Acesse Google Cloud Console\n2. Crie um novo projeto ou selecione um existente\n3. Ative a API do Google Drive\n4. Crie credenciais OAuth 2.0\n5. Baixe o arquivo de credenciais', 1),
+ 'Para obter credenciais OAuth2 do Google Drive:\n1. Acesse Google Cloud Console\n2. Crie um novo projeto ou selecione um existente\n3. Ative a API do Google Drive\n4. Crie credenciais OAuth 2.0\n5. Baixe o arquivo de credenciais', 1)
+ON DUPLICATE KEY UPDATE 
+  `fields` = '{"clientId": "string", "clientSecret": "string", "refreshToken": "string"}',
+  `instructions` = 'Para obter credenciais OAuth2 do Google Drive:\n1. Acesse Google Cloud Console\n2. Crie um novo projeto ou selecione um existente\n3. Ative a API do Google Drive\n4. Crie credenciais OAuth 2.0\n5. Baixe o arquivo de credenciais';
 
+INSERT INTO `credentialTemplates` (`service`, `fields`, `instructions`, `isActive`) VALUES
 ('Gmail', '{"email": "string", "appPassword": "string"}', 
- 'Para obter senha de aplicativo do Gmail:\n1. Ative a verificação em duas etapas na sua conta Google\n2. Acesse Conta Google > Segurança > Senhas de app\n3. Selecione "E-mail" e seu dispositivo\n4. Copie a senha gerada', 1),
+ 'Para obter senha de aplicativo do Gmail:\n1. Ative a verificação em duas etapas na sua conta Google\n2. Acesse Conta Google > Segurança > Senhas de app\n3. Selecione "E-mail" e seu dispositivo\n4. Copie a senha gerada', 1)
+ON DUPLICATE KEY UPDATE 
+  `fields` = '{"email": "string", "appPassword": "string"}',
+  `instructions` = 'Para obter senha de aplicativo do Gmail:\n1. Ative a verificação em duas etapas na sua conta Google\n2. Acesse Conta Google > Segurança > Senhas de app\n3. Selecione "E-mail" e seu dispositivo\n4. Copie a senha gerada';
 
+INSERT INTO `credentialTemplates` (`service`, `fields`, `instructions`, `isActive`) VALUES
 ('OpenAI', '{"apiKey": "string", "organization": "string"}', 
- 'Para obter chave de API da OpenAI:\n1. Acesse platform.openai.com\n2. Faça login ou crie uma conta\n3. Vá em API keys\n4. Clique em "Create new secret key"\n5. Copie a chave gerada (não será mostrada novamente)', 1),
+ 'Para obter chave de API da OpenAI:\n1. Acesse platform.openai.com\n2. Faça login ou crie uma conta\n3. Vá em API keys\n4. Clique em "Create new secret key"\n5. Copie a chave gerada (não será mostrada novamente)', 1)
+ON DUPLICATE KEY UPDATE 
+  `fields` = '{"apiKey": "string", "organization": "string"}',
+  `instructions` = 'Para obter chave de API da OpenAI:\n1. Acesse platform.openai.com\n2. Faça login ou crie uma conta\n3. Vá em API keys\n4. Clique em "Create new secret key"\n5. Copie a chave gerada (não será mostrada novamente)';
 
+INSERT INTO `credentialTemplates` (`service`, `fields`, `instructions`, `isActive`) VALUES
 ('Anthropic', '{"apiKey": "string"}', 
- 'Para obter chave de API da Anthropic (Claude):\n1. Acesse console.anthropic.com\n2. Faça login ou crie uma conta\n3. Vá em API Keys\n4. Clique em "Create Key"\n5. Copie a chave gerada', 1),
+ 'Para obter chave de API da Anthropic (Claude):\n1. Acesse console.anthropic.com\n2. Faça login ou crie uma conta\n3. Vá em API Keys\n4. Clique em "Create Key"\n5. Copie a chave gerada', 1)
+ON DUPLICATE KEY UPDATE 
+  `fields` = '{"apiKey": "string"}',
+  `instructions` = 'Para obter chave de API da Anthropic (Claude):\n1. Acesse console.anthropic.com\n2. Faça login ou crie uma conta\n3. Vá em API Keys\n4. Clique em "Create Key"\n5. Copie a chave gerada';
 
+INSERT INTO `credentialTemplates` (`service`, `fields`, `instructions`, `isActive`) VALUES
 ('Google Sheets', '{"clientId": "string", "clientSecret": "string", "refreshToken": "string"}', 
- 'Para obter credenciais OAuth2 do Google Sheets:\n1. Acesse Google Cloud Console\n2. Crie um novo projeto ou selecione um existente\n3. Ative a API do Google Sheets\n4. Crie credenciais OAuth 2.0\n5. Baixe o arquivo de credenciais', 1),
+ 'Para obter credenciais OAuth2 do Google Sheets:\n1. Acesse Google Cloud Console\n2. Crie um novo projeto ou selecione um existente\n3. Ative a API do Google Sheets\n4. Crie credenciais OAuth 2.0\n5. Baixe o arquivo de credenciais', 1)
+ON DUPLICATE KEY UPDATE 
+  `fields` = '{"clientId": "string", "clientSecret": "string", "refreshToken": "string"}',
+  `instructions` = 'Para obter credenciais OAuth2 do Google Sheets:\n1. Acesse Google Cloud Console\n2. Crie um novo projeto ou selecione um existente\n3. Ative a API do Google Sheets\n4. Crie credenciais OAuth 2.0\n5. Baixe o arquivo de credenciais';
 
+INSERT INTO `credentialTemplates` (`service`, `fields`, `instructions`, `isActive`) VALUES
 ('Notion', '{"integrationToken": "string"}', 
- 'Para obter token de integração do Notion:\n1. Acesse www.notion.so/my-integrations\n2. Clique em "New integration"\n3. Configure as permissões necessárias\n4. Copie o Internal Integration Token', 1),
+ 'Para obter token de integração do Notion:\n1. Acesse www.notion.so/my-integrations\n2. Clique em "New integration"\n3. Configure as permissões necessárias\n4. Copie o Internal Integration Token', 1)
+ON DUPLICATE KEY UPDATE 
+  `fields` = '{"integrationToken": "string"}',
+  `instructions` = 'Para obter token de integração do Notion:\n1. Acesse www.notion.so/my-integrations\n2. Clique em "New integration"\n3. Configure as permissões necessárias\n4. Copie o Internal Integration Token';
 
+INSERT INTO `credentialTemplates` (`service`, `fields`, `instructions`, `isActive`) VALUES
 ('Slack', '{"botToken": "string", "appToken": "string"}', 
- 'Para obter tokens do Slack:\n1. Acesse api.slack.com/apps\n2. Crie um novo app ou selecione um existente\n3. Em "OAuth & Permissions", copie o Bot User OAuth Token\n4. Em "Basic Information", gere e copie o App-Level Token', 1),
+ 'Para obter tokens do Slack:\n1. Acesse api.slack.com/apps\n2. Crie um novo app ou selecione um existente\n3. Em "OAuth & Permissions", copie o Bot User OAuth Token\n4. Em "Basic Information", gere e copie o App-Level Token', 1)
+ON DUPLICATE KEY UPDATE 
+  `fields` = '{"botToken": "string", "appToken": "string"}',
+  `instructions` = 'Para obter tokens do Slack:\n1. Acesse api.slack.com/apps\n2. Crie um novo app ou selecione um existente\n3. Em "OAuth & Permissions", copie o Bot User OAuth Token\n4. Em "Basic Information", gere e copie o App-Level Token';
 
+INSERT INTO `credentialTemplates` (`service`, `fields`, `instructions`, `isActive`) VALUES
 ('Discord', '{"botToken": "string"}', 
  'Para obter token de bot do Discord:\n1. Acesse discord.com/developers/applications\n2. Crie uma nova aplicação\n3. Vá em "Bot" e clique em "Add Bot"\n4. Copie o token do bot\n5. Configure as permissões necessárias', 1)
-AS new_values
 ON DUPLICATE KEY UPDATE 
-  `fields` = new_values.fields, 
-  `instructions` = new_values.instructions;
+  `fields` = '{"botToken": "string"}',
+  `instructions` = 'Para obter token de bot do Discord:\n1. Acesse discord.com/developers/applications\n2. Crie uma nova aplicação\n3. Vá em "Bot" e clique em "Add Bot"\n4. Copie o token do bot\n5. Configure as permissões necessárias';
 
 -- ==================================================
 -- FIM DO SCHEMA
