@@ -1,0 +1,77 @@
+═══════════════════════════════════════════════════════════════
+  COMANDOS RÁPIDOS - ORQUESTRADOR V3.0
+═══════════════════════════════════════════════════════════════
+
+📦 NO SEU COMPUTADOR LOCAL:
+
+  # Transferir para servidor
+  scp orquestrador-v3.tar.gz flavio@192.168.1.247:/home/flavio/
+
+  # Conectar via SSH
+  ssh flavio@192.168.1.247
+
+───────────────────────────────────────────────────────────────
+
+🖥️  NO SERVIDOR (após conectar via SSH):
+
+  # Extrair e instalar (COPIE E COLE TUDO DE UMA VEZ)
+  mkdir -p orquestrador-v3 && \
+  tar -xzf orquestrador-v3.tar.gz -C orquestrador-v3 && \
+  cd orquestrador-v3 && \
+  chmod +x instalar.sh && \
+  ./instalar.sh
+
+───────────────────────────────────────────────────────────────
+
+⚙️  GERENCIAMENTO APÓS INSTALAÇÃO:
+
+  # Ver status
+  pm2 status
+  
+  # Ver logs em tempo real
+  pm2 logs orquestrador-v3
+  
+  # Parar logs (Ctrl+C)
+  
+  # Reiniciar
+  pm2 restart orquestrador-v3
+  
+  # Parar
+  pm2 stop orquestrador-v3
+  
+  # Iniciar
+  pm2 start orquestrador-v3
+
+───────────────────────────────────────────────────────────────
+
+🔧 COMANDOS DE MANUTENÇÃO RÁPIDA:
+
+  # Usar scripts criados automaticamente
+  ~/orquestrador-start.sh
+  ~/orquestrador-stop.sh
+  ~/orquestrador-restart.sh
+  ~/orquestrador-logs.sh
+
+───────────────────────────────────────────────────────────────
+
+🌐 ACESSAR O SISTEMA:
+
+  http://192.168.1.247:3000
+
+───────────────────────────────────────────────────────────────
+
+🆘 SE DER PROBLEMA:
+
+  # Liberar portas
+  sudo fuser -k 3000/tcp && sudo fuser -k 3001/tcp
+  
+  # Reiniciar MySQL
+  sudo systemctl restart mysql
+  
+  # Reiniciar aplicação
+  pm2 restart orquestrador-v3
+  
+  # Ver logs de erro
+  pm2 logs orquestrador-v3 --err
+
+═══════════════════════════════════════════════════════════════
