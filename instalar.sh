@@ -224,29 +224,59 @@ log "✓ Schema aplicado (23 tabelas criadas)"
 
 # 13. Instalar dependências NPM
 log_info "Instalando dependências NPM (isso pode demorar)..."
-if ! pnpm install 2>&1 | tee -a "$LOG_FILE"; then
-    log_error "Erro ao instalar dependências"
-    exit 1
+
+# Tentar com pnpm primeiro, se falhar usar npm
+if command -v pnpm &> /dev/null; then
+    log_info "Usando pnpm..."
+    if ! pnpm install --legacy-peer-deps 2>&1 | tee -a "$LOG_FILE"; then
+        log_warn "pnpm falhou, tentando com npm..."
+        if ! npm install --legacy-peer-deps 2>&1 | tee -a "$LOG_FILE"; then
+            log_error "Erro ao instalar dependências"
+            exit 1
+        fi
+    fi
+else
+    log_info "Usando npm..."
+    if ! npm install --legacy-peer-deps 2>&1 | tee -a "$LOG_FILE"; then
+        log_error "Erro ao instalar dependências"
+        exit 1
+    fi
 fi
+
 log "✓ Dependências instaladas"
 
 # 14. Build do projeto
 log_info "Fazendo build do projeto..."
-# Aprovar scripts do pnpm automaticamente
-pnpm config set auto-install-peers true
-pnpm config set strict-peer-dependencies false
 
-if ! pnpm build 2>&1 | tee -a "$LOG_FILE"; then
-    log_error "Erro no build do projeto"
-    log_error "Verifique o log em: $LOG_FILE"
-    exit 1
+# Build do servidor primeiro (crítico para evitar 502)
+log_info "Compilando backend..."
+if command -v pnpm &> /dev/null; then
+    pnpm build:server 2>&1 | tee -a "$LOG_FILE" || npm run build:server 2>&1 | tee -a "$LOG_FILE"
+else
+    npm run build:server 2>&1 | tee -a "$LOG_FILE"
 fi
 
-# Verificar se os arquivos de build foram criados
+# Verificar se o backend foi compilado
 if [ ! -f "dist/index.js" ]; then
-    log_error "Build não gerou o arquivo dist/index.js"
+    log_error "Build do backend falhou - dist/index.js não existe"
     exit 1
 fi
+log "✓ Backend compilado: dist/index.js"
+
+# Build do cliente
+log_info "Compilando frontend..."
+if command -v pnpm &> /dev/null; then
+    pnpm build:client 2>&1 | tee -a "$LOG_FILE" || npm run build:client 2>&1 | tee -a "$LOG_FILE"
+else
+    npm run build:client 2>&1 | tee -a "$LOG_FILE"
+fi
+
+# Verificar se o frontend foi compilado
+if [ ! -d "dist/client" ]; then
+    log_error "Build do frontend falhou - dist/client não existe"
+    exit 1
+fi
+log "✓ Frontend compilado: dist/client"
 
 log "✓ Build concluído com sucesso"
 
