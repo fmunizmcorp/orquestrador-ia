@@ -439,12 +439,12 @@ CREATE TABLE IF NOT EXISTS `aiQualityMetrics` (
 -- Usuário padrão
 INSERT INTO `users` (`openId`, `name`, `email`, `role`) VALUES
 ('flavio-default', 'Flavio', 'flavio@local', 'admin')
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
+ON DUPLICATE KEY UPDATE `name` = 'Flavio';
 
 -- Provedor LM Studio
 INSERT INTO `aiProviders` (`name`, `type`, `endpoint`, `isActive`, `config`) VALUES
 ('LM Studio Local', 'local', 'http://localhost:1234/v1', 1, '{"description": "Servidor local LM Studio", "maxConcurrent": 1}')
-ON DUPLICATE KEY UPDATE `endpoint` = VALUES(`endpoint`), `isActive` = VALUES(`isActive`);
+ON DUPLICATE KEY UPDATE `endpoint` = 'http://localhost:1234/v1', `isActive` = 1;
 
 -- IAs Especializadas
 INSERT INTO `specializedAIs` (`userId`, `name`, `description`, `category`, `systemPrompt`, `capabilities`, `isActive`) VALUES
@@ -467,7 +467,10 @@ INSERT INTO `specializedAIs` (`userId`, `name`, `description`, `category`, `syst
 (1, 'IA Analista', 'Especializada em análise de dados e métricas', 'analysis', 
  'Você é uma IA de análise especializada. Sua função é analisar dados de forma completa e fornecer insights detalhados. NUNCA omita dados ou análises importantes. Sempre forneça conclusões baseadas em evidências concretas.', 
  '["analysis", "data_processing", "insights"]', 1)
-ON DUPLICATE KEY UPDATE `description` = VALUES(`description`), `systemPrompt` = VALUES(`systemPrompt`);
+AS new_values
+ON DUPLICATE KEY UPDATE 
+  `description` = new_values.description, 
+  `systemPrompt` = new_values.systemPrompt;
 
 -- Templates de Credenciais
 INSERT INTO `credentialTemplates` (`service`, `fields`, `instructions`, `isActive`) VALUES
@@ -497,7 +500,10 @@ INSERT INTO `credentialTemplates` (`service`, `fields`, `instructions`, `isActiv
 
 ('Discord', '{"botToken": "string"}', 
  'Para obter token de bot do Discord:\n1. Acesse discord.com/developers/applications\n2. Crie uma nova aplicação\n3. Vá em "Bot" e clique em "Add Bot"\n4. Copie o token do bot\n5. Configure as permissões necessárias', 1)
-ON DUPLICATE KEY UPDATE `fields` = VALUES(`fields`), `instructions` = VALUES(`instructions`);
+AS new_values
+ON DUPLICATE KEY UPDATE 
+  `fields` = new_values.fields, 
+  `instructions` = new_values.instructions;
 
 -- ==================================================
 -- FIM DO SCHEMA

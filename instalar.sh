@@ -207,18 +207,48 @@ log "✓ Arquivo .env criado"
 
 # 12. Aplicar schema SQL
 log_info "Aplicando schema do banco de dados..."
-mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < schema.sql 2>&1 | tee -a "$LOG_FILE"
+if ! mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < schema.sql 2>&1 | tee -a "$LOG_FILE"; then
+    log_error "Erro ao aplicar schema SQL"
+    log_error "Verifique o log em: $LOG_FILE"
+    exit 1
+fi
+
+# Verificar se as tabelas foram criadas
+TABLES_COUNT=$(mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "SHOW TABLES;" 2>/dev/null | wc -l)
+if [ "$TABLES_COUNT" -lt 23 ]; then
+    log_error "Schema não foi aplicado corretamente (esperado 23+ tabelas, encontrado $TABLES_COUNT)"
+    exit 1
+fi
+
 log "✓ Schema aplicado (23 tabelas criadas)"
 
 # 13. Instalar dependências NPM
 log_info "Instalando dependências NPM (isso pode demorar)..."
-pnpm install 2>&1 | tee -a "$LOG_FILE"
+if ! pnpm install 2>&1 | tee -a "$LOG_FILE"; then
+    log_error "Erro ao instalar dependências"
+    exit 1
+fi
 log "✓ Dependências instaladas"
 
 # 14. Build do projeto
 log_info "Fazendo build do projeto..."
-pnpm build 2>&1 | tee -a "$LOG_FILE"
-log "✓ Build concluído"
+# Aprovar scripts do pnpm automaticamente
+pnpm config set auto-install-peers true
+pnpm config set strict-peer-dependencies false
+
+if ! pnpm build 2>&1 | tee -a "$LOG_FILE"; then
+    log_error "Erro no build do projeto"
+    log_error "Verifique o log em: $LOG_FILE"
+    exit 1
+fi
+
+# Verificar se os arquivos de build foram criados
+if [ ! -f "dist/index.js" ]; then
+    log_error "Build não gerou o arquivo dist/index.js"
+    exit 1
+fi
+
+log "✓ Build concluído com sucesso"
 
 # 15. Criar diretórios necessários
 log_info "Criando diretórios necessários..."
