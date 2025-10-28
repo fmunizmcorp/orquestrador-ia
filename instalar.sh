@@ -267,15 +267,26 @@ log_info "Fazendo build do projeto..."
 
 # Build do servidor primeiro (crítico para evitar 502)
 log_info "Compilando backend..."
+BUILD_SUCCESS=0
 if command -v pnpm &> /dev/null; then
-    pnpm build:server 2>&1 | tee -a "$LOG_FILE" || npm run build:server 2>&1 | tee -a "$LOG_FILE"
+    if pnpm build:server 2>&1 | tee -a "$LOG_FILE"; then
+        BUILD_SUCCESS=1
+    else
+        log_warn "Build com pnpm falhou, tentando npm..."
+        if npm run build:server 2>&1 | tee -a "$LOG_FILE"; then
+            BUILD_SUCCESS=1
+        fi
+    fi
 else
-    npm run build:server 2>&1 | tee -a "$LOG_FILE"
+    if npm run build:server 2>&1 | tee -a "$LOG_FILE"; then
+        BUILD_SUCCESS=1
+    fi
 fi
 
 # Verificar se o backend foi compilado
-if [ ! -f "dist/index.js" ]; then
-    log_error "Build do backend falhou - dist/index.js não existe"
+if [ ! -f "dist/index.js" ] || [ "$BUILD_SUCCESS" -eq 0 ]; then
+    log_error "Build do backend falhou - dist/index.js não existe ou build retornou erro"
+    log_error "Verifique os erros TypeScript acima"
     exit 1
 fi
 log "✓ Backend compilado: dist/index.js"
