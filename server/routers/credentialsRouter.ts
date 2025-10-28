@@ -3,7 +3,7 @@ import { db } from '../db/index.js';
 import { credentials } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { idSchema, createCredentialSchema, updateCredentialSchema, searchSchema } from '../utils/validation.js';
-import { encrypt, decrypt, encryptJSON, decryptJSON } from '../utils/encryption';
+import { encrypt, decrypt, encryptJSON, decryptJSON } from '../utils/encryption.js';
 
 export const credentialsRouter = router({
   list: publicProcedure
