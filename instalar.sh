@@ -95,12 +95,12 @@ fi
 # Backup do banco de dados
 log_info "Fazendo backup do banco de dados..."
 if command -v mysqldump &> /dev/null; then
-    sudo mysqldump -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" 2>/dev/null > "$BACKUP_DIR/database_backup.sql" || {
+    mysqldump -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" 2>/dev/null > "$BACKUP_DIR/database_backup.sql" || {
         # Se falhar, tentar como root
-        sudo mysqldump "$DB_NAME" 2>/dev/null > "$BACKUP_DIR/database_backup.sql" || true
+        sudo mysqldump "$DB_NAME" 2>/dev/null | sudo tee "$BACKUP_DIR/database_backup.sql" > /dev/null || true
     }
-    if [ -f "$BACKUP_DIR/database_backup.sql" ]; then
-        log "✓ Backup do banco criado"
+    if [ -f "$BACKUP_DIR/database_backup.sql" ] && [ -s "$BACKUP_DIR/database_backup.sql" ]; then
+        log "✓ Backup do banco criado ($(du -h $BACKUP_DIR/database_backup.sql | cut -f1))"
     else
         log_warn "Não foi possível fazer backup do banco"
     fi

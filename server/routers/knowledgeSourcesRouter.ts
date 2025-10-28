@@ -2,7 +2,7 @@ import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
 import { knowledgeSources } from '../db/schema.js';
 import { eq, desc } from 'drizzle-orm';
-import { idSchema, createKnowledgeSourceSchema, updateKnowledgeSourceSchema } from '../utils/validation';
+import { idSchema, createKnowledgeSourceSchema, updateKnowledgeSourceSchema } from '../utils/validation.js';
 
 export const knowledgeSourcesRouter = router({
   listByKnowledgeBase: publicProcedure

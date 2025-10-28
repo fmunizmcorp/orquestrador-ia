@@ -2,7 +2,7 @@ import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
 import { subtasks, aiModels } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
-import { idSchema, createSubtaskSchema, updateSubtaskSchema } from '../utils/validation';
+import { idSchema, createSubtaskSchema, updateSubtaskSchema } from '../utils/validation.js';
 
 export const subtasksRouter = router({
   listByTask: publicProcedure

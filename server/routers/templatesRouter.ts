@@ -2,7 +2,7 @@ import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
 import { aiTemplates } from '../db/schema.js';
 import { eq, and, like, desc } from 'drizzle-orm';
-import { idSchema, createTemplateSchema, updateTemplateSchema, searchSchema } from '../utils/validation';
+import { idSchema, createTemplateSchema, updateTemplateSchema, searchSchema } from '../utils/validation.js';
 
 export const templatesRouter = router({
   list: publicProcedure

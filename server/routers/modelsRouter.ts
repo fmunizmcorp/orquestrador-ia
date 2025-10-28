@@ -2,7 +2,7 @@ import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
 import { aiModels, aiProviders } from '../db/schema.js';
 import { eq, like, and, desc } from 'drizzle-orm';
-import { idSchema, createModelSchema, updateModelSchema, searchSchema } from '../utils/validation';
+import { idSchema, createModelSchema, updateModelSchema, searchSchema } from '../utils/validation.js';
 import { z } from 'zod';
 
 export const modelsRouter = router({

@@ -2,7 +2,7 @@ import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
 import { tasks, subtasks } from '../db/schema.js';
 import { eq, desc, and, like } from 'drizzle-orm';
-import { idSchema, createTaskSchema, updateTaskSchema, searchSchema } from '../utils/validation';
+import { idSchema, createTaskSchema, updateTaskSchema, searchSchema } from '../utils/validation.js';
 import { z } from 'zod';
 
 export const tasksRouter = router({

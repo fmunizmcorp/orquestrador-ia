@@ -7,7 +7,7 @@ import {
   createProviderSchema,
   updateProviderSchema,
   searchSchema,
-} from '../utils/validation';
+} from '../utils/validation.js';
 
 export const providersRouter = router({
   // Listar todos os provedores

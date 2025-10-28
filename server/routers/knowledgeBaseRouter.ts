@@ -2,7 +2,7 @@ import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
 import { knowledgeBase } from '../db/schema.js';
 import { eq, and, like, desc } from 'drizzle-orm';
-import { idSchema, createKnowledgeBaseSchema, updateKnowledgeBaseSchema, searchSchema } from '../utils/validation';
+import { idSchema, createKnowledgeBaseSchema, updateKnowledgeBaseSchema, searchSchema } from '../utils/validation.js';
 
 export const knowledgeBaseRouter = router({
   list: publicProcedure
