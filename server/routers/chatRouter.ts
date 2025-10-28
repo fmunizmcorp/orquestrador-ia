@@ -1,6 +1,6 @@
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
-import { chatConversations, chatMessages } from '../db/schema';
+import { chatConversations, chatMessages } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
 import { idSchema, createChatConversationSchema, createChatMessageSchema, searchSchema } from '../utils/validation';
 import { z } from 'zod';

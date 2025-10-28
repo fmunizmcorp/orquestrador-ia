@@ -1,6 +1,6 @@
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
-import { credentials } from '../db/schema';
+import { credentials } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { idSchema, createCredentialSchema, updateCredentialSchema, searchSchema } from '../utils/validation';
 import { encrypt, decrypt, encryptJSON, decryptJSON } from '../utils/encryption';

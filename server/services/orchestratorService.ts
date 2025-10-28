@@ -9,7 +9,7 @@
  */
 
 import { db } from '../db/index.js';
-import { tasks, subtasks, aiModels, specializedAIs, executionLogs } from '../db/schema';
+import { tasks, subtasks, aiModels, specializedAIs, executionLogs } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { lmstudioService } from './lmstudioService.js';
 
@@ -54,11 +54,11 @@ class OrchestratorService {
       throw new Error('Modelo de planejamento não disponível');
     }
 
-    const prompt = \`Analise a seguinte tarefa e crie uma lista COMPLETA de subtarefas.
+    const prompt = `Analise a seguinte tarefa e crie uma lista COMPLETA de subtarefas.
 IMPORTANTE: NÃO RESUMA. Liste TODAS as subtarefas necessárias, sem exceção.
 
-Tarefa: \${task.title}
-Descrição: \${task.description}
+Tarefa: ${task.title}
+Descrição: ${task.description}
 
 Retorne um JSON array com objetos contendo:
 - title: título da subtarefa
@@ -72,7 +72,7 @@ Exemplo:
     "description": "Pesquisar TODOS os requisitos necessários...",
     "estimatedDifficulty": 3
   }
-]\`;
+]`;
 
     try {
       const response = await lmstudioService.generateCompletion(model.modelId, prompt);
@@ -82,7 +82,7 @@ Exemplo:
       await db.insert(executionLogs).values({
         taskId,
         level: 'info',
-        message: \`Planejamento concluído: \${breakdown.length} subtarefas criadas\`,
+        message: `Planejamento concluído: ${breakdown.length} subtarefas criadas`,
         metadata: { breakdown },
       });
 
@@ -91,7 +91,7 @@ Exemplo:
       await db.insert(executionLogs).values({
         taskId,
         level: 'error',
-        message: \`Erro no planejamento: \${error}\`,
+        message: `Erro no planejamento: ${error}`,
       });
       throw error;
     }
@@ -140,7 +140,7 @@ Exemplo:
           await db.update(subtasks).set({
             status: 'completed',
             reviewedBy: tiebreaker.reviewerId,
-            reviewNotes: \`Validação de desempate: \${tiebreaker.notes}\`,
+            reviewNotes: `Validação de desempate: ${tiebreaker.notes}`,
             completedAt: new Date(),
           }).where(eq(subtasks.id, subtaskId));
           
@@ -162,7 +162,7 @@ Exemplo:
         taskId: subtask.taskId,
         subtaskId,
         level: 'error',
-        message: \`Erro na execução: \${error}\`,
+        message: `Erro na execução: ${error}`,
       });
 
       throw error;

@@ -1,6 +1,6 @@
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
-import { knowledgeSources } from '../db/schema';
+import { knowledgeSources } from '../db/schema.js';
 import { eq, desc } from 'drizzle-orm';
 import { idSchema, createKnowledgeSourceSchema, updateKnowledgeSourceSchema } from '../utils/validation';
 

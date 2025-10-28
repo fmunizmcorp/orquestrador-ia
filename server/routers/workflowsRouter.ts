@@ -1,6 +1,6 @@
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
-import { aiWorkflows } from '../db/schema';
+import { aiWorkflows } from '../db/schema.js';
 import { eq, and, like, desc } from 'drizzle-orm';
 import { idSchema, createWorkflowSchema, updateWorkflowSchema, searchSchema } from '../utils/validation';
 

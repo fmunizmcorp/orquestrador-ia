@@ -1,6 +1,6 @@
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
-import { externalAPIAccounts, credentials } from '../db/schema';
+import { externalAPIAccounts, credentials } from '../db/schema.js';
 import { eq, and, like, desc } from 'drizzle-orm';
 import { idSchema, createExternalAPIAccountSchema, updateExternalAPIAccountSchema, searchSchema } from '../utils/validation';
 
