@@ -8,10 +8,10 @@
  * - ZERO perda de trabalho
  */
 
-import { db } from '../db';
+import { db } from '../db/index.js';
 import { tasks, subtasks, aiModels, specializedAIs, executionLogs } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
-import { lmstudioService } from './lmstudioService';
+import { lmstudioService } from './lmstudioService.js';
 
 interface TaskBreakdown {
   title: string;

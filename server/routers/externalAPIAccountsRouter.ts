@@ -1,5 +1,5 @@
-import { router, publicProcedure } from '../trpc';
-import { db } from '../db';
+import { router, publicProcedure } from '../trpc.js';
+import { db } from '../db/index.js';
 import { externalAPIAccounts, credentials } from '../db/schema';
 import { eq, and, like, desc } from 'drizzle-orm';
 import { idSchema, createExternalAPIAccountSchema, updateExternalAPIAccountSchema, searchSchema } from '../utils/validation';

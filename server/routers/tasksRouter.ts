@@ -1,5 +1,5 @@
-import { router, publicProcedure } from '../trpc';
-import { db } from '../db';
+import { router, publicProcedure } from '../trpc.js';
+import { db } from '../db/index.js';
 import { tasks, subtasks } from '../db/schema';
 import { eq, desc, and, like } from 'drizzle-orm';
 import { idSchema, createTaskSchema, updateTaskSchema, searchSchema } from '../utils/validation';

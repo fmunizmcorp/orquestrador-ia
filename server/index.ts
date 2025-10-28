@@ -9,10 +9,10 @@ import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { appRouter } from './routers/index';
-import { createContext } from './trpc';
-import { testConnection } from './db/index';
-import { systemMonitorService } from './services/systemMonitorService';
+import { appRouter } from './routers/index.js';
+import { createContext } from './trpc.js';
+import { testConnection } from './db/index.js';
+import { systemMonitorService } from './services/systemMonitorService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

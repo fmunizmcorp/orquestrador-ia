@@ -8,7 +8,7 @@
  */
 
 import axios from 'axios';
-import { db } from '../db';
+import { db } from '../db/index.js';
 import { credentials } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { decryptJSON } from '../utils/encryption';
