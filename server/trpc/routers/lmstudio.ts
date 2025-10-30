@@ -103,7 +103,7 @@ export const lmstudioRouter = router({
     }))
     .mutation(async ({ input }) => {
       const benchmark = await lmstudioService.benchmarkModel(input.modelId);
-      return { success: benchmark.success, ...benchmark };
+      return benchmark;
     }),
 
   /**
