@@ -13,7 +13,7 @@
 import axios from 'axios';
 import { db } from '../../db/index.js';
 import { credentials } from '../../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { withErrorHandling, ExternalServiceError } from '../../middleware/errorHandler.js';
 import CryptoJS from 'crypto-js';
 
@@ -55,8 +55,10 @@ class GitHubService {
   private async getCredentials(userId: number): Promise<GitHubCredentials> {
     const [cred] = await db.select()
       .from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'github'))
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'github')
+      ))
       .limit(1);
 
     if (!cred) {
@@ -92,8 +94,10 @@ class GitHubService {
     // Upsert
     const existing = await db.select()
       .from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'github'))
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'github')
+      ))
       .limit(1);
 
     if (existing.length > 0) {

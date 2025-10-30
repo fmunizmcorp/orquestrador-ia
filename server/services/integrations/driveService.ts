@@ -4,7 +4,7 @@
 import axios from 'axios';
 import { db } from '../../db/index.js';
 import { credentials } from '../../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import CryptoJS from 'crypto-js';
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
@@ -13,8 +13,10 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key';
 class DriveService {
   private async getCredentials(userId: number) {
     const [cred] = await db.select().from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'drive')).limit(1);
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'drive')
+      )).limit(1);
     if (!cred) throw new Error('Credentials not found');
     const bytes = CryptoJS.AES.decrypt(cred.encryptedData, ENCRYPTION_KEY);
     return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
@@ -23,8 +25,10 @@ class DriveService {
   async saveCredentials(userId: number, accessToken: string, refreshToken?: string) {
     const encrypted = CryptoJS.AES.encrypt(JSON.stringify({ accessToken, refreshToken }), ENCRYPTION_KEY).toString();
     const existing = await db.select().from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'drive')).limit(1);
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'drive')
+      )).limit(1);
     
     if (existing.length > 0) {
       await db.update(credentials).set({ encryptedData: encrypted }).where(eq(credentials.id, existing[0].id));

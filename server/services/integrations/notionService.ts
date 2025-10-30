@@ -5,7 +5,7 @@
 import axios from 'axios';
 import { db } from '../../db/index.js';
 import { credentials } from '../../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import CryptoJS from 'crypto-js';
 
 const NOTION_API = 'https://api.notion.com/v1';
@@ -29,8 +29,10 @@ interface DatabaseQueryFilter {
 class NotionService {
   private async getToken(userId: number): Promise<string> {
     const [cred] = await db.select().from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'notion'))
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'notion')
+      ))
       .limit(1);
     
     if (!cred) {
@@ -50,8 +52,10 @@ class NotionService {
 
     const existing = await db.select()
       .from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'notion'))
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'notion')
+      ))
       .limit(1);
 
     if (existing.length > 0) {

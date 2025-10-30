@@ -5,7 +5,7 @@
 import axios from 'axios';
 import { db } from '../../db/index.js';
 import { credentials } from '../../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import CryptoJS from 'crypto-js';
 
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
@@ -30,8 +30,10 @@ interface BatchUpdate {
 class SheetsService {
   private async getToken(userId: number): Promise<string> {
     const [cred] = await db.select().from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'google_sheets'))
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'google_sheets')
+      ))
       .limit(1);
     
     if (!cred) {
@@ -54,8 +56,10 @@ class SheetsService {
 
     const existing = await db.select()
       .from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'google_sheets'))
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'google_sheets')
+      ))
       .limit(1);
 
     if (existing.length > 0) {

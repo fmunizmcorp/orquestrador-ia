@@ -11,7 +11,7 @@
 import axios from 'axios';
 import { db } from '../../db/index.js';
 import { credentials } from '../../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { withErrorHandling, ExternalServiceError } from '../../middleware/errorHandler.js';
 import CryptoJS from 'crypto-js';
 
@@ -40,8 +40,10 @@ class GmailService {
   private async getCredentials(userId: number): Promise<GmailCredentials> {
     const [cred] = await db.select()
       .from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'gmail'))
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'gmail')
+      ))
       .limit(1);
 
     if (!cred) {
@@ -75,8 +77,10 @@ class GmailService {
 
     const existing = await db.select()
       .from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'gmail'))
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'gmail')
+      ))
       .limit(1);
 
     if (existing.length > 0) {
