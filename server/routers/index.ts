@@ -19,6 +19,7 @@ import { githubRouter } from './githubRouter.js';
 import { gmailRouter } from './gmailRouter.js';
 import { driveRouter } from './driveRouter.js';
 import { slackRouter } from './slackRouter.js';
+import { notionRouter } from './notionRouter.js';
 
 export const appRouter = router({
   providers: providersRouter,
@@ -41,6 +42,7 @@ export const appRouter = router({
   gmail: gmailRouter,
   drive: driveRouter,
   slack: slackRouter,
+  notion: notionRouter,
 });
 
 export type AppRouter = typeof appRouter;
