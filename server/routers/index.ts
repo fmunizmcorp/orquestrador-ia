@@ -17,6 +17,7 @@ import { systemMonitorRouter } from './systemMonitorRouter.js';
 import { puppeteerRouter } from './puppeteerRouter.js';
 import { githubRouter } from './githubRouter.js';
 import { gmailRouter } from './gmailRouter.js';
+import { driveRouter } from './driveRouter.js';
 
 export const appRouter = router({
   providers: providersRouter,
@@ -37,6 +38,7 @@ export const appRouter = router({
   puppeteer: puppeteerRouter,
   github: githubRouter,
   gmail: gmailRouter,
+  drive: driveRouter,
 });
 
 export type AppRouter = typeof appRouter;
