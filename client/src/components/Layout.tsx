@@ -18,7 +18,10 @@ import {
   Menu,
   X,
   FileCode,
+  TrendingUp,
 } from 'lucide-react';
+import { MobileMenu } from './MobileMenu';
+import { CollaborationPanel } from './CollaborationPanel';
 
 interface LayoutProps {
   children: ReactNode;
@@ -30,6 +33,7 @@ const Layout = ({ children }: LayoutProps) => {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/analytics', label: 'Analytics', icon: TrendingUp },
     { path: '/providers', label: 'Provedores', icon: Database },
     { path: '/models', label: 'Modelos', icon: Cpu },
     { path: '/specialized-ais', label: 'IAs Especializadas', icon: Brain },
@@ -49,11 +53,14 @@ const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="flex h-screen bg-slate-900">
-      {/* Sidebar */}
+      {/* Mobile Menu */}
+      <MobileMenu />
+      
+      {/* Sidebar - Hidden on mobile */}
       <aside
         className={`${
           sidebarOpen ? 'w-64' : 'w-20'
-        } bg-slate-800 border-r border-slate-700 transition-all duration-300 flex flex-col`}
+        } bg-slate-800 border-r border-slate-700 transition-all duration-300 flex-col hidden lg:flex`}
       >
         {/* Header */}
         <div className="p-4 border-b border-slate-700 flex items-center justify-between">
@@ -104,10 +111,13 @@ const Layout = ({ children }: LayoutProps) => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto p-6">
+        <div className="container mx-auto p-4 lg:p-6">
           {children}
         </div>
       </main>
+
+      {/* Collaboration Panel */}
+      <CollaborationPanel />
     </div>
   );
 };
