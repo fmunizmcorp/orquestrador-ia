@@ -78,11 +78,11 @@ export const providersRouter = router({
     .input(createProviderSchema)
     .mutation(async ({ input }) => {
       try {
-        const [provider] = await db.insert(aiProviders)
-          .values(input)
-          .returning();
+        const result: any = await db.insert(aiProviders)
+          .values(input);
 
-        return { id: provider.id, success: true };
+        const insertId = result[0]?.insertId || result.insertId;
+        return { id: insertId, success: true };
       } catch (error) {
         console.error('Erro ao criar provedor:', error);
         throw new Error('Falha ao criar provedor');

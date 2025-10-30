@@ -99,11 +99,11 @@ export const tasksRouter = router({
   create: publicProcedure
     .input(createTaskSchema)
     .mutation(async ({ input }) => {
-      const [task] = await db.insert(tasks)
-        .values(input)
-        .returning();
+      const result: any = await db.insert(tasks)
+        .values(input);
 
-      return { id: task.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   update: publicProcedure

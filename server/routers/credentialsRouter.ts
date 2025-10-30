@@ -76,19 +76,20 @@ export const credentialsRouter = router({
   create: publicProcedure
     .input(createCredentialSchema)
     .mutation(async ({ input }) => {
-      const { data, ...rest } = input;
+      const { data, expiresAt, ...rest } = input;
 
       // Criptografar dados
       const encryptedData = encryptJSON(data);
 
-      const [cred] = await db.insert(credentials)
+      const result: any = await db.insert(credentials)
         .values({
           ...rest,
           encryptedData,
-        })
-        .returning();
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+        });
 
-      return { id: cred.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   update: publicProcedure

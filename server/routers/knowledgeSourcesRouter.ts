@@ -34,11 +34,11 @@ export const knowledgeSourcesRouter = router({
   create: publicProcedure
     .input(createKnowledgeSourceSchema)
     .mutation(async ({ input }) => {
-      const [source] = await db.insert(knowledgeSources)
-        .values(input)
-        .returning();
+      const result: any = await db.insert(knowledgeSources)
+        .values(input);
 
-      return { id: source.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   update: publicProcedure

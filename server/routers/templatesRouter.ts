@@ -58,11 +58,16 @@ export const templatesRouter = router({
   create: publicProcedure
     .input(createTemplateSchema)
     .mutation(async ({ input }) => {
-      const [template] = await db.insert(aiTemplates)
-        .values(input)
-        .returning();
+      const { isActive, templateData, ...rest } = input;
+      
+      const result: any = await db.insert(aiTemplates)
+        .values({
+          ...rest,
+          templateData: templateData || {},
+        });
 
-      return { id: template.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   update: publicProcedure

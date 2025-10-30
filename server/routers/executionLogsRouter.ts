@@ -66,11 +66,11 @@ export const executionLogsRouter = router({
       metadata: z.any().optional(),
     }))
     .mutation(async ({ input }) => {
-      const [log] = await db.insert(executionLogs)
-        .values(input)
-        .returning();
+      const result: any = await db.insert(executionLogs)
+        .values(input);
 
-      return { id: log.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   delete: publicProcedure

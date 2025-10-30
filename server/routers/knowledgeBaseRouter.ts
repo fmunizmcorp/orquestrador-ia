@@ -58,11 +58,16 @@ export const knowledgeBaseRouter = router({
   create: publicProcedure
     .input(createKnowledgeBaseSchema)
     .mutation(async ({ input }) => {
-      const [kb] = await db.insert(knowledgeBase)
-        .values(input)
-        .returning();
+      const { description, isPublic, ...rest } = input;
+      
+      const result: any = await db.insert(knowledgeBase)
+        .values({
+          ...rest,
+          content: description || '',
+        });
 
-      return { id: kb.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   update: publicProcedure

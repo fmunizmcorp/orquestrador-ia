@@ -15,7 +15,7 @@ export const modelsRouter = router({
 
       let conditions = [];
       if (query) {
-        conditions.push(like(aiModels.name, `%${query}%`));
+        conditions.push(like(aiModels.modelName, `%${query}%`));
       }
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -24,7 +24,7 @@ export const modelsRouter = router({
         id: aiModels.id,
         providerId: aiModels.providerId,
         providerName: aiProviders.name,
-        name: aiModels.name,
+        name: aiModels.modelName,
         modelId: aiModels.modelId,
         capabilities: aiModels.capabilities,
         contextWindow: aiModels.contextWindow,
@@ -80,11 +80,16 @@ export const modelsRouter = router({
   create: publicProcedure
     .input(createModelSchema)
     .mutation(async ({ input }) => {
-      const [model] = await db.insert(aiModels)
-        .values(input)
-        .returning();
+      const { name, ...rest } = input;
+      
+      const result: any = await db.insert(aiModels)
+        .values({
+          ...rest,
+          modelName: name,
+        });
 
-      return { id: model.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   // Atualizar modelo

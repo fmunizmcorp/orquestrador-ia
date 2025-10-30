@@ -166,7 +166,7 @@ export const subtasks = mysqlTable('subtasks', {
   title: varchar('title', { length: 500 }).notNull(),
   description: text('description'),
   prompt: text('prompt').notNull(),
-  result: text('result', { length: 'long' }),
+  result: text('result'),
   status: mysqlEnum('status', ['pending', 'executing', 'completed', 'failed', 'validating', 'rejected']).default('pending'),
   orderIndex: int('orderIndex').default(0),
   estimatedDifficulty: mysqlEnum('estimatedDifficulty', ['easy', 'medium', 'hard', 'expert']).default('medium'),
@@ -206,10 +206,10 @@ export const chatConversations = mysqlTable('chatConversations', {
 // ==================================================
 // 10. TABELA: chatMessages
 // ==================================================
-export const chatMessages = mysqlTable('chatMessages', {
+export const chatMessages: any = mysqlTable('chatMessages', {
   id: int('id').primaryKey().autoincrement(),
   conversationId: int('conversationId').notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
-  parentMessageId: int('parentMessageId').references(() => chatMessages.id, { onDelete: 'set null' }),
+  parentMessageId: int('parentMessageId').references((): any => chatMessages.id, { onDelete: 'set null' }),
   role: mysqlEnum('role', ['user', 'assistant', 'system']).notNull(),
   content: text('content').notNull(),
   isEdited: boolean('isEdited').default(false),
@@ -624,7 +624,7 @@ export const puppeteerResults = mysqlTable('puppeteerResults', {
   id: int('id').primaryKey().autoincrement(),
   sessionId: varchar('sessionId', { length: 255 }).notNull().references(() => puppeteerSessions.sessionId, { onDelete: 'cascade' }),
   resultType: mysqlEnum('resultType', ['screenshot', 'pdf', 'data', 'html']).notNull(),
-  data: text('data', { length: 'long' }),
+  data: text('data'),
   url: varchar('url', { length: 1000 }),
   metadata: json('metadata'),
   createdAt: timestamp('createdAt').defaultNow(),
@@ -999,7 +999,7 @@ export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
   }),
 }));
 
-export const projectsRelations = relations(projects, ({ one, many }) => ({
+export const projectsRelations = relations(projects, ({ one }) => ({
   team: one(teams, {
     fields: [projects.teamId],
     references: [teams.id],

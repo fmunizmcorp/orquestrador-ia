@@ -70,11 +70,16 @@ export const instructionsRouter = router({
   create: publicProcedure
     .input(createInstructionSchema)
     .mutation(async ({ input }) => {
-      const [instruction] = await db.insert(instructions)
-        .values(input)
-        .returning();
+      const { instructionText, description, category, usageCount, ...rest } = input;
+      
+      const result: any = await db.insert(instructions)
+        .values({
+          ...rest,
+          content: instructionText,
+        });
 
-      return { id: instruction.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   update: publicProcedure

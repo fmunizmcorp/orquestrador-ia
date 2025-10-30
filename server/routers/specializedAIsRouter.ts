@@ -25,7 +25,7 @@ export const specializedAIsRouter = router({
         description: specializedAIs.description,
         category: specializedAIs.category,
         defaultModelId: specializedAIs.defaultModelId,
-        defaultModelName: aiModels.name,
+        defaultModelName: aiModels.modelName,
         fallbackModelIds: specializedAIs.fallbackModelIds,
         systemPrompt: specializedAIs.systemPrompt,
         capabilities: specializedAIs.capabilities,
@@ -73,11 +73,11 @@ export const specializedAIsRouter = router({
   create: publicProcedure
     .input(createSpecializedAISchema)
     .mutation(async ({ input }) => {
-      const [ai] = await db.insert(specializedAIs)
-        .values(input)
-        .returning();
+      const result: any = await db.insert(specializedAIs)
+        .values(input);
 
-      return { id: ai.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   update: publicProcedure

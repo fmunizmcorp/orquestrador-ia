@@ -12,7 +12,7 @@ export const subtasksRouter = router({
         id: subtasks.id,
         taskId: subtasks.taskId,
         assignedModelId: subtasks.assignedModelId,
-        assignedModelName: aiModels.name,
+        assignedModelName: aiModels.modelName,
         title: subtasks.title,
         description: subtasks.description,
         prompt: subtasks.prompt,
@@ -50,11 +50,11 @@ export const subtasksRouter = router({
   create: publicProcedure
     .input(createSubtaskSchema)
     .mutation(async ({ input }) => {
-      const [subtask] = await db.insert(subtasks)
-        .values(input)
-        .returning();
+      const result: any = await db.insert(subtasks)
+        .values(input);
 
-      return { id: subtask.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   update: publicProcedure

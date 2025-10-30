@@ -72,11 +72,17 @@ export const externalAPIAccountsRouter = router({
   create: publicProcedure
     .input(createExternalAPIAccountSchema)
     .mutation(async ({ input }) => {
-      const [account] = await db.insert(externalAPIAccounts)
-        .values(input)
-        .returning();
+      const { service, accountIdentifier, ...rest } = input;
+      
+      const result: any = await db.insert(externalAPIAccounts)
+        .values({
+          ...rest,
+          provider: service,
+          accountName: accountIdentifier,
+        });
 
-      return { id: account.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   update: publicProcedure

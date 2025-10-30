@@ -58,11 +58,11 @@ export const workflowsRouter = router({
   create: publicProcedure
     .input(createWorkflowSchema)
     .mutation(async ({ input }) => {
-      const [workflow] = await db.insert(aiWorkflows)
-        .values(input)
-        .returning();
+      const result: any = await db.insert(aiWorkflows)
+        .values(input);
 
-      return { id: workflow.id, success: true };
+      const insertId = result[0]?.insertId || result.insertId;
+      return { id: insertId, success: true };
     }),
 
   update: publicProcedure
