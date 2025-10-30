@@ -1,0 +1,122 @@
+═══════════════════════════════════════════════════════════════════════════════
+  ORQUESTRADOR DE IAs V3.0 - INSTALAÇÃO COMPLETA COM UM ÚNICO COMANDO
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 COPIE E COLE ESTE COMANDO NO SEU SERVIDOR:
+
+cd ~ && rm -rf orquestrador-ia 2>/dev/null; git clone https://github.com/fmunizmcorp/orquestrador-ia.git && cd orquestrador-ia && chmod +x install.sh && ./install.sh
+
+───────────────────────────────────────────────────────────────────────────────
+
+✅ O QUE ESTE COMANDO FAZ AUTOMATICAMENTE:
+
+1. Remove instalação anterior (se existir)
+2. Clona o repositório completo do GitHub
+3. Navega para a pasta correta
+4. Dá permissão de execução ao instalador
+5. Executa 10 etapas de instalação:
+   ✓ Verifica Node.js, npm, MySQL, Git
+   ✓ Instala dependências npm
+   ✓ Cria .env com secrets auto-gerados
+   ✓ Solicita credenciais MySQL
+   ✓ Cria database automaticamente
+   ✓ Executa migrations (todas as tabelas)
+   ✓ Compila frontend (React + TypeScript + Vite)
+   ✓ Compila backend (Node.js + TypeScript + tRPC)
+   ✓ Libera porta 3001 (mata processos conflitantes)
+   ✓ Inicia com PM2 (auto-restart)
+
+───────────────────────────────────────────────────────────────────────────────
+
+🎯 RESULTADO FINAL:
+
+• Sistema rodando em: http://localhost:3001
+• Gerenciado pelo PM2 (reinicia automaticamente em caso de falha)
+• Dashboard completo com CRUD de Teams, Projects, Prompts
+• Dark Mode funcional com persistência
+• Autenticação JWT pronta
+• Banco de dados MySQL com todas as tabelas criadas
+
+───────────────────────────────────────────────────────────────────────────────
+
+📚 DOCUMENTAÇÃO COMPLETA:
+
+• README.md - Visão geral do sistema
+• DEPLOY_COMPLETO.md - Guia detalhado de deploy
+• INSTALL.md - Manual de instalação passo a passo
+• RELATORIO_IMPLEMENTACAO_COMPLETA.md - Relatório técnico (69 páginas)
+
+───────────────────────────────────────────────────────────────────────────────
+
+🔧 COMANDOS ÚTEIS APÓS INSTALAÇÃO:
+
+# Ver status
+pm2 status
+
+# Ver logs em tempo real
+pm2 logs orquestrador-ia
+
+# Reiniciar
+pm2 restart orquestrador-ia
+
+# Parar
+pm2 stop orquestrador-ia
+
+# Remover
+pm2 delete orquestrador-ia
+
+───────────────────────────────────────────────────────────────────────────────
+
+⚠️ REQUISITOS MÍNIMOS DO SERVIDOR:
+
+• Ubuntu 22.04+ / Debian 11+ / CentOS 8+
+• Node.js v18 ou superior instalado
+• MySQL 8.0+ instalado e rodando
+• Git instalado
+• Mínimo 1GB RAM (recomendado 2GB)
+• Mínimo 2GB disco livre
+• Porta 3001 disponível
+
+───────────────────────────────────────────────────────────────────────────────
+
+🐛 TROUBLESHOOTING RÁPIDO:
+
+Node.js não instalado:
+  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+
+MySQL não instalado:
+  sudo apt-get update
+  sudo apt-get install -y mysql-server
+  sudo systemctl start mysql
+
+Git não instalado:
+  sudo apt-get install -y git
+
+Porta 3001 ocupada:
+  sudo lsof -ti:3001 | xargs kill -9
+
+───────────────────────────────────────────────────────────────────────────────
+
+✅ VERIFICAÇÃO FINAL (após executar o comando):
+
+[ ] Script terminou sem erros
+[ ] Mensagem "✅ Sistema iniciado com sucesso!" apareceu
+[ ] pm2 status mostra "orquestrador-ia" com status "online"
+[ ] curl http://localhost:3001 retorna HTML
+[ ] Navegador abre http://localhost:3001 e mostra login
+[ ] Consegue criar conta e fazer login
+[ ] Dashboard carrega com dados
+
+───────────────────────────────────────────────────────────────────────────────
+
+🔗 LINKS IMPORTANTES:
+
+• Repositório: https://github.com/fmunizmcorp/orquestrador-ia
+• Issues: https://github.com/fmunizmcorp/orquestrador-ia/issues
+
+───────────────────────────────────────────────────────────────────────────────
+
+🎉 PRONTO! TUDO FUNCIONA COM UM ÚNICO COMANDO!
+
+═══════════════════════════════════════════════════════════════════════════════
