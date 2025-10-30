@@ -18,6 +18,8 @@ import ExternalAPIAccounts from './pages/ExternalAPIAccounts';
 import Settings from './pages/Settings';
 import Terminal from './pages/Terminal';
 import ModelTraining from './pages/ModelTraining';
+import { Analytics } from './pages/Analytics';
+import { WorkflowBuilder } from './pages/WorkflowBuilder';
 
 function App() {
   return (
@@ -32,6 +34,7 @@ function App() {
         <Route path="/tasks/:id/subtasks" element={<Subtasks />} />
         <Route path="/templates" element={<Templates />} />
         <Route path="/workflows" element={<Workflows />} />
+        <Route path="/workflows/builder" element={<WorkflowBuilder />} />
         <Route path="/instructions" element={<Instructions />} />
         <Route path="/knowledge-base" element={<KnowledgeBase />} />
         <Route path="/knowledge-base/:id/sources" element={<KnowledgeSources />} />
@@ -41,6 +44,7 @@ function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/terminal" element={<Terminal />} />
         <Route path="/model-training" element={<ModelTraining />} />
+        <Route path="/analytics" element={<Analytics />} />
       </Routes>
     </Layout>
   );
