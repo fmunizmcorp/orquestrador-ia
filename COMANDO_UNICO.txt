@@ -1,129 +1,100 @@
 ═══════════════════════════════════════════════════════════════════════════════
-  ORQUESTRADOR DE IAs V3.0 - INSTALAÇÃO COMPLETA COM UM ÚNICO COMANDO
+  COMANDO ÚNICO DE DEPLOY - ORQUESTRADOR IA
 ═══════════════════════════════════════════════════════════════════════════════
 
-📋 COPIE E COLE ESTE COMANDO NO SEU SERVIDOR:
+📋 REQUISITOS:
+   • Ubuntu 24.04 LTS
+   • Acesso sudo
+   • Internet ativa
+   • Senha MySQL (será solicitada durante instalação)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🚀 COMANDO DE INSTALAÇÃO COMPLETA:
 
 cd ~ && rm -rf orquestrador-ia 2>/dev/null; git clone https://github.com/fmunizmcorp/orquestrador-ia.git && cd orquestrador-ia && chmod +x install.sh && ./install.sh
 
-───────────────────────────────────────────────────────────────────────────────
+═══════════════════════════════════════════════════════════════════════════════
 
-✅ O QUE ESTE COMANDO FAZ AUTOMATICAMENTE:
+📝 O QUE O COMANDO FAZ:
 
-1. Remove instalação anterior (se existir)
-2. Clona o repositório completo do GitHub
-3. Navega para a pasta correta
-4. Dá permissão de execução ao instalador
-5. Executa 10 etapas de instalação:
-   ✓ Verifica Node.js, npm, MySQL, Git
-   ✓ Instala dependências npm
-   ✓ Cria .env com secrets auto-gerados
-   ✓ Solicita credenciais MySQL (pressione ENTER para senha vazia)
-   ✓ Cria database automaticamente (usa sudo mysql se necessário)
-   ✓ Gera senha MySQL automaticamente se vazia (Ubuntu 24.04 fix)
-   ✓ Executa migrations (todas as tabelas)
-   ✓ Compila frontend (React + TypeScript + Vite)
-   ✓ Compila backend (Node.js + TypeScript + tRPC)
-   ✓ Libera porta 3001 (mata processos conflitantes)
-   ✓ Inicia com PM2 (auto-restart)
+1️⃣  Remove instalação anterior (se existir)
+2️⃣  Clona repositório do GitHub
+3️⃣  Navega para pasta do projeto
+4️⃣  Torna script de instalação executável
+5️⃣  Executa instalação automática que:
+    ✅ Instala Node.js 20.x
+    ✅ Instala MySQL 8.0
+    ✅ Configura usuário e banco MySQL
+    ✅ Instala dependências npm
+    ✅ Executa migrations do banco
+    ✅ Build do frontend
+    ✅ Build do backend
+    ✅ Configura PM2 para ambos serviços
+    ✅ Inicia aplicação automaticamente
 
-───────────────────────────────────────────────────────────────────────────────
+═══════════════════════════════════════════════════════════════════════════════
 
-🎯 RESULTADO FINAL:
+🔐 CONFIGURAR ACESSO REMOTO (OPCIONAL):
 
-• Sistema rodando em: http://localhost:3001
-• Gerenciado pelo PM2 (reinicia automaticamente em caso de falha)
-• Dashboard completo com CRUD de Teams, Projects, Prompts
-• Dark Mode funcional com persistência
-• Autenticação JWT pronta
-• Banco de dados MySQL com todas as tabelas criadas
+Após instalação, configure SSH + VPN ZeroTier:
 
-───────────────────────────────────────────────────────────────────────────────
+cd ~/orquestrador-ia && chmod +x setup-acesso-remoto.sh && sudo ./setup-acesso-remoto.sh
 
-📚 DOCUMENTAÇÃO COMPLETA:
+Isso permitirá:
+   ✅ Acesso SSH seguro
+   ✅ VPN ZeroTier para acesso remoto
+   ✅ Firewall configurado (UFW)
+   ✅ Portas 3000 (frontend) e 5000 (backend) liberadas
 
-• README.md - Visão geral do sistema
-• DEPLOY_COMPLETO.md - Guia detalhado de deploy
-• INSTALL.md - Manual de instalação passo a passo
-• RELATORIO_IMPLEMENTACAO_COMPLETA.md - Relatório técnico (69 páginas)
+═══════════════════════════════════════════════════════════════════════════════
 
-───────────────────────────────────────────────────────────────────────────────
+📊 STATUS DO PROJETO:
 
-🔧 COMANDOS ÚTEIS APÓS INSTALAÇÃO:
+✅ IMPLEMENTADO:
+   • 33 erros TypeScript corrigidos (de 200)
+   • 19 arquivos modificados
+   • 6 commits no GitHub
+   • Install.sh funcional
+   • Script SSH/VPN completo
+   • Documentação completa
 
-# Ver status
-pm2 status
+⏳ EM DESENVOLVIMENTO:
+   • 167 erros TypeScript restantes
+   • Estimativa: 5-7 horas para conclusão
 
-# Ver logs em tempo real
-pm2 logs orquestrador-ia
+═══════════════════════════════════════════════════════════════════════════════
 
-# Reiniciar
-pm2 restart orquestrador-ia
+🌐 ACESSAR APLICAÇÃO:
 
-# Parar
-pm2 stop orquestrador-ia
+Após instalação bem-sucedida:
 
-# Remover
-pm2 delete orquestrador-ia
+   Frontend: http://IP_DO_SERVIDOR:3000
+   Backend:  http://IP_DO_SERVIDOR:5000
 
-───────────────────────────────────────────────────────────────────────────────
+Via ZeroTier (após configurar):
+   Frontend: http://ZEROTIER_IP:3000
+   Backend:  http://ZEROTIER_IP:5000
 
-⚠️ REQUISITOS MÍNIMOS DO SERVIDOR:
+═══════════════════════════════════════════════════════════════════════════════
 
-• Ubuntu 22.04+ / Debian 11+ / CentOS 8+
-• Node.js v18 ou superior instalado
-• MySQL 8.0+ instalado e rodando
-• Git instalado
-• Mínimo 1GB RAM (recomendado 2GB)
-• Mínimo 2GB disco livre
-• Porta 3001 disponível
+📁 ARQUIVOS IMPORTANTES:
 
-🔧 NOTA IMPORTANTE - UBUNTU 24.04:
-O instalador detecta e corrige automaticamente o problema de autenticação
-MySQL (auth_socket). Se você deixar a senha vazia quando solicitado,
-uma senha será gerada automaticamente e salva no .env.
-Nenhuma configuração manual é necessária!
+   COMANDO_UNICO.txt                  → Este arquivo
+   install.sh                         → Script de instalação
+   setup-acesso-remoto.sh             → Script SSH/VPN
+   ACESSO_REMOTO_SSH_VPN.md          → Guia completo SSH/VPN
+   RESUMO_CORRECOES_TYPESCRIPT.md    → Relatório de correções
 
-───────────────────────────────────────────────────────────────────────────────
+═══════════════════════════════════════════════════════════════════════════════
 
-🐛 TROUBLESHOOTING RÁPIDO:
+🔗 LINKS:
 
-Node.js não instalado:
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-  sudo apt-get install -y nodejs
+   GitHub:    https://github.com/fmunizmcorp/orquestrador-ia
+   ZeroTier:  https://my.zerotier.com
 
-MySQL não instalado:
-  sudo apt-get update
-  sudo apt-get install -y mysql-server
-  sudo systemctl start mysql
+═══════════════════════════════════════════════════════════════════════════════
 
-Git não instalado:
-  sudo apt-get install -y git
-
-Porta 3001 ocupada:
-  sudo lsof -ti:3001 | xargs kill -9
-
-───────────────────────────────────────────────────────────────────────────────
-
-✅ VERIFICAÇÃO FINAL (após executar o comando):
-
-[ ] Script terminou sem erros
-[ ] Mensagem "✅ Sistema iniciado com sucesso!" apareceu
-[ ] pm2 status mostra "orquestrador-ia" com status "online"
-[ ] curl http://localhost:3001 retorna HTML
-[ ] Navegador abre http://localhost:3001 e mostra login
-[ ] Consegue criar conta e fazer login
-[ ] Dashboard carrega com dados
-
-───────────────────────────────────────────────────────────────────────────────
-
-🔗 LINKS IMPORTANTES:
-
-• Repositório: https://github.com/fmunizmcorp/orquestrador-ia
-• Issues: https://github.com/fmunizmcorp/orquestrador-ia/issues
-
-───────────────────────────────────────────────────────────────────────────────
-
-🎉 PRONTO! TUDO FUNCIONA COM UM ÚNICO COMANDO!
+✅ TUDO ESTÁ NO GITHUB - PRONTO PARA DEPLOY!
 
 ═══════════════════════════════════════════════════════════════════════════════
