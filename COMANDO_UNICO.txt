@@ -18,8 +18,9 @@ cd ~ && rm -rf orquestrador-ia 2>/dev/null; git clone https://github.com/fmunizm
    ✓ Verifica Node.js, npm, MySQL, Git
    ✓ Instala dependências npm
    ✓ Cria .env com secrets auto-gerados
-   ✓ Solicita credenciais MySQL
-   ✓ Cria database automaticamente
+   ✓ Solicita credenciais MySQL (pressione ENTER para senha vazia)
+   ✓ Cria database automaticamente (usa sudo mysql se necessário)
+   ✓ Gera senha MySQL automaticamente se vazia (Ubuntu 24.04 fix)
    ✓ Executa migrations (todas as tabelas)
    ✓ Compila frontend (React + TypeScript + Vite)
    ✓ Compila backend (Node.js + TypeScript + tRPC)
@@ -76,6 +77,12 @@ pm2 delete orquestrador-ia
 • Mínimo 1GB RAM (recomendado 2GB)
 • Mínimo 2GB disco livre
 • Porta 3001 disponível
+
+🔧 NOTA IMPORTANTE - UBUNTU 24.04:
+O instalador detecta e corrige automaticamente o problema de autenticação
+MySQL (auth_socket). Se você deixar a senha vazia quando solicitado,
+uma senha será gerada automaticamente e salva no .env.
+Nenhuma configuração manual é necessária!
 
 ───────────────────────────────────────────────────────────────────────────────
 
