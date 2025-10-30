@@ -14,6 +14,7 @@ import { executionLogsRouter } from './executionLogsRouter.js';
 import { chatRouter} from './chatRouter.js';
 import { externalAPIAccountsRouter } from './externalAPIAccountsRouter.js';
 import { systemMonitorRouter } from './systemMonitorRouter.js';
+import { puppeteerRouter } from './puppeteerRouter.js';
 
 export const appRouter = router({
   providers: providersRouter,
@@ -31,6 +32,7 @@ export const appRouter = router({
   chat: chatRouter,
   externalAPIAccounts: externalAPIAccountsRouter,
   systemMonitor: systemMonitorRouter,
+  puppeteer: puppeteerRouter,
 });
 
 export type AppRouter = typeof appRouter;
