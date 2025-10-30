@@ -1,5 +1,6 @@
 -- Schema completo do Orquestrador de IAs V3.0
--- 23 tabelas com relacionamentos e dados iniciais
+-- 42 tabelas com relacionamentos e dados iniciais
+-- Atualizado: 2025-10-30 - Revisão Completa
 
 -- ==================================================
 -- 1. TABELA: users
@@ -9,11 +10,18 @@ CREATE TABLE IF NOT EXISTS `users` (
   `openId` VARCHAR(255) NOT NULL UNIQUE COMMENT 'Identificador único obrigatório',
   `name` VARCHAR(255) NOT NULL,
   `email` VARCHAR(255) NOT NULL,
+  `username` VARCHAR(100) COMMENT 'Username único opcional',
+  `passwordHash` TEXT COMMENT 'Hash bcrypt da senha',
+  `lastLoginAt` TIMESTAMP NULL COMMENT 'Último login do usuário',
+  `avatarUrl` VARCHAR(500) COMMENT 'URL do avatar do usuário',
+  `bio` TEXT COMMENT 'Biografia/descrição do usuário',
+  `preferences` JSON COMMENT 'Preferências do usuário',
   `role` ENUM('admin', 'user') DEFAULT 'user',
   `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX `idx_openId` (`openId`),
-  INDEX `idx_email` (`email`)
+  UNIQUE INDEX `idx_openId` (`openId`),
+  INDEX `idx_email` (`email`),
+  INDEX `idx_username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==================================================
@@ -39,8 +47,8 @@ CREATE TABLE IF NOT EXISTS `aiProviders` (
 CREATE TABLE IF NOT EXISTS `aiModels` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `providerId` INT NOT NULL,
-  `name` VARCHAR(255) NOT NULL,
-  `modelId` VARCHAR(255) NOT NULL,
+  `modelName` VARCHAR(255) NOT NULL COMMENT 'Nome descritivo do modelo',
+  `modelId` VARCHAR(255) NOT NULL COMMENT 'ID técnico do modelo',
   `capabilities` JSON COMMENT 'Array de capacidades: ["text", "code", "reasoning"]',
   `contextWindow` INT DEFAULT 4096,
   `isLoaded` BOOLEAN DEFAULT FALSE,
@@ -129,15 +137,23 @@ CREATE TABLE IF NOT EXISTS `externalAPIAccounts` (
 CREATE TABLE IF NOT EXISTS `tasks` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `userId` INT NOT NULL,
+  `projectId` INT,
   `title` VARCHAR(500) NOT NULL,
-  `description` TEXT NOT NULL,
-  `status` ENUM('pending', 'planning', 'executing', 'validating', 'completed', 'failed', 'paused') DEFAULT 'pending',
+  `description` TEXT,
+  `status` ENUM('pending', 'planning', 'in_progress', 'executing', 'validating', 'completed', 'blocked', 'failed', 'cancelled', 'paused') DEFAULT 'pending',
   `priority` ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+  `assignedUserId` INT,
+  `estimatedHours` DECIMAL(8,2),
+  `actualHours` DECIMAL(8,2),
+  `dueDate` TIMESTAMP NULL,
   `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `completedAt` TIMESTAMP NULL,
   FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`projectId`) REFERENCES `projects`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`assignedUserId`) REFERENCES `users`(`id`) ON DELETE SET NULL,
   INDEX `idx_userId` (`userId`),
+  INDEX `idx_projectId` (`projectId`),
   INDEX `idx_status` (`status`),
   INDEX `idx_priority` (`priority`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -154,6 +170,8 @@ CREATE TABLE IF NOT EXISTS `subtasks` (
   `prompt` TEXT NOT NULL,
   `result` LONGTEXT,
   `status` ENUM('pending', 'executing', 'completed', 'failed', 'validating', 'rejected') DEFAULT 'pending',
+  `orderIndex` INT DEFAULT 0,
+  `estimatedDifficulty` ENUM('easy', 'medium', 'hard', 'expert') DEFAULT 'medium',
   `reviewedBy` INT COMMENT 'ID do modelo que fez a validação',
   `reviewNotes` TEXT,
   `completedAt` TIMESTAMP NULL,
@@ -163,7 +181,8 @@ CREATE TABLE IF NOT EXISTS `subtasks` (
   FOREIGN KEY (`assignedModelId`) REFERENCES `aiModels`(`id`) ON DELETE SET NULL,
   FOREIGN KEY (`reviewedBy`) REFERENCES `aiModels`(`id`) ON DELETE SET NULL,
   INDEX `idx_taskId` (`taskId`),
-  INDEX `idx_status` (`status`)
+  INDEX `idx_status` (`status`),
+  INDEX `idx_orderIndex` (`orderIndex`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==================================================
@@ -175,6 +194,10 @@ CREATE TABLE IF NOT EXISTS `chatConversations` (
   `title` VARCHAR(500),
   `aiId` INT COMMENT 'IA especializada utilizada',
   `modelId` INT COMMENT 'Modelo específico utilizado',
+  `systemPrompt` TEXT COMMENT 'Prompt de sistema da conversa',
+  `lastMessageAt` TIMESTAMP NULL COMMENT 'Última mensagem enviada',
+  `messageCount` INT DEFAULT 0 COMMENT 'Contador de mensagens',
+  `isRead` BOOLEAN DEFAULT FALSE COMMENT 'Conversa lida ou não',
   `isActive` BOOLEAN DEFAULT TRUE,
   `metadata` JSON,
   `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -192,13 +215,18 @@ CREATE TABLE IF NOT EXISTS `chatConversations` (
 CREATE TABLE IF NOT EXISTS `chatMessages` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `conversationId` INT NOT NULL,
+  `parentMessageId` INT COMMENT 'ID da mensagem pai para threading',
   `role` ENUM('user', 'assistant', 'system') NOT NULL,
   `content` TEXT NOT NULL,
+  `isEdited` BOOLEAN DEFAULT FALSE COMMENT 'Mensagem editada',
   `attachments` JSON COMMENT 'Array de anexos',
   `metadata` JSON,
   `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`conversationId`) REFERENCES `chatConversations`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`parentMessageId`) REFERENCES `chatMessages`(`id`) ON DELETE SET NULL,
   INDEX `idx_conversationId` (`conversationId`),
+  INDEX `idx_parentMessageId` (`parentMessageId`),
   INDEX `idx_createdAt` (`createdAt`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -627,40 +655,4 @@ CREATE TABLE IF NOT EXISTS `puppeteerSessions` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `sessionId` VARCHAR(255) NOT NULL UNIQUE,
   `userId` INT NOT NULL,
-  `status` ENUM('active', 'closed', 'error') NOT NULL DEFAULT 'active',
-  `config` JSON COMMENT 'headless, proxy, userAgent, etc',
-  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `expiresAt` TIMESTAMP NULL,
-  FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-  INDEX `idx_userId` (`userId`),
-  INDEX `idx_sessionId` (`sessionId`),
-  INDEX `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tabela: puppeteerResults (para armazenar resultados de scraping)
-CREATE TABLE IF NOT EXISTS `puppeteerResults` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `sessionId` VARCHAR(255) NOT NULL,
-  `resultType` ENUM('screenshot', 'pdf', 'data', 'html') NOT NULL,
-  `data` LONGTEXT,
-  `url` VARCHAR(1000),
-  `metadata` JSON,
-  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`sessionId`) REFERENCES `puppeteerSessions`(`sessionId`) ON DELETE CASCADE,
-  INDEX `idx_sessionId` (`sessionId`),
-  INDEX `idx_resultType` (`resultType`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ==================================================
--- DADOS INICIAIS PARA TRAINING
--- ==================================================
-
--- Dataset de exemplo
-INSERT INTO `trainingDatasets` (`userId`, `name`, `description`, `datasetType`, `format`, `recordCount`, `isActive`) VALUES
-(1, 'Dataset de Exemplo - Conversação', 'Dataset de exemplo com conversas em português', 'chat', 'jsonl', 100, 1)
-ON DUPLICATE KEY UPDATE `name` = `name`;
-
--- ==================================================
--- FIM DO SCHEMA
--- ==================================================
+  `status` E

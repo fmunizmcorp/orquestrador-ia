@@ -9,12 +9,19 @@ export const users = mysqlTable('users', {
   openId: varchar('openId', { length: 255 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull(),
+  username: varchar('username', { length: 100 }),
+  passwordHash: text('passwordHash'),
+  lastLoginAt: timestamp('lastLoginAt'),
+  avatarUrl: varchar('avatarUrl', { length: 500 }),
+  bio: text('bio'),
+  preferences: json('preferences'),
   role: mysqlEnum('role', ['admin', 'user']).default('user'),
   createdAt: timestamp('createdAt').defaultNow(),
   updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
 }, (table) => ({
   openIdIdx: uniqueIndex('idx_openId').on(table.openId),
   emailIdx: index('idx_email').on(table.email),
+  usernameIdx: index('idx_username').on(table.username),
 }));
 
 // ==================================================
@@ -41,7 +48,7 @@ export const aiProviders = mysqlTable('aiProviders', {
 export const aiModels = mysqlTable('aiModels', {
   id: int('id').primaryKey().autoincrement(),
   providerId: int('providerId').notNull().references(() => aiProviders.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 255 }).notNull(),
+  modelName: varchar('modelName', { length: 255 }).notNull(),
   modelId: varchar('modelId', { length: 255 }).notNull(),
   capabilities: json('capabilities').$type<string[]>(),
   contextWindow: int('contextWindow').default(4096),
@@ -129,15 +136,22 @@ export const externalAPIAccounts = mysqlTable('externalAPIAccounts', {
 export const tasks = mysqlTable('tasks', {
   id: int('id').primaryKey().autoincrement(),
   userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  projectId: int('projectId').references(() => projects.id, { onDelete: 'set null' }),
+  assignedUserId: int('assignedUserId').references(() => users.id, { onDelete: 'set null' }),
   title: varchar('title', { length: 500 }).notNull(),
   description: text('description').notNull(),
-  status: mysqlEnum('status', ['pending', 'planning', 'executing', 'validating', 'completed', 'failed', 'paused']).default('pending'),
+  status: mysqlEnum('status', ['pending', 'planning', 'in_progress', 'executing', 'validating', 'completed', 'blocked', 'failed', 'cancelled', 'paused']).default('pending'),
   priority: mysqlEnum('priority', ['low', 'medium', 'high', 'urgent']).default('medium'),
+  estimatedHours: decimal('estimatedHours', { precision: 8, scale: 2 }),
+  actualHours: decimal('actualHours', { precision: 8, scale: 2 }),
+  dueDate: timestamp('dueDate'),
   createdAt: timestamp('createdAt').defaultNow(),
   updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
   completedAt: timestamp('completedAt'),
 }, (table) => ({
   userIdIdx: index('idx_userId').on(table.userId),
+  projectIdIdx: index('idx_projectId').on(table.projectId),
+  assignedUserIdIdx: index('idx_assignedUserId').on(table.assignedUserId),
   statusIdx: index('idx_status').on(table.status),
   priorityIdx: index('idx_priority').on(table.priority),
 }));
@@ -152,8 +166,10 @@ export const subtasks = mysqlTable('subtasks', {
   title: varchar('title', { length: 500 }).notNull(),
   description: text('description'),
   prompt: text('prompt').notNull(),
-  result: text('result'),
+  result: text('result', { length: 'long' }),
   status: mysqlEnum('status', ['pending', 'executing', 'completed', 'failed', 'validating', 'rejected']).default('pending'),
+  orderIndex: int('orderIndex').default(0),
+  estimatedDifficulty: mysqlEnum('estimatedDifficulty', ['easy', 'medium', 'hard', 'expert']).default('medium'),
   reviewedBy: int('reviewedBy').references(() => aiModels.id, { onDelete: 'set null' }),
   reviewNotes: text('reviewNotes'),
   completedAt: timestamp('completedAt'),
@@ -162,6 +178,7 @@ export const subtasks = mysqlTable('subtasks', {
 }, (table) => ({
   taskIdIdx: index('idx_taskId').on(table.taskId),
   statusIdx: index('idx_status').on(table.status),
+  orderIndexIdx: index('idx_orderIndex').on(table.orderIndex),
 }));
 
 // ==================================================
@@ -173,6 +190,10 @@ export const chatConversations = mysqlTable('chatConversations', {
   title: varchar('title', { length: 500 }),
   aiId: int('aiId').references(() => specializedAIs.id, { onDelete: 'set null' }),
   modelId: int('modelId').references(() => aiModels.id, { onDelete: 'set null' }),
+  systemPrompt: text('systemPrompt'),
+  lastMessageAt: timestamp('lastMessageAt'),
+  messageCount: int('messageCount').default(0),
+  isRead: boolean('isRead').default(false),
   isActive: boolean('isActive').default(true),
   metadata: json('metadata'),
   createdAt: timestamp('createdAt').defaultNow(),
@@ -188,13 +209,17 @@ export const chatConversations = mysqlTable('chatConversations', {
 export const chatMessages = mysqlTable('chatMessages', {
   id: int('id').primaryKey().autoincrement(),
   conversationId: int('conversationId').notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  parentMessageId: int('parentMessageId').references(() => chatMessages.id, { onDelete: 'set null' }),
   role: mysqlEnum('role', ['user', 'assistant', 'system']).notNull(),
   content: text('content').notNull(),
+  isEdited: boolean('isEdited').default(false),
   attachments: json('attachments'),
   metadata: json('metadata'),
   createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
 }, (table) => ({
   conversationIdIdx: index('idx_conversationId').on(table.conversationId),
+  parentMessageIdIdx: index('idx_parentMessageId').on(table.parentMessageId),
   createdAtIdx: index('idx_createdAt').on(table.createdAt),
 }));
 
@@ -662,3 +687,374 @@ export const puppeteerResultsRelations = relations(puppeteerResults, ({ one }) =
     references: [puppeteerSessions.sessionId],
   }),
 }));
+
+// ==================================================
+// TABELAS ADICIONAIS - TEAMS & PROJECTS
+// ==================================================
+
+export const teams = mysqlTable('teams', {
+  id: int('id').primaryKey().autoincrement(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  ownerId: int('ownerId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  ownerIdIdx: index('idx_ownerId').on(table.ownerId),
+}));
+
+export const teamMembers = mysqlTable('teamMembers', {
+  id: int('id').primaryKey().autoincrement(),
+  teamId: int('teamId').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: mysqlEnum('role', ['owner', 'admin', 'member', 'viewer']).default('member'),
+  joinedAt: timestamp('joinedAt').defaultNow(),
+}, (table) => ({
+  teamUserIdx: uniqueIndex('idx_team_user').on(table.teamId, table.userId),
+  teamIdIdx: index('idx_teamId').on(table.teamId),
+  userIdIdx: index('idx_userId').on(table.userId),
+}));
+
+export const projects = mysqlTable('projects', {
+  id: int('id').primaryKey().autoincrement(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  teamId: int('teamId').references(() => teams.id, { onDelete: 'set null' }),
+  status: mysqlEnum('status', ['planning', 'active', 'on_hold', 'completed', 'archived']).default('planning'),
+  startDate: timestamp('startDate'),
+  endDate: timestamp('endDate'),
+  budget: decimal('budget', { precision: 12, scale: 2 }),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  teamIdIdx: index('idx_teamId').on(table.teamId),
+  statusIdx: index('idx_status').on(table.status),
+}));
+
+export const taskDependencies = mysqlTable('taskDependencies', {
+  id: int('id').primaryKey().autoincrement(),
+  taskId: int('taskId').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+  dependsOnTaskId: int('dependsOnTaskId').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+  dependencyType: mysqlEnum('dependencyType', ['finish_to_start', 'start_to_start', 'finish_to_finish', 'start_to_finish']).default('finish_to_start'),
+  createdAt: timestamp('createdAt').defaultNow(),
+}, (table) => ({
+  taskDependencyIdx: uniqueIndex('idx_task_dependency').on(table.taskId, table.dependsOnTaskId),
+  taskIdIdx: index('idx_taskId').on(table.taskId),
+  dependsOnTaskIdIdx: index('idx_dependsOnTaskId').on(table.dependsOnTaskId),
+}));
+
+// ==================================================
+// TABELAS DE ORQUESTRAÇÃO - CRÍTICAS
+// ==================================================
+
+export const orchestrationLogs = mysqlTable('orchestrationLogs', {
+  id: int('id').primaryKey().autoincrement(),
+  taskId: int('taskId').references(() => tasks.id, { onDelete: 'cascade' }),
+  subtaskId: int('subtaskId').references(() => subtasks.id, { onDelete: 'cascade' }),
+  aiId: int('aiId').references(() => specializedAIs.id, { onDelete: 'set null' }),
+  action: varchar('action', { length: 100 }).notNull(),
+  input: text('input'),
+  output: text('output'),
+  executionTime: int('executionTime'),
+  status: mysqlEnum('status', ['success', 'failed', 'timeout', 'cancelled']).default('success'),
+  createdAt: timestamp('createdAt').defaultNow(),
+}, (table) => ({
+  taskIdIdx: index('idx_taskId').on(table.taskId),
+  subtaskIdIdx: index('idx_subtaskId').on(table.subtaskId),
+  aiIdIdx: index('idx_aiId').on(table.aiId),
+  actionIdx: index('idx_action').on(table.action),
+}));
+
+export const crossValidations = mysqlTable('crossValidations', {
+  id: int('id').primaryKey().autoincrement(),
+  subtaskId: int('subtaskId').notNull().references(() => subtasks.id, { onDelete: 'cascade' }),
+  validatorAiId: int('validatorAiId').notNull().references(() => specializedAIs.id, { onDelete: 'cascade' }),
+  score: decimal('score', { precision: 5, scale: 2 }).notNull(),
+  approved: boolean('approved').notNull(),
+  feedback: text('feedback'),
+  divergence: decimal('divergence', { precision: 5, scale: 2 }),
+  createdAt: timestamp('createdAt').defaultNow(),
+}, (table) => ({
+  subtaskIdIdx: index('idx_subtaskId').on(table.subtaskId),
+  validatorAiIdIdx: index('idx_validatorAiId').on(table.validatorAiId),
+  approvedIdx: index('idx_approved').on(table.approved),
+}));
+
+export const hallucinationDetections = mysqlTable('hallucinationDetections', {
+  id: int('id').primaryKey().autoincrement(),
+  subtaskId: int('subtaskId').notNull().references(() => subtasks.id, { onDelete: 'cascade' }),
+  detectedAt: timestamp('detectedAt').defaultNow(),
+  confidenceScore: decimal('confidenceScore', { precision: 5, scale: 2 }).notNull(),
+  indicators: json('indicators'),
+  wasRecovered: boolean('wasRecovered').default(false),
+  recoveryMethod: varchar('recoveryMethod', { length: 100 }),
+  createdAt: timestamp('createdAt').defaultNow(),
+}, (table) => ({
+  subtaskIdIdx: index('idx_subtaskId').on(table.subtaskId),
+  wasRecoveredIdx: index('idx_wasRecovered').on(table.wasRecovered),
+}));
+
+export const executionResults = mysqlTable('executionResults', {
+  id: int('id').primaryKey().autoincrement(),
+  subtaskId: int('subtaskId').notNull().references(() => subtasks.id, { onDelete: 'cascade' }),
+  executorAiId: int('executorAiId').notNull().references(() => specializedAIs.id, { onDelete: 'cascade' }),
+  result: text('result').notNull(),
+  score: decimal('score', { precision: 5, scale: 2 }),
+  metrics: json('metrics'),
+  createdAt: timestamp('createdAt').defaultNow(),
+}, (table) => ({
+  subtaskIdIdx: index('idx_subtaskId').on(table.subtaskId),
+  executorAiIdIdx: index('idx_executorAiId').on(table.executorAiId),
+}));
+
+// ==================================================
+// TABELAS DE CHAT AVANÇADO
+// ==================================================
+
+export const messageAttachments = mysqlTable('messageAttachments', {
+  id: int('id').primaryKey().autoincrement(),
+  messageId: int('messageId').notNull().references(() => chatMessages.id, { onDelete: 'cascade' }),
+  fileName: varchar('fileName', { length: 500 }).notNull(),
+  fileType: varchar('fileType', { length: 100 }),
+  fileUrl: varchar('fileUrl', { length: 1000 }).notNull(),
+  fileSize: bigint('fileSize', { mode: 'number' }),
+  createdAt: timestamp('createdAt').defaultNow(),
+}, (table) => ({
+  messageIdIdx: index('idx_messageId').on(table.messageId),
+}));
+
+export const messageReactions = mysqlTable('messageReactions', {
+  id: int('id').primaryKey().autoincrement(),
+  messageId: int('messageId').notNull().references(() => chatMessages.id, { onDelete: 'cascade' }),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  emoji: varchar('emoji', { length: 10 }).notNull(),
+  createdAt: timestamp('createdAt').defaultNow(),
+}, (table) => ({
+  messageUserEmojiIdx: uniqueIndex('idx_message_user_emoji').on(table.messageId, table.userId, table.emoji),
+  messageIdIdx: index('idx_messageId').on(table.messageId),
+}));
+
+// ==================================================
+// TABELAS DE MONITORAMENTO
+// ==================================================
+
+export const systemMetrics = mysqlTable('systemMetrics', {
+  id: int('id').primaryKey().autoincrement(),
+  cpuUsage: decimal('cpuUsage', { precision: 5, scale: 2 }).notNull(),
+  memoryUsage: decimal('memoryUsage', { precision: 5, scale: 2 }).notNull(),
+  diskUsage: decimal('diskUsage', { precision: 5, scale: 2 }).notNull(),
+  activeConnections: int('activeConnections').default(0),
+  timestamp: timestamp('timestamp').defaultNow(),
+}, (table) => ({
+  timestampIdx: index('idx_timestamp').on(table.timestamp),
+}));
+
+export const apiUsage = mysqlTable('apiUsage', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').references(() => users.id, { onDelete: 'set null' }),
+  endpoint: varchar('endpoint', { length: 255 }).notNull(),
+  method: varchar('method', { length: 10 }).notNull(),
+  statusCode: int('statusCode').notNull(),
+  responseDuration: int('responseDuration'),
+  timestamp: timestamp('timestamp').defaultNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  endpointIdx: index('idx_endpoint').on(table.endpoint),
+  timestampIdx: index('idx_timestamp').on(table.timestamp),
+}));
+
+export const errorLogs = mysqlTable('errorLogs', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').references(() => users.id, { onDelete: 'set null' }),
+  level: mysqlEnum('level', ['error', 'warning', 'critical']).default('error'),
+  message: text('message').notNull(),
+  stack: text('stack'),
+  metadata: json('metadata'),
+  timestamp: timestamp('timestamp').defaultNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  levelIdx: index('idx_level').on(table.level),
+  timestampIdx: index('idx_timestamp').on(table.timestamp),
+}));
+
+export const auditLogs = mysqlTable('auditLogs', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').references(() => users.id, { onDelete: 'set null' }),
+  action: varchar('action', { length: 100 }).notNull(),
+  resourceType: varchar('resourceType', { length: 100 }),
+  resourceId: int('resourceId'),
+  changes: json('changes'),
+  ipAddress: varchar('ipAddress', { length: 45 }),
+  userAgent: text('userAgent'),
+  timestamp: timestamp('timestamp').defaultNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  actionIdx: index('idx_action').on(table.action),
+  timestampIdx: index('idx_timestamp').on(table.timestamp),
+}));
+
+// ==================================================
+// TABELAS DE SERVIÇOS EXTERNOS
+// ==================================================
+
+export const externalServices = mysqlTable('externalServices', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  serviceName: varchar('serviceName', { length: 100 }).notNull(),
+  config: json('config'),
+  isActive: boolean('isActive').default(true),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  serviceNameIdx: index('idx_serviceName').on(table.serviceName),
+}));
+
+export const oauthTokens = mysqlTable('oauthTokens', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  serviceId: int('serviceId').notNull().references(() => externalServices.id, { onDelete: 'cascade' }),
+  accessToken: text('accessToken').notNull(),
+  refreshToken: text('refreshToken'),
+  expiresAt: timestamp('expiresAt').notNull(),
+  scope: text('scope'),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  serviceIdIdx: index('idx_serviceId').on(table.serviceId),
+}));
+
+export const apiCredentials = mysqlTable('apiCredentials', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  serviceName: varchar('serviceName', { length: 100 }).notNull(),
+  credentialName: varchar('credentialName', { length: 255 }).notNull(),
+  encryptedData: text('encryptedData').notNull(),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  serviceNameIdx: index('idx_serviceName').on(table.serviceName),
+}));
+
+// ==================================================
+// TABELAS DE PROMPTS
+// ==================================================
+
+export const prompts = mysqlTable('prompts', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  content: text('content').notNull(),
+  category: varchar('category', { length: 100 }),
+  tags: json('tags').$type<string[]>(),
+  variables: json('variables'),
+  isPublic: boolean('isPublic').default(false),
+  useCount: int('useCount').default(0),
+  currentVersion: int('currentVersion').default(1),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  categoryIdx: index('idx_category').on(table.category),
+  isPublicIdx: index('idx_isPublic').on(table.isPublic),
+}));
+
+export const promptVersions = mysqlTable('promptVersions', {
+  id: int('id').primaryKey().autoincrement(),
+  promptId: int('promptId').notNull().references(() => prompts.id, { onDelete: 'cascade' }),
+  version: int('version').notNull(),
+  content: text('content').notNull(),
+  changeDescription: text('changeDescription'),
+  createdByUserId: int('createdByUserId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('createdAt').defaultNow(),
+}, (table) => ({
+  promptVersionIdx: uniqueIndex('idx_prompt_version').on(table.promptId, table.version),
+  promptIdIdx: index('idx_promptId').on(table.promptId),
+}));
+
+// ==================================================
+// RELATIONS ADICIONAIS
+// ==================================================
+
+export const teamsRelations = relations(teams, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [teams.ownerId],
+    references: [users.id],
+  }),
+  members: many(teamMembers),
+  projects: many(projects),
+}));
+
+export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamMembers.teamId],
+    references: [teams.id],
+  }),
+  user: one(users, {
+    fields: [teamMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  team: one(teams, {
+    fields: [projects.teamId],
+    references: [teams.id],
+  }),
+}));
+
+export const orchestrationLogsRelations = relations(orchestrationLogs, ({ one }) => ({
+  task: one(tasks, {
+    fields: [orchestrationLogs.taskId],
+    references: [tasks.id],
+  }),
+  subtask: one(subtasks, {
+    fields: [orchestrationLogs.subtaskId],
+    references: [subtasks.id],
+  }),
+  ai: one(specializedAIs, {
+    fields: [orchestrationLogs.aiId],
+    references: [specializedAIs.id],
+  }),
+}));
+
+export const crossValidationsRelations = relations(crossValidations, ({ one }) => ({
+  subtask: one(subtasks, {
+    fields: [crossValidations.subtaskId],
+    references: [subtasks.id],
+  }),
+  validatorAi: one(specializedAIs, {
+    fields: [crossValidations.validatorAiId],
+    references: [specializedAIs.id],
+  }),
+}));
+
+export const promptsRelations = relations(prompts, ({ one, many }) => ({
+  user: one(users, {
+    fields: [prompts.userId],
+    references: [users.id],
+  }),
+  versions: many(promptVersions),
+}));
+
+export const promptVersionsRelations = relations(promptVersions, ({ one }) => ({
+  prompt: one(prompts, {
+    fields: [promptVersions.promptId],
+    references: [prompts.id],
+  }),
+  createdBy: one(users, {
+    fields: [promptVersions.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+// ==================================================
+// ALIASES FOR ROUTER COMPATIBILITY
+// ==================================================
+
+// Chat router compatibility
+export const conversations = chatConversations;
+export const messages = chatMessages;

@@ -10,6 +10,12 @@ export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/trpc`,
+      headers() {
+        const token = localStorage.getItem('auth_token');
+        return {
+          authorization: token ? `Bearer ${token}` : '',
+        };
+      },
     }),
   ],
 });
