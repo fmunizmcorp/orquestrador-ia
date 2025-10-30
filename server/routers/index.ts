@@ -18,6 +18,7 @@ import { puppeteerRouter } from './puppeteerRouter.js';
 import { githubRouter } from './githubRouter.js';
 import { gmailRouter } from './gmailRouter.js';
 import { driveRouter } from './driveRouter.js';
+import { slackRouter } from './slackRouter.js';
 
 export const appRouter = router({
   providers: providersRouter,
@@ -39,6 +40,7 @@ export const appRouter = router({
   github: githubRouter,
   gmail: gmailRouter,
   drive: driveRouter,
+  slack: slackRouter,
 });
 
 export type AppRouter = typeof appRouter;
