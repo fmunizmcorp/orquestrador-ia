@@ -15,6 +15,7 @@ import { chatRouter} from './chatRouter.js';
 import { externalAPIAccountsRouter } from './externalAPIAccountsRouter.js';
 import { systemMonitorRouter } from './systemMonitorRouter.js';
 import { puppeteerRouter } from './puppeteerRouter.js';
+import { githubRouter } from './githubRouter.js';
 
 export const appRouter = router({
   providers: providersRouter,
@@ -33,6 +34,7 @@ export const appRouter = router({
   externalAPIAccounts: externalAPIAccountsRouter,
   systemMonitor: systemMonitorRouter,
   puppeteer: puppeteerRouter,
+  github: githubRouter,
 });
 
 export type AppRouter = typeof appRouter;
