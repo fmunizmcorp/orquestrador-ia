@@ -13,6 +13,7 @@ import { knowledgeSourcesRouter } from './knowledgeSourcesRouter.js';
 import { executionLogsRouter } from './executionLogsRouter.js';
 import { chatRouter} from './chatRouter.js';
 import { externalAPIAccountsRouter } from './externalAPIAccountsRouter.js';
+import { systemMonitorRouter } from './systemMonitorRouter.js';
 
 export const appRouter = router({
   providers: providersRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
   executionLogs: executionLogsRouter,
   chat: chatRouter,
   externalAPIAccounts: externalAPIAccountsRouter,
+  systemMonitor: systemMonitorRouter,
 });
 
 export type AppRouter = typeof appRouter;

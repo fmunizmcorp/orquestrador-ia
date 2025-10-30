@@ -59,6 +59,19 @@ interface ResourceLimits {
   diskMax: number;
 }
 
+interface MetricsHistory {
+  timestamp: number;
+  metrics: SystemMetrics;
+}
+
+interface Alert {
+  id: string;
+  level: 'warning' | 'critical';
+  message: string;
+  timestamp: number;
+  resolved: boolean;
+}
+
 class SystemMonitorService {
   private readonly DEFAULT_LIMITS: ResourceLimits = {
     cpuMax: 80,
@@ -66,6 +79,14 @@ class SystemMonitorService {
     vramMax: 95,
     diskMax: 85,
   };
+
+  // Histórico de métricas (últimos 100 registros)
+  private metricsHistory: MetricsHistory[] = [];
+  private readonly MAX_HISTORY = 100;
+
+  // Alertas ativos
+  private alerts = new Map<string, Alert>();
+  private alertIdCounter = 0;
 
   /**
    * Coleta métricas completas do sistema
@@ -156,7 +177,7 @@ class SystemMonitorService {
         memUsage: lmstudioProc?.mem,
       };
 
-      return {
+      const metrics = {
         cpu,
         memory,
         gpu,
@@ -164,10 +185,190 @@ class SystemMonitorService {
         network,
         processes: processInfo,
       };
+
+      // Adicionar ao histórico
+      this.addToHistory(metrics);
+
+      // Verificar e criar alertas
+      await this.checkAndCreateAlerts(metrics);
+
+      return metrics;
     } catch (error) {
       console.error('Erro ao coletar métricas do sistema:', error);
       throw error;
     }
+  }
+
+  /**
+   * Adicionar métricas ao histórico
+   */
+  private addToHistory(metrics: SystemMetrics): void {
+    this.metricsHistory.push({
+      timestamp: Date.now(),
+      metrics,
+    });
+
+    // Manter apenas MAX_HISTORY
+    if (this.metricsHistory.length > this.MAX_HISTORY) {
+      this.metricsHistory.shift();
+    }
+  }
+
+  /**
+   * Obter histórico de métricas
+   */
+  getHistory(minutes?: number): MetricsHistory[] {
+    if (!minutes) {
+      return this.metricsHistory;
+    }
+
+    const cutoff = Date.now() - (minutes * 60 * 1000);
+    return this.metricsHistory.filter(h => h.timestamp >= cutoff);
+  }
+
+  /**
+   * Calcular médias do histórico
+   */
+  getAverages(minutes: number = 10): {
+    cpu: number;
+    memory: number;
+    disk: number;
+    gpu: number[];
+  } {
+    const history = this.getHistory(minutes);
+    
+    if (history.length === 0) {
+      return { cpu: 0, memory: 0, disk: 0, gpu: [] };
+    }
+
+    const cpuSum = history.reduce((sum, h) => sum + h.metrics.cpu.usage, 0);
+    const memSum = history.reduce((sum, h) => sum + h.metrics.memory.usagePercent, 0);
+    const diskSum = history.reduce((sum, h) => sum + h.metrics.disk.usagePercent, 0);
+
+    const gpuCount = history[0].metrics.gpu.length;
+    const gpuSums = new Array(gpuCount).fill(0);
+    
+    history.forEach(h => {
+      h.metrics.gpu.forEach((gpu, idx) => {
+        gpuSums[idx] += gpu.vramUsagePercent;
+      });
+    });
+
+    return {
+      cpu: cpuSum / history.length,
+      memory: memSum / history.length,
+      disk: diskSum / history.length,
+      gpu: gpuSums.map(sum => sum / history.length),
+    };
+  }
+
+  /**
+   * Verificar e criar alertas
+   */
+  private async checkAndCreateAlerts(metrics: SystemMetrics): Promise<void> {
+    const limits = this.DEFAULT_LIMITS;
+
+    // CPU
+    if (metrics.cpu.usage > limits.cpuMax) {
+      this.createAlert('critical', `CPU em ${metrics.cpu.usage.toFixed(1)}%`);
+    } else if (metrics.cpu.usage > limits.cpuMax - 10) {
+      this.createAlert('warning', `CPU elevada: ${metrics.cpu.usage.toFixed(1)}%`);
+    } else {
+      this.resolveAlert('cpu');
+    }
+
+    // RAM
+    if (metrics.memory.usagePercent > limits.ramMax) {
+      this.createAlert('critical', `RAM em ${metrics.memory.usagePercent.toFixed(1)}%`);
+    } else if (metrics.memory.usagePercent > limits.ramMax - 10) {
+      this.createAlert('warning', `RAM elevada: ${metrics.memory.usagePercent.toFixed(1)}%`);
+    } else {
+      this.resolveAlert('memory');
+    }
+
+    // GPU
+    metrics.gpu.forEach((gpu, idx) => {
+      const key = `gpu-${idx}`;
+      if (gpu.vramUsagePercent > limits.vramMax) {
+        this.createAlert('critical', `VRAM GPU ${idx} em ${gpu.vramUsagePercent.toFixed(1)}%`, key);
+      } else if (gpu.vramUsagePercent > limits.vramMax - 5) {
+        this.createAlert('warning', `VRAM GPU ${idx} elevada: ${gpu.vramUsagePercent.toFixed(1)}%`, key);
+      } else {
+        this.resolveAlert(key);
+      }
+    });
+
+    // Disco
+    if (metrics.disk.usagePercent > limits.diskMax) {
+      this.createAlert('critical', `Disco em ${metrics.disk.usagePercent.toFixed(1)}%`);
+    } else if (metrics.disk.usagePercent > limits.diskMax - 10) {
+      this.createAlert('warning', `Disco elevado: ${metrics.disk.usagePercent.toFixed(1)}%`);
+    } else {
+      this.resolveAlert('disk');
+    }
+  }
+
+  /**
+   * Criar alerta
+   */
+  private createAlert(level: 'warning' | 'critical', message: string, key?: string): void {
+    const alertKey = key || message.split(' ')[0].toLowerCase();
+    
+    // Se já existe, apenas atualizar timestamp
+    if (this.alerts.has(alertKey)) {
+      const alert = this.alerts.get(alertKey)!;
+      alert.timestamp = Date.now();
+      alert.resolved = false;
+      alert.message = message;
+      alert.level = level;
+      return;
+    }
+
+    // Criar novo
+    this.alerts.set(alertKey, {
+      id: `alert-${this.alertIdCounter++}`,
+      level,
+      message,
+      timestamp: Date.now(),
+      resolved: false,
+    });
+
+    console.log(`⚠️  [${level.toUpperCase()}] ${message}`);
+  }
+
+  /**
+   * Resolver alerta
+   */
+  private resolveAlert(key: string): void {
+    if (this.alerts.has(key)) {
+      const alert = this.alerts.get(key)!;
+      alert.resolved = true;
+      
+      // Remover após 5 minutos resolvido
+      setTimeout(() => {
+        this.alerts.delete(key);
+      }, 300000);
+    }
+  }
+
+  /**
+   * Obter alertas ativos
+   */
+  getAlerts(includeResolved: boolean = false): Alert[] {
+    const alerts = Array.from(this.alerts.values());
+    
+    if (includeResolved) {
+      return alerts;
+    }
+
+    return alerts.filter(a => !a.resolved);
+  }
+
+  /**
+   * Limpar todos os alertas
+   */
+  clearAlerts(): void {
+    this.alerts.clear();
   }
 
   /**
