@@ -26,15 +26,19 @@ import {
   Plug,
   User,
   LogOut,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { MobileMenu } from './MobileMenu';
 import { CollaborationPanel } from './CollaborationPanel';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme, isDark } = useTheme();
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -125,6 +129,16 @@ const Layout = () => {
                     {user?.email}
                   </p>
                 </div>
+              </div>
+              <div className="flex space-x-2 mb-2">
+                <button
+                  onClick={toggleTheme}
+                  className="flex-1 flex items-center justify-center px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-gray-300 transition-colors"
+                  title={isDark ? 'Modo Claro' : 'Modo Escuro'}
+                >
+                  {isDark ? <Sun size={16} className="mr-2" /> : <Moon size={16} className="mr-2" />}
+                  {isDark ? 'Claro' : 'Escuro'}
+                </button>
               </div>
               <div className="flex space-x-2">
                 <Link

@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
@@ -33,8 +34,9 @@ import { WorkflowBuilder } from './pages/WorkflowBuilder';
 
 function App() {
   return (
-    <AuthProvider>
-      <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <Routes>
         {/* Rotas Públicas (sem Layout) */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -71,7 +73,8 @@ function App() {
           </Route>
         </Route>
       </Routes>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

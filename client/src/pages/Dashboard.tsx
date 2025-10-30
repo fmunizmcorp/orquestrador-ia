@@ -1,406 +1,377 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { trpc } from '../lib/trpc';
-import { 
-  Activity, Brain, CheckCircle, AlertCircle, Cpu, HardDrive, 
-  Server, TrendingUp, AlertTriangle, Zap
-} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
-// Componente de cartão de métrica
-const MetricCard = ({ 
-  title, 
-  value, 
-  icon: Icon, 
-  color,
-  subtitle 
-}: {
+interface StatsCardProps {
   title: string;
-  value: string | number;
-  icon: any;
+  value: number | string;
+  icon: string;
   color: string;
-  subtitle?: string;
-}) => (
-  <div className="card">
+  trend?: number;
+}
+
+const StatsCard = ({ title, value, icon, color, trend }: StatsCardProps) => (
+  <div className="bg-white rounded-lg shadow p-6">
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-gray-400 text-sm">{title}</p>
-        <p className={`text-3xl font-bold ${color}`}>{value}</p>
-        {subtitle && <p className="text-gray-500 text-xs mt-1">{subtitle}</p>}
+        <p className="text-sm font-medium text-gray-600">{title}</p>
+        <p className={`text-3xl font-bold ${color} mt-2`}>{value}</p>
+        {trend !== undefined && (
+          <p className={`text-sm mt-2 ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}% este mês
+          </p>
+        )}
       </div>
-      <Icon className={color.replace('text-', 'text-')} size={40} />
+      <div className={`text-4xl ${color.replace('text-', 'opacity-20 ')}`}>
+        {icon}
+      </div>
     </div>
   </div>
 );
 
-// Componente de barra de progresso
-const ProgressBar = ({ 
-  label, 
-  value, 
-  max = 100,
-  color = 'blue',
-  showPercentage = true
-}: {
-  label: string;
-  value: number;
-  max?: number;
-  color?: 'blue' | 'green' | 'yellow' | 'red';
-  showPercentage?: boolean;
-}) => {
-  const percentage = (value / max) * 100;
-  
-  const colorClasses = {
-    blue: 'bg-blue-600',
-    green: 'bg-green-600',
-    yellow: 'bg-yellow-600',
-    red: 'bg-red-600',
-  };
-
-  return (
-    <div className="mb-4">
-      <div className="flex justify-between mb-2">
-        <span className="text-sm text-gray-300">{label}</span>
-        {showPercentage && (
-          <span className="text-sm text-gray-400">{value.toFixed(1)}%</span>
-        )}
-      </div>
-      <div className="w-full bg-gray-700 rounded-full h-2.5">
-        <div 
-          className={`${colorClasses[color]} h-2.5 rounded-full transition-all duration-300`}
-          style={{ width: `${Math.min(percentage, 100)}%` }}
-        />
-      </div>
-    </div>
-  );
-};
-
-// Componente de alerta
-const AlertBadge = ({ 
-  level, 
-  message 
-}: { 
-  level: 'warning' | 'critical'; 
+interface ActivityItem {
+  id: number;
+  type: string;
   message: string;
-}) => {
-  const colors = {
-    warning: 'bg-yellow-600/20 text-yellow-400 border-yellow-600',
-    critical: 'bg-red-600/20 text-red-400 border-red-600',
-  };
+  timestamp: Date;
+  user?: string;
+}
 
-  return (
-    <div className={`px-3 py-2 rounded-lg border ${colors[level]} flex items-center gap-2 text-sm`}>
-      <AlertTriangle size={16} />
-      <span>{message}</span>
-    </div>
-  );
-};
-
-const Dashboard = () => {
-  // Estados
+export default function Dashboard() {
+  const { user } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [wsMetrics, setWsMetrics] = useState<any>(null);
-  const [wsConnected, setWsConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
 
-  // Queries (fallback se WebSocket falhar)
-  const { data: taskStats } = trpc.tasks.stats.useQuery();
-  const { data: currentMetrics?, refetch: refetchMetrics } = trpc.systemMonitor.getMetrics.useQuery(
-    undefined,
-    { refetchInterval: wsConnected ? false : 10000 } // Só polling se WS desconectado
-  );
-  const { data: alerts } = trpc.systemMonitor.getAlerts.useQuery(
-    { includeResolved: false },
-    { refetchInterval: 10000 }
-  );
-  const { data: averages } = trpc.systemMonitor.getAverages.useQuery(
-    { minutes: 10 },
-    { refetchInterval: 10000 }
-  );
+  // Queries
+  const { data: teamsData } = trpc.teams.list.useQuery({ limit: 100, offset: 0 });
+  const { data: projectsData } = trpc.projects.list.useQuery({ limit: 100, offset: 0 });
+  const { data: promptsData } = trpc.prompts.list.useQuery({ 
+    userId: user?.id, 
+    limit: 100, 
+    offset: 0 
+  });
+  const { data: metricsData } = trpc.monitoring.getCurrentMetrics.useQuery();
+  const { data: serviceStatus } = trpc.monitoring.getServiceStatus.useQuery();
 
-  // WebSocket para métricas em tempo real
-  useEffect(() => {
-    const ws = new WebSocket('ws://localhost:3001/ws');
-
-    ws.onopen = () => {
-      console.log('✅ WebSocket Dashboard conectado');
-      setWsConnected(true);
-      
-      // Inscrever em métricas
-      ws.send(JSON.stringify({
-        type: 'monitoring:subscribe',
-      }));
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        
-        if (message.type === 'metrics') {
-          setWsMetrics(message.data);
-        }
-      } catch (error) {
-        console.error('Erro ao processar mensagem WebSocket:', error);
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error('❌ Erro no WebSocket Dashboard:', error);
-      setWsConnected(false);
-    };
-
-    ws.onclose = () => {
-      console.log('❌ WebSocket Dashboard desconectado');
-      setWsConnected(false);
-    };
-
-    wsRef.current = ws;
-
-    return () => {
-      ws.close();
-    };
-  }, []);
-
-  // Atualizar relógio
+  // Update clock
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Usar métricas do WebSocket se disponível, senão usar tRPC
-  const currentMetrics = wsMetrics || currentMetrics?;
+  // Calculate stats
+  const teams = teamsData?.teams || [];
+  const projects = projectsData?.projects || [];
+  const prompts = promptsData?.prompts || [];
+  const metrics = metricsData?.metrics;
 
-  // Determinar cor baseada no uso
-  const getUsageColor = (value: number): 'green' | 'yellow' | 'red' => {
-    if (value < 60) return 'green';
-    if (value < 80) return 'yellow';
-    return 'red';
+  const activeProjects = projects.filter((p: any) => p.status === 'active').length;
+  const completedProjects = projects.filter((p: any) => p.status === 'completed').length;
+  const totalMembers = teams.reduce((sum: number, team: any) => sum + (team.memberCount || 0), 0);
+
+  // Project status distribution
+  const projectsByStatus = {
+    planning: projects.filter((p: any) => p.status === 'planning').length,
+    active: projects.filter((p: any) => p.status === 'active').length,
+    on_hold: projects.filter((p: any) => p.status === 'on_hold').length,
+    completed: projects.filter((p: any) => p.status === 'completed').length,
+    archived: projects.filter((p: any) => p.status === 'archived').length,
+  };
+
+  // Recent activity (simulated for now)
+  const recentActivity: ActivityItem[] = [
+    { id: 1, type: 'project', message: 'Novo projeto criado', timestamp: new Date(Date.now() - 1000 * 60 * 5), user: user?.name },
+    { id: 2, type: 'team', message: 'Equipe atualizada', timestamp: new Date(Date.now() - 1000 * 60 * 15), user: user?.name },
+    { id: 3, type: 'prompt', message: 'Novo prompt adicionado', timestamp: new Date(Date.now() - 1000 * 60 * 30), user: user?.name },
+    { id: 4, type: 'system', message: 'Sistema iniciado', timestamp: new Date(Date.now() - 1000 * 60 * 60), user: 'Sistema' },
+  ];
+
+  const formatTimeAgo = (date: Date) => {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return `${seconds}s atrás`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m atrás`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h atrás`;
+    return `${Math.floor(hours / 24)}d atrás`;
   };
 
   return (
-    <div className="space-y-6 p-4">
+    <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-          <p className="text-gray-400 text-sm mt-1">
-            {currentTime.toLocaleString('pt-BR')}
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div 
-              className={`w-3 h-3 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}
-              title={wsConnected ? 'WebSocket Conectado (Real-time)' : 'Usando Polling'}
-            />
-            <span className="text-sm text-gray-400">
-              {wsConnected ? 'Real-time' : 'Polling'}
-            </span>
-          </div>
-          <button
-            onClick={() => refetchMetrics()}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
-          >
-            <Activity size={16} />
-            Atualizar
-          </button>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Bem-vindo, {user?.name || 'Usuário'}! 👋
+        </h1>
+        <p className="text-gray-600 mt-1">
+          {currentTime.toLocaleDateString('pt-BR', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })} - {currentTime.toLocaleTimeString('pt-BR')}
+        </p>
       </div>
 
-      {/* Alertas */}
-      {alerts && alerts.length > 0 && (
-        <div className="card">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <AlertTriangle className="text-yellow-500" />
-            Alertas Ativos ({alerts.length})
-          </h2>
-          <div className="space-y-2">
-            {alerts.map(alert => (
-              <AlertBadge key={alert.id} level={alert.level} message={alert.message} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Estatísticas de Tarefas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          title="Total de Tarefas"
-          value={taskStats?.total || 0}
-          icon={Activity}
-          color="text-blue-400"
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <StatsCard
+          title="Equipes"
+          value={teams.length}
+          icon="👥"
+          color="text-blue-600"
+          trend={12}
         />
-        <MetricCard
-          title="Em Execução"
-          value={taskStats?.executing || 0}
-          icon={Brain}
-          color="text-yellow-400"
-          subtitle="Processando..."
+        <StatsCard
+          title="Projetos Ativos"
+          value={activeProjects}
+          icon="📊"
+          color="text-green-600"
+          trend={8}
         />
-        <MetricCard
-          title="Concluídas"
-          value={taskStats?.completed || 0}
-          icon={CheckCircle}
-          color="text-green-400"
-          subtitle={`${((taskStats?.completed || 0) / (taskStats?.total || 1) * 100).toFixed(0)}% do total`}
+        <StatsCard
+          title="Prompts"
+          value={prompts.length}
+          icon="💬"
+          color="text-purple-600"
+          trend={-3}
         />
-        <MetricCard
-          title="Falhadas"
-          value={taskStats?.failed || 0}
-          icon={AlertCircle}
-          color="text-red-400"
+        <StatsCard
+          title="Membros"
+          value={totalMembers}
+          icon="🎯"
+          color="text-orange-600"
+          trend={15}
         />
       </div>
 
-      {/* Recursos do Sistema */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* CPU e RAM */}
-        <div className="card">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Cpu className="text-blue-500" />
-            Processamento
-          </h2>
-          
-          <ProgressBar
-            label="CPU"
-            value={currentMetrics??.cpu.usage || 0}
-            color={getUsageColor(currentMetrics??.cpu.usage || 0)}
-          />
-          
-          <ProgressBar
-            label="RAM"
-            value={currentMetrics??.memory.usagePercent || 0}
-            color={getUsageColor(currentMetrics??.memory.usagePercent || 0)}
-          />
-
-          <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-gray-400">Cores</p>
-              <p className="text-white font-semibold">{currentMetrics??.cpu.cores || 0}</p>
-            </div>
-            <div>
-              <p className="text-gray-400">RAM Total</p>
-              <p className="text-white font-semibold">
-                {currentMetrics? ? (currentMetrics?.memory.total / 1024 / 1024 / 1024).toFixed(1) : 0} GB
-              </p>
-            </div>
-          </div>
-
-          {currentMetrics??.cpu.temperature && (
-            <div className="mt-4 p-3 bg-blue-600/20 rounded-lg">
-              <p className="text-sm text-gray-300">
-                🌡️ Temperatura CPU: <span className="font-bold text-white">{currentMetrics?.cpu.temperature.toFixed(1)}°C</span>
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* GPU e Disco */}
-        <div className="card">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Server className="text-purple-500" />
-            Armazenamento & GPU
-          </h2>
-
-          <ProgressBar
-            label="Disco"
-            value={currentMetrics??.disk.usagePercent || 0}
-            color={getUsageColor(currentMetrics??.disk.usagePercent || 0)}
-          />
-
-          {currentMetrics??.gpu && currentMetrics?.gpu.length > 0 && (
-            <>
-              {currentMetrics?.gpu.map((gpu, idx) => (
-                <div key={idx} className="mb-4">
-                  <ProgressBar
-                    label={`VRAM GPU ${idx} (${gpu.model.substring(0, 20)}...)`}
-                    value={gpu.vramUsagePercent}
-                    color={getUsageColor(gpu.vramUsagePercent)}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content - 2 columns */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Projects Status */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Status dos Projetos
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600">Planejamento</span>
+                  <span className="font-semibold text-gray-900">{projectsByStatus.planning}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gray-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(projectsByStatus.planning / Math.max(projects.length, 1)) * 100}%` }}
                   />
-                  {gpu.temperature && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      🌡️ {gpu.temperature}°C
-                      {gpu.utilization !== null && ` • Uso: ${gpu.utilization}%`}
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600">Ativo</span>
+                  <span className="font-semibold text-green-600">{projectsByStatus.active}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(projectsByStatus.active / Math.max(projects.length, 1)) * 100}%` }}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600">Em Espera</span>
+                  <span className="font-semibold text-yellow-600">{projectsByStatus.on_hold}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-yellow-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(projectsByStatus.on_hold / Math.max(projects.length, 1)) * 100}%` }}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600">Concluído</span>
+                  <span className="font-semibold text-blue-600">{projectsByStatus.completed}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(projectsByStatus.completed / Math.max(projects.length, 1)) * 100}%` }}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600">Arquivado</span>
+                  <span className="font-semibold text-red-600">{projectsByStatus.archived}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-red-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(projectsByStatus.archived / Math.max(projects.length, 1)) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* System Metrics */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Métricas do Sistema
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-3xl font-bold text-blue-600">
+                  {metrics?.cpu ? `${metrics.cpu.toFixed(1)}%` : '0%'}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">CPU</div>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-3xl font-bold text-green-600">
+                  {metrics?.memory ? `${metrics.memory.toFixed(1)}%` : '0%'}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">Memória</div>
+              </div>
+              <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                <div className="text-3xl font-bold text-yellow-600">
+                  {metrics?.disk ? `${metrics.disk.toFixed(1)}%` : '0%'}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">Disco</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Ações Rápidas
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <button className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span className="text-sm text-gray-600">Novo Projeto</span>
+              </button>
+              <button className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
+                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span className="text-sm text-gray-600">Nova Equipe</span>
+              </button>
+              <button className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
+                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="text-sm text-gray-600">Novo Prompt</span>
+              </button>
+              <button className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors">
+                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span className="text-sm text-gray-600">Ver Análises</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar - 1 column */}
+        <div className="space-y-6">
+          {/* Recent Activity */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Atividade Recente
+            </h2>
+            <div className="space-y-4">
+              {recentActivity.map((activity) => (
+                <div key={activity.id} className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <div className={`w-2 h-2 rounded-full mt-2 ${
+                      activity.type === 'project' ? 'bg-green-500' :
+                      activity.type === 'team' ? 'bg-blue-500' :
+                      activity.type === 'prompt' ? 'bg-purple-500' :
+                      'bg-gray-500'
+                    }`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900">{activity.message}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {activity.user} • {formatTimeAgo(activity.timestamp)}
                     </p>
-                  )}
+                  </div>
                 </div>
               ))}
-            </>
-          )}
-
-          <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-gray-400">Disco Livre</p>
-              <p className="text-white font-semibold">
-                {currentMetrics? ? (currentMetrics?.disk.free / 1024 / 1024 / 1024).toFixed(1) : 0} GB
-              </p>
             </div>
-            <div>
-              <p className="text-gray-400">Disco Total</p>
-              <p className="text-white font-semibold">
-                {currentMetrics? ? (currentMetrics?.disk.total / 1024 / 1024 / 1024).toFixed(1) : 0} GB
-              </p>
+          </div>
+
+          {/* System Status */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Status do Sistema
+            </h2>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Banco de Dados</span>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  serviceStatus?.status?.database
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {serviceStatus?.status?.database ? 'Online' : 'Offline'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">API tRPC</span>
+                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                  Online
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">LM Studio</span>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  serviceStatus?.status?.lmstudio
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {serviceStatus?.status?.lmstudio ? 'Online' : 'Offline'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Completion Rate */}
+          <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow p-6 text-white">
+            <h2 className="text-lg font-semibold mb-2">
+              Taxa de Conclusão
+            </h2>
+            <div className="text-4xl font-bold mb-2">
+              {projects.length > 0 
+                ? `${Math.round((completedProjects / projects.length) * 100)}%`
+                : '0%'
+              }
+            </div>
+            <p className="text-sm opacity-90">
+              {completedProjects} de {projects.length} projetos concluídos
+            </p>
+            <div className="mt-4 bg-white/20 rounded-full h-2">
+              <div 
+                className="bg-white h-2 rounded-full transition-all duration-300"
+                style={{ 
+                  width: projects.length > 0 
+                    ? `${(completedProjects / projects.length) * 100}%` 
+                    : '0%' 
+                }}
+              />
             </div>
           </div>
         </div>
       </div>
-
-      {/* Médias Históricas */}
-      {averages && (
-        <div className="card">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="text-green-500" />
-            Médias (últimos 10 minutos)
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-              <p className="text-gray-400 text-sm">CPU Média</p>
-              <p className="text-2xl font-bold text-white">{averages.cpu.toFixed(1)}%</p>
-            </div>
-            <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-              <p className="text-gray-400 text-sm">RAM Média</p>
-              <p className="text-2xl font-bold text-white">{averages.memory.toFixed(1)}%</p>
-            </div>
-            <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-              <p className="text-gray-400 text-sm">Disco Médio</p>
-              <p className="text-2xl font-bold text-white">{averages.disk.toFixed(1)}%</p>
-            </div>
-            {averages.gpu && averages.gpu.length > 0 && (
-              <div className="bg-gray-700/50 rounded-lg p-4 text-center">
-                <p className="text-gray-400 text-sm">VRAM Média</p>
-                <p className="text-2xl font-bold text-white">{averages.gpu[0].toFixed(1)}%</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Processos */}
-      {currentMetrics??.processes.lmstudio && (
-        <div className="card">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Zap className="text-green-500" />
-            LM Studio Ativo
-          </h2>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div>
-              <p className="text-gray-400">PID</p>
-              <p className="text-white font-semibold">{currentMetrics?.processes.pid}</p>
-            </div>
-            <div>
-              <p className="text-gray-400">CPU</p>
-              <p className="text-white font-semibold">
-                {currentMetrics?.processes.cpuUsage?.toFixed(1) || 0}%
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-400">RAM</p>
-              <p className="text-white font-semibold">
-                {currentMetrics?.processes.memUsage?.toFixed(1) || 0}%
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
-};
-
-export default Dashboard;
+}
