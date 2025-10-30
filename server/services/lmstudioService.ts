@@ -198,6 +198,271 @@ class LMStudioService {
   }
 
   /**
+   * Estima tokens em um texto (aproximação)
+   */
+  estimateTokens(text: string): number {
+    // Estimativa aproximada: 1 token ≈ 4 caracteres
+    // Para inglês: ~0.75 palavras por token
+    const charEstimate = text.length / 4;
+    const wordEstimate = text.split(/\s+/).length / 0.75;
+    
+    // Usar média
+    return Math.round((charEstimate + wordEstimate) / 2);
+  }
+
+  /**
+   * Trunca texto para caber no contexto
+   */
+  truncateToContext(text: string, maxTokens: number): string {
+    const estimatedTokens = this.estimateTokens(text);
+    
+    if (estimatedTokens <= maxTokens) {
+      return text;
+    }
+
+    // Calcular % a remover
+    const ratio = maxTokens / estimatedTokens;
+    const targetLength = Math.floor(text.length * ratio);
+    
+    // Truncar e adicionar indicador
+    return text.substring(0, targetLength) + '\n\n[... truncado para caber no contexto ...]';
+  }
+
+  /**
+   * Divide texto longo em chunks com overlap
+   */
+  chunkText(text: string, chunkSize: number = 2000, overlap: number = 200): string[] {
+    const chunks: string[] = [];
+    let startIndex = 0;
+
+    while (startIndex < text.length) {
+      const endIndex = Math.min(startIndex + chunkSize, text.length);
+      chunks.push(text.substring(startIndex, endIndex));
+      
+      // Próximo chunk começa com overlap
+      startIndex = endIndex - overlap;
+      
+      // Se o overlap faria começar antes do fim, parar
+      if (startIndex + overlap >= text.length) {
+        break;
+      }
+    }
+
+    return chunks;
+  }
+
+  /**
+   * Processa texto longo em chunks e agrega resultados
+   */
+  async processLongText(
+    modelId: string,
+    text: string,
+    instructionTemplate: (chunk: string, index: number, total: number) => string,
+    aggregateResults?: (results: string[]) => string
+  ): Promise<string> {
+    // Dividir em chunks
+    const chunks = this.chunkText(text, 3000, 300);
+    const results: string[] = [];
+
+    // Processar cada chunk
+    for (let i = 0; i < chunks.length; i++) {
+      const prompt = instructionTemplate(chunks[i], i + 1, chunks.length);
+      
+      const result = await this.generateCompletion(modelId, prompt, {
+        temperature: 0.3,
+        maxTokens: 2048,
+      });
+
+      results.push(result);
+    }
+
+    // Agregar resultados
+    if (aggregateResults) {
+      return aggregateResults(results);
+    }
+
+    return results.join('\n\n---\n\n');
+  }
+
+  /**
+   * Carrega modelo específico (se LM Studio suportar)
+   */
+  async loadModel(modelId: string): Promise<boolean> {
+    try {
+      // Testar se modelo responde
+      await this.generateCompletion(modelId, 'test', {
+        maxTokens: 1,
+        temperature: 0,
+      });
+
+      console.log(`✅ Modelo ${modelId} carregado com sucesso`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Falha ao carregar modelo ${modelId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Troca de modelo com fallback automático
+   */
+  async switchModel(
+    preferredModelId: string,
+    fallbackModelIds: string[] = []
+  ): Promise<{ modelId: string; success: boolean }> {
+    // Tentar modelo preferido
+    if (await this.loadModel(preferredModelId)) {
+      return { modelId: preferredModelId, success: true };
+    }
+
+    // Tentar fallbacks
+    for (const fallbackId of fallbackModelIds) {
+      if (await this.loadModel(fallbackId)) {
+        console.log(`⚠️  Usando fallback: ${fallbackId}`);
+        return { modelId: fallbackId, success: true };
+      }
+    }
+
+    throw new Error('Nenhum modelo disponível (preferido ou fallbacks)');
+  }
+
+  /**
+   * Benchmark de modelo (velocidade de geração)
+   */
+  async benchmarkModel(modelId: string): Promise<{
+    tokensPerSecond: number;
+    latencyMs: number;
+    success: boolean;
+  }> {
+    try {
+      const testPrompt = 'Generate exactly 100 tokens of text about artificial intelligence.';
+      const startTime = Date.now();
+
+      const result = await this.generateCompletion(modelId, testPrompt, {
+        temperature: 0.7,
+        maxTokens: 100,
+      });
+
+      const endTime = Date.now();
+      const durationMs = endTime - startTime;
+      const estimatedTokens = this.estimateTokens(result);
+      const tokensPerSecond = (estimatedTokens / durationMs) * 1000;
+
+      return {
+        tokensPerSecond,
+        latencyMs: durationMs,
+        success: true,
+      };
+    } catch (error) {
+      console.error('Erro ao fazer benchmark:', error);
+      return {
+        tokensPerSecond: 0,
+        latencyMs: 0,
+        success: false,
+      };
+    }
+  }
+
+  /**
+   * Valida resposta do modelo (verifica se não é vazia ou inválida)
+   */
+  validateResponse(response: string, minLength: number = 10): boolean {
+    if (!response || typeof response !== 'string') {
+      return false;
+    }
+
+    const trimmed = response.trim();
+    
+    if (trimmed.length < minLength) {
+      return false;
+    }
+
+    // Verificar se não é apenas erro ou placeholder
+    const invalidPatterns = [
+      /^error/i,
+      /^failed/i,
+      /^\[.*\]$/,
+      /^null$/i,
+      /^undefined$/i,
+    ];
+
+    return !invalidPatterns.some(pattern => pattern.test(trimmed));
+  }
+
+  /**
+   * Retry com modelo diferente em caso de falha
+   */
+  async generateWithRetry(
+    modelId: string,
+    prompt: string,
+    options: any = {},
+    fallbackModelIds: string[] = []
+  ): Promise<{ result: string; modelUsed: string }> {
+    // Tentar modelo principal
+    try {
+      const result = await this.generateCompletion(modelId, prompt, options);
+      
+      if (this.validateResponse(result)) {
+        return { result, modelUsed: modelId };
+      }
+    } catch (error) {
+      console.warn(`Falha com modelo ${modelId}:`, error);
+    }
+
+    // Tentar fallbacks
+    for (const fallbackId of fallbackModelIds) {
+      try {
+        console.log(`🔄 Tentando fallback: ${fallbackId}`);
+        const result = await this.generateCompletion(fallbackId, prompt, options);
+        
+        if (this.validateResponse(result)) {
+          return { result, modelUsed: fallbackId };
+        }
+      } catch (error) {
+        console.warn(`Falha com fallback ${fallbackId}:`, error);
+      }
+    }
+
+    throw new Error('Falha em todos os modelos (principal e fallbacks)');
+  }
+
+  /**
+   * Comparar respostas de múltiplos modelos
+   */
+  async compareModels(
+    modelIds: string[],
+    prompt: string,
+    options: any = {}
+  ): Promise<Array<{ modelId: string; response: string; tokensPerSecond: number }>> {
+    const results = await Promise.all(
+      modelIds.map(async (modelId) => {
+        const startTime = Date.now();
+        
+        try {
+          const response = await this.generateCompletion(modelId, prompt, options);
+          const durationMs = Date.now() - startTime;
+          const tokens = this.estimateTokens(response);
+          const tokensPerSecond = (tokens / durationMs) * 1000;
+
+          return {
+            modelId,
+            response,
+            tokensPerSecond,
+          };
+        } catch (error) {
+          return {
+            modelId,
+            response: `Erro: ${error}`,
+            tokensPerSecond: 0,
+          };
+        }
+      })
+    );
+
+    return results;
+  }
+
+  /**
    * Recomenda modelo para tipo de tarefa
    */
   async recommendModel(taskType: string): Promise<string | null> {
