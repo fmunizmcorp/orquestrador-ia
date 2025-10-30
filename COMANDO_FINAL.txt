@@ -1,0 +1,29 @@
+═══════════════════════════════════════════════════════════
+  COMANDO ÚNICO - Baixa do GitHub e Executa no Servidor
+═══════════════════════════════════════════════════════════
+
+ssh flavio@192.168.1.247 "curl -fsSL https://raw.githubusercontent.com/fmunizmcorp/orquestrador-ia/genspark_ai_developer/corrigir-sistema.sh | bash"
+
+
+═══════════════════════════════════════════════════════════
+  O QUE ESTE COMANDO FAZ
+═══════════════════════════════════════════════════════════
+
+1. Conecta via SSH no servidor (192.168.1.247)
+2. Baixa o script direto do GitHub
+3. Executa automaticamente no servidor
+4. O script faz:
+   ✓ Para PM2
+   ✓ Verifica/cria tabelas do banco
+   ✓ Popula dados básicos
+   ✓ Recompila frontend
+   ✓ Reinicia PM2
+   ✓ Testa se API está respondendo
+
+═══════════════════════════════════════════════════════════
+  SE O SSH PEDIR SENHA
+═══════════════════════════════════════════════════════════
+
+Digite: bdflavioia
+
+═══════════════════════════════════════════════════════════
