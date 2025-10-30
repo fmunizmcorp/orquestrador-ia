@@ -1,8 +1,13 @@
+/**
+ * Validation Helpers - Validações reutilizáveis
+ */
+
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-/**
- * Validações comuns
- */
+// ========================================
+// ZOD SCHEMAS (compatibilidade com routers existentes)
+// ========================================
 
 export const idSchema = z.number().int().positive();
 
@@ -15,10 +20,6 @@ export const searchSchema = z.object({
   query: z.string().optional(),
   ...paginationSchema.shape,
 });
-
-/**
- * Schemas para validação de entidades
- */
 
 export const createProviderSchema = z.object({
   name: z.string().min(1).max(255),
@@ -71,7 +72,7 @@ export const createCredentialSchema = z.object({
   userId: idSchema.default(1),
   service: z.string().min(1).max(100),
   credentialType: z.string().max(50).optional(),
-  data: z.any(), // Será criptografado
+  data: z.any(),
   metadata: z.any().optional(),
   isActive: z.boolean().default(true),
   expiresAt: z.string().datetime().optional(),
@@ -98,113 +99,289 @@ export const updateTaskSchema = z.object({
 
 export const createSubtaskSchema = z.object({
   taskId: idSchema,
-  assignedModelId: idSchema.optional(),
   title: z.string().min(1).max(500),
   description: z.string().optional(),
   prompt: z.string().min(1),
+  assignedModelId: idSchema.optional(),
+  status: z.enum(['pending', 'executing', 'validating', 'completed', 'failed', 'rejected']).default('pending'),
 });
 
-export const updateSubtaskSchema = z.object({
-  id: idSchema,
-  title: z.string().min(1).max(500).optional(),
-  description: z.string().optional(),
-  prompt: z.string().min(1).optional(),
-  result: z.string().optional(),
-  status: z.enum(['pending', 'executing', 'completed', 'failed', 'validating', 'rejected']).optional(),
-  reviewedBy: idSchema.optional(),
-  reviewNotes: z.string().optional(),
-});
-
-export const createTemplateSchema = z.object({
-  userId: idSchema.default(1),
-  name: z.string().min(1).max(255),
-  description: z.string().optional(),
-  category: z.string().max(100).optional(),
-  templateData: z.any(),
-  isPublic: z.boolean().default(false),
-});
-
-export const updateTemplateSchema = createTemplateSchema.partial().extend({
+export const updateSubtaskSchema = createSubtaskSchema.partial().extend({
   id: idSchema,
 });
 
-export const createWorkflowSchema = z.object({
-  userId: idSchema.default(1),
-  name: z.string().min(1).max(255),
-  description: z.string().optional(),
-  steps: z.any(),
-  isActive: z.boolean().default(true),
-});
+// ========================================
+// VALIDATION HELPERS (funções auxiliares)
+// ========================================
 
-export const updateWorkflowSchema = createWorkflowSchema.partial().extend({
-  id: idSchema,
-});
+/**
+ * Valida se um ID é válido (número positivo)
+ */
+export function validateId(id: any, fieldName: string = 'ID'): number {
+  const parsed = parseInt(id);
+  
+  if (isNaN(parsed) || parsed <= 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} inválido. Deve ser um número positivo.`,
+    });
+  }
+  
+  return parsed;
+}
 
-export const createInstructionSchema = z.object({
-  userId: idSchema.default(1),
-  aiId: idSchema.optional(),
-  title: z.string().min(1).max(255),
-  content: z.string().min(1),
-  priority: z.number().int().min(0).max(100).default(50),
-  isActive: z.boolean().default(true),
-});
+/**
+ * Valida se uma string não está vazia
+ */
+export function validateNonEmpty(value: any, fieldName: string): string {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} é obrigatório e não pode estar vazio.`,
+    });
+  }
+  
+  return value.trim();
+}
 
-export const updateInstructionSchema = createInstructionSchema.partial().extend({
-  id: idSchema,
-});
+/**
+ * Valida comprimento mínimo de string
+ */
+export function validateMinLength(value: string, minLength: number, fieldName: string): string {
+  if (value.length < minLength) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} deve ter no mínimo ${minLength} caracteres.`,
+    });
+  }
+  
+  return value;
+}
 
-export const createKnowledgeBaseSchema = z.object({
-  userId: idSchema.default(1),
-  title: z.string().min(1).max(500),
-  content: z.string().min(1),
-  category: z.string().max(100).optional(),
-  tags: z.array(z.string()).optional(),
-  isActive: z.boolean().default(true),
-});
+/**
+ * Valida comprimento máximo de string
+ */
+export function validateMaxLength(value: string, maxLength: number, fieldName: string): string {
+  if (value.length > maxLength) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} deve ter no máximo ${maxLength} caracteres.`,
+    });
+  }
+  
+  return value;
+}
 
-export const updateKnowledgeBaseSchema = createKnowledgeBaseSchema.partial().extend({
-  id: idSchema,
-});
+/**
+ * Valida enum (valor dentro de lista permitida)
+ */
+export function validateEnum<T extends string>(
+  value: any,
+  allowedValues: T[],
+  fieldName: string
+): T {
+  if (!allowedValues.includes(value)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} inválido. Valores permitidos: ${allowedValues.join(', ')}`,
+    });
+  }
+  
+  return value as T;
+}
 
-export const createKnowledgeSourceSchema = z.object({
-  knowledgeBaseId: idSchema,
-  sourceType: z.string().max(50).optional(),
-  sourceUrl: z.string().max(1000).optional(),
-  sourceData: z.any().optional(),
-});
+/**
+ * Valida se um array não está vazio
+ */
+export function validateNonEmptyArray<T>(value: any, fieldName: string): T[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} deve ser um array com pelo menos um elemento.`,
+    });
+  }
+  
+  return value;
+}
 
-export const updateKnowledgeSourceSchema = createKnowledgeSourceSchema.partial().extend({
-  id: idSchema,
-});
+/**
+ * Valida se um número está dentro de um intervalo
+ */
+export function validateRange(
+  value: number,
+  min: number,
+  max: number,
+  fieldName: string
+): number {
+  if (value < min || value > max) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} deve estar entre ${min} e ${max}.`,
+    });
+  }
+  
+  return value;
+}
 
-export const createExternalAPIAccountSchema = z.object({
-  userId: idSchema.default(1),
-  provider: z.string().min(1).max(100),
-  accountName: z.string().min(1).max(255),
-  credentialId: idSchema.optional(),
-  creditBalance: z.number().default(0),
-  creditLimit: z.number().optional(),
-  alertThreshold: z.number().optional(),
-  isActive: z.boolean().default(true),
-});
+/**
+ * Valida se um objeto JSON é válido
+ */
+export function validateJSON(value: any, fieldName: string): object {
+  try {
+    if (typeof value === 'string') {
+      return JSON.parse(value);
+    }
+    
+    if (typeof value === 'object' && value !== null) {
+      return value;
+    }
+    
+    throw new Error('Não é um objeto JSON válido');
+  } catch (error) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} deve ser um objeto JSON válido.`,
+    });
+  }
+}
 
-export const updateExternalAPIAccountSchema = createExternalAPIAccountSchema.partial().extend({
-  id: idSchema,
-});
+/**
+ * Valida se uma URL é válida
+ */
+export function validateURL(value: string, fieldName: string): string {
+  try {
+    new URL(value);
+    return value;
+  } catch (error) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} deve ser uma URL válida.`,
+    });
+  }
+}
 
-export const createChatConversationSchema = z.object({
-  userId: idSchema.default(1),
-  title: z.string().max(500).optional(),
-  aiId: idSchema.optional(),
-  modelId: idSchema.optional(),
-  isActive: z.boolean().default(true),
-  metadata: z.any().optional(),
-});
+/**
+ * Valida se um email é válido
+ */
+export function validateEmail(value: string, fieldName: string): string {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  if (!emailRegex.test(value)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} deve ser um email válido.`,
+    });
+  }
+  
+  return value;
+}
 
-export const createChatMessageSchema = z.object({
-  conversationId: idSchema,
-  role: z.enum(['user', 'assistant', 'system']),
-  content: z.string().min(1),
-  attachments: z.any().optional(),
-  metadata: z.any().optional(),
-});
+/**
+ * Valida se uma data é válida
+ */
+export function validateDate(value: any, fieldName: string): Date {
+  const date = new Date(value);
+  
+  if (isNaN(date.getTime())) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} deve ser uma data válida.`,
+    });
+  }
+  
+  return date;
+}
+
+/**
+ * Valida se uma data está no futuro
+ */
+export function validateFutureDate(value: any, fieldName: string): Date {
+  const date = validateDate(value, fieldName);
+  
+  if (date <= new Date()) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${fieldName} deve ser uma data futura.`,
+    });
+  }
+  
+  return date;
+}
+
+/**
+ * Wrapper para tratamento de erros de banco
+ */
+export function handleDatabaseError(error: any, operation: string): never {
+  console.error(`Erro na operação ${operation}:`, error);
+  
+  // Erro de duplicata (chave única)
+  if (error.code === 'ER_DUP_ENTRY' || error.code === '23000') {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'Já existe um registro com esses dados.',
+    });
+  }
+  
+  // Erro de chave estrangeira
+  if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.code === '23000') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Referência inválida. Verifique se todos os IDs relacionados existem.',
+    });
+  }
+  
+  // Erro genérico
+  throw new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: `Erro ao executar ${operation}. Tente novamente.`,
+  });
+}
+
+/**
+ * Verifica se um registro existe
+ */
+export function ensureExists<T>(
+  record: T | undefined | null,
+  entityName: string
+): T {
+  if (!record) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: `${entityName} não encontrado(a).`,
+    });
+  }
+  
+  return record;
+}
+
+/**
+ * Sanitiza string HTML (previne XSS)
+ */
+export function sanitizeHTML(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+/**
+ * Valida paginação
+ */
+export function validatePagination(page?: number, limit?: number): {
+  page: number;
+  limit: number;
+  offset: number;
+} {
+  const validPage = Math.max(1, page || 1);
+  const validLimit = Math.min(Math.max(1, limit || 20), 100); // Max 100
+  const offset = (validPage - 1) * validLimit;
+  
+  return {
+    page: validPage,
+    limit: validLimit,
+    offset,
+  };
+}
