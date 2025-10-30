@@ -16,6 +16,7 @@ import { externalAPIAccountsRouter } from './externalAPIAccountsRouter.js';
 import { systemMonitorRouter } from './systemMonitorRouter.js';
 import { puppeteerRouter } from './puppeteerRouter.js';
 import { githubRouter } from './githubRouter.js';
+import { gmailRouter } from './gmailRouter.js';
 
 export const appRouter = router({
   providers: providersRouter,
@@ -35,6 +36,7 @@ export const appRouter = router({
   systemMonitor: systemMonitorRouter,
   puppeteer: puppeteerRouter,
   github: githubRouter,
+  gmail: gmailRouter,
 });
 
 export type AppRouter = typeof appRouter;
