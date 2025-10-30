@@ -13,6 +13,8 @@ import { appRouter } from './routers/index.js';
 import { createContext } from './trpc.js';
 import { testConnection } from './db/index.js';
 import { systemMonitorService } from './services/systemMonitorService.js';
+import { handleMessage, connectionManager, broadcastTaskUpdate } from './websocket/handlers.js';
+import { setBroadcastCallback } from './services/orchestratorService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,30 +81,45 @@ if (process.env.NODE_ENV === 'production') {
 // Criar servidor HTTP
 const server = createServer(app);
 
-// WebSocket para monitoramento em tempo real
+// WebSocket para chat e monitoramento em tempo real
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 wss.on('connection', (ws) => {
   console.log('✅ Cliente WebSocket conectado');
 
-  // Enviar métricas a cada 10 segundos
+  // Registrar conexão
+  connectionManager.register(ws);
+
+  // Enviar métricas a cada 10 segundos (se inscrito)
   const interval = setInterval(async () => {
     try {
-      const metrics = await systemMonitorService.getMetrics();
-      ws.send(JSON.stringify({ type: 'metrics', data: metrics }));
+      // Enviar apenas para quem está inscrito em monitoramento
+      const subscribers = connectionManager.getMonitoringSubscribers();
+      
+      if (subscribers.includes(ws) && ws.readyState === 1) {
+        const metrics = await systemMonitorService.getMetrics();
+        ws.send(JSON.stringify({ type: 'metrics', data: metrics }));
+      }
     } catch (error) {
       console.error('Erro ao enviar métricas:', error);
     }
   }, 10000);
 
+  // Handler de mensagens
+  ws.on('message', async (message: string) => {
+    await handleMessage(ws, message.toString());
+  });
+
   ws.on('close', () => {
     console.log('❌ Cliente WebSocket desconectado');
     clearInterval(interval);
+    connectionManager.unregister(ws);
   });
 
   ws.on('error', (error) => {
     console.error('Erro no WebSocket:', error);
     clearInterval(interval);
+    connectionManager.unregister(ws);
   });
 });
 
@@ -116,6 +133,9 @@ async function start() {
       console.error('❌ Falha ao conectar com o banco de dados');
       process.exit(1);
     }
+
+    // Configurar callback de broadcast
+    setBroadcastCallback(broadcastTaskUpdate);
 
     // Iniciar servidor
     server.listen(PORT, () => {

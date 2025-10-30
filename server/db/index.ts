@@ -6,8 +6,8 @@ import * as schema from './schema.js';
 const poolConnection = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '3306'),
-  user: process.env.DB_USER || 'flavio',
-  password: process.env.DB_PASSWORD || 'bdflavioia',
+  user: process.env.DB_USER || 'orquestrador',
+  password: process.env.DB_PASSWORD || 'orquestrador123',
   database: process.env.DB_NAME || 'orquestraia',
   connectionLimit: 10,
   waitForConnections: true,

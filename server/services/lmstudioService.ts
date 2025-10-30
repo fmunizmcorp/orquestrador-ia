@@ -186,6 +186,18 @@ class LMStudioService {
   }
 
   /**
+   * Alias para generateStreamingCompletion (compatibilidade)
+   */
+  async generateCompletionStream(
+    modelId: string,
+    prompt: string,
+    options: any = {},
+    onChunk: (chunk: string) => void
+  ): Promise<void> {
+    return this.generateStreamingCompletion(modelId, prompt, onChunk, options);
+  }
+
+  /**
    * Recomenda modelo para tipo de tarefa
    */
   async recommendModel(taskType: string): Promise<string | null> {
