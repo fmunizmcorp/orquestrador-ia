@@ -148,9 +148,17 @@ print_step "4/10 - Configuração do Banco de Dados MySQL"
 read -p "$(echo -e ${CYAN}Digite o usuário do MySQL [root]: ${NC})" input_user
 DB_USER=${input_user:-root}
 
-read -sp "$(echo -e ${CYAN}Digite a senha do MySQL [vazio]: ${NC})" input_pass
+read -sp "$(echo -e ${CYAN}Digite a senha do MySQL: ${NC})" input_pass
 echo
 DB_PASSWORD=${input_pass}
+
+# Se senha estiver vazia, solicitar novamente
+while [ -z "$DB_PASSWORD" ]; do
+    print_warning "Senha não pode estar vazia!"
+    read -sp "$(echo -e ${CYAN}Digite a senha do MySQL: ${NC})" input_pass
+    echo
+    DB_PASSWORD=${input_pass}
+done
 
 read -p "$(echo -e ${CYAN}Digite o nome do banco de dados [orquestraia]: ${NC})" input_db
 DB_NAME=${input_db:-orquestraia}
@@ -166,52 +174,33 @@ print_success "Credenciais do banco de dados configuradas!"
 print_step "5/10 - Criando banco de dados"
 
 if command -v mysql &> /dev/null; then
-    echo "Tentando criar banco de dados..."
+    echo "Tentando criar banco de dados com usuário '${DB_USER}'..."
     
-    # Criar usuário e banco de dados com senha se não existir
-    if [ -z "$DB_PASSWORD" ]; then
-        # Senha vazia - usar sudo mysql (auth_socket) ou criar nova senha
-        print_warning "Senha vazia detectada. Criando usuário com senha..."
+    # Tentar criar banco de dados com credenciais fornecidas
+    mysql -u"$DB_USER" -p"$DB_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;" 2>/dev/null
+    
+    if [ $? -eq 0 ]; then
+        print_success "Banco de dados '${DB_NAME}' criado/verificado!"
+    else
+        print_warning "Não foi possível criar banco com as credenciais fornecidas."
+        print_info "Tentando com sudo mysql..."
         
-        # Gerar senha aleatória
-        NEW_PASSWORD=$(openssl rand -base64 16 2>/dev/null || echo "orquestrador$(date +%s)")
-        
-        # Criar usuário e banco usando sudo
+        # Tentar criar banco e usuário usando sudo
         sudo mysql <<EOSQL
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;
-CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${NEW_PASSWORD}';
+CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
 EOSQL
         
         if [ $? -eq 0 ]; then
-            # Atualizar .env com nova senha
-            DB_PASSWORD="$NEW_PASSWORD"
-            sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PASSWORD}/" .env
-            
-            print_success "Banco de dados criado com nova senha!"
-            print_info "Senha gerada e salva no .env: ${DB_PASSWORD}"
+            print_success "Banco de dados e usuário criados com sudo!"
+            print_info "Usuário: ${DB_USER} | Banco: ${DB_NAME}"
         else
-            print_error "Falha ao criar banco com sudo. Tentando método alternativo..."
-            # Tentar sem sudo
-            mysql -u"$DB_USER" <<EOSQL2
-CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;
-EOSQL2
-            if [ $? -eq 0 ]; then
-                print_success "Banco de dados criado!"
-            else
-                print_error "Falha ao criar banco. Configure manualmente."
-            fi
-        fi
-    else
-        # Com senha - método normal
-        mysql -u"$DB_USER" -p"$DB_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;" 2>/dev/null
-        
-        if [ $? -eq 0 ]; then
-            print_success "Banco de dados criado/verificado!"
-        else
-            print_error "Falha ao criar banco com credenciais fornecidas"
-            print_warning "Execute manualmente: CREATE DATABASE ${DB_NAME};"
+            print_error "Falha ao criar banco. Você precisará criar manualmente:"
+            print_info "sudo mysql -e \"CREATE DATABASE ${DB_NAME};\""
+            print_info "sudo mysql -e \"CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY 'sua_senha';\""
+            print_info "sudo mysql -e \"GRANT ALL ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';\""
         fi
     fi
 else
