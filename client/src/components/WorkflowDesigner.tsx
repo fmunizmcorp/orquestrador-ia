@@ -3,7 +3,7 @@
  * Visual workflow builder with drag-and-drop interface
  */
 import React, { useState, useCallback, useRef } from 'react';
-import { trpc } from '../utils/trpc';
+import { trpc } from '../lib/trpc';
 
 interface WorkflowNode {
   id: string;

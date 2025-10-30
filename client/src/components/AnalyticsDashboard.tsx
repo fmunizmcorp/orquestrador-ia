@@ -3,7 +3,7 @@
  * Real-time visualization of system performance and AI metrics
  */
 import React, { useState, useEffect } from 'react';
-import { trpc } from '../utils/trpc';
+import { trpc } from '../lib/trpc';
 
 interface ChartData {
   labels: string[];
