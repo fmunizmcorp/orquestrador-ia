@@ -1,0 +1,26 @@
+═══════════════════════════════════════════════════════════
+  COMANDO FINAL - Executa Correção no Servidor
+═══════════════════════════════════════════════════════════
+
+ssh flavio@192.168.1.247 'cd /home/flavio/orquestrador-ia && bash corrigir-problemas.sh'
+
+
+═══════════════════════════════════════════════════════════
+  O QUE ESTE COMANDO FAZ
+═══════════════════════════════════════════════════════════
+
+✓ Conecta via SSH no servidor (192.168.1.247)
+✓ Vai para o diretório do projeto
+✓ Executa o script de correção que JÁ FOI CRIADO
+✓ O script vai:
+  1. Reiniciar PM2
+  2. Recompilar frontend
+  3. Verificar se API responde
+
+═══════════════════════════════════════════════════════════
+  SE O SSH PEDIR SENHA
+═══════════════════════════════════════════════════════════
+
+Digite: bdflavioia
+
+═══════════════════════════════════════════════════════════
