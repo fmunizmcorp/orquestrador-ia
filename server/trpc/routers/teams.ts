@@ -70,11 +70,14 @@ export const teamsRouter = router({
       ownerId: z.number(),
     }))
     .mutation(async ({ input }) => {
-      const [team] = await db.insert(teams).values({
+      const result: any = await db.insert(teams).values({
         name: input.name,
         description: input.description,
         ownerId: input.ownerId,
-      }).returning();
+      });
+
+      const teamId = result[0]?.insertId || result.insertId;
+      const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
 
       // Add owner as first member
       await db.insert(teamMembers).values({
@@ -98,10 +101,11 @@ export const teamsRouter = router({
     .mutation(async ({ input }) => {
       const { id, ...updates } = input;
 
-      const [updated] = await db.update(teams)
+      await db.update(teams)
         .set(updates)
-        .where(eq(teams.id, id))
-        .returning();
+        .where(eq(teams.id, id));
+
+      const [updated] = await db.select().from(teams).where(eq(teams.id, id)).limit(1);
 
       return { success: true, team: updated };
     }),
@@ -163,11 +167,14 @@ export const teamsRouter = router({
       role: z.enum(['owner', 'admin', 'member', 'viewer']).optional().default('member'),
     }))
     .mutation(async ({ input }) => {
-      const [member] = await db.insert(teamMembers).values({
+      const result: any = await db.insert(teamMembers).values({
         teamId: input.teamId,
         userId: input.userId,
         role: input.role,
-      }).returning();
+      });
+
+      const memberId = result[0]?.insertId || result.insertId;
+      const [member] = await db.select().from(teamMembers).where(eq(teamMembers.id, memberId)).limit(1);
 
       return { success: true, member };
     }),
@@ -181,10 +188,11 @@ export const teamsRouter = router({
       role: z.enum(['owner', 'admin', 'member', 'viewer']),
     }))
     .mutation(async ({ input }) => {
-      const [updated] = await db.update(teamMembers)
+      await db.update(teamMembers)
         .set({ role: input.role })
-        .where(eq(teamMembers.id, input.memberId))
-        .returning();
+        .where(eq(teamMembers.id, input.memberId));
+
+      const [updated] = await db.select().from(teamMembers).where(eq(teamMembers.id, input.memberId)).limit(1);
 
       return { success: true, member: updated };
     }),
