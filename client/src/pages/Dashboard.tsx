@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { trpc } from '../lib/trpc';
 import { 
   Activity, Brain, CheckCircle, AlertCircle, Cpu, HardDrive, 
@@ -96,12 +96,15 @@ const AlertBadge = ({
 const Dashboard = () => {
   // Estados
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [wsMetrics, setWsMetrics] = useState<any>(null);
+  const [wsConnected, setWsConnected] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
 
-  // Queries
+  // Queries (fallback se WebSocket falhar)
   const { data: taskStats } = trpc.tasks.stats.useQuery();
-  const { data: systemMetrics, refetch: refetchMetrics } = trpc.systemMonitor.getMetrics.useQuery(
+  const { data: currentMetrics?, refetch: refetchMetrics } = trpc.systemMonitor.getMetrics.useQuery(
     undefined,
-    { refetchInterval: 10000 } // Atualizar a cada 10s
+    { refetchInterval: wsConnected ? false : 10000 } // Só polling se WS desconectado
   );
   const { data: alerts } = trpc.systemMonitor.getAlerts.useQuery(
     { includeResolved: false },
@@ -112,11 +115,57 @@ const Dashboard = () => {
     { refetchInterval: 10000 }
   );
 
+  // WebSocket para métricas em tempo real
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:3001/ws');
+
+    ws.onopen = () => {
+      console.log('✅ WebSocket Dashboard conectado');
+      setWsConnected(true);
+      
+      // Inscrever em métricas
+      ws.send(JSON.stringify({
+        type: 'monitoring:subscribe',
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        
+        if (message.type === 'metrics') {
+          setWsMetrics(message.data);
+        }
+      } catch (error) {
+        console.error('Erro ao processar mensagem WebSocket:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('❌ Erro no WebSocket Dashboard:', error);
+      setWsConnected(false);
+    };
+
+    ws.onclose = () => {
+      console.log('❌ WebSocket Dashboard desconectado');
+      setWsConnected(false);
+    };
+
+    wsRef.current = ws;
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
   // Atualizar relógio
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Usar métricas do WebSocket se disponível, senão usar tRPC
+  const currentMetrics = wsMetrics || currentMetrics?;
 
   // Determinar cor baseada no uso
   const getUsageColor = (value: number): 'green' | 'yellow' | 'red' => {
@@ -135,13 +184,24 @@ const Dashboard = () => {
             {currentTime.toLocaleString('pt-BR')}
           </p>
         </div>
-        <button
-          onClick={() => refetchMetrics()}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
-        >
-          <Activity size={16} />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div 
+              className={`w-3 h-3 rounded-full ${wsConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}
+              title={wsConnected ? 'WebSocket Conectado (Real-time)' : 'Usando Polling'}
+            />
+            <span className="text-sm text-gray-400">
+              {wsConnected ? 'Real-time' : 'Polling'}
+            </span>
+          </div>
+          <button
+            onClick={() => refetchMetrics()}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+          >
+            <Activity size={16} />
+            Atualizar
+          </button>
+        </div>
       </div>
 
       {/* Alertas */}
@@ -200,33 +260,33 @@ const Dashboard = () => {
           
           <ProgressBar
             label="CPU"
-            value={systemMetrics?.cpu.usage || 0}
-            color={getUsageColor(systemMetrics?.cpu.usage || 0)}
+            value={currentMetrics??.cpu.usage || 0}
+            color={getUsageColor(currentMetrics??.cpu.usage || 0)}
           />
           
           <ProgressBar
             label="RAM"
-            value={systemMetrics?.memory.usagePercent || 0}
-            color={getUsageColor(systemMetrics?.memory.usagePercent || 0)}
+            value={currentMetrics??.memory.usagePercent || 0}
+            color={getUsageColor(currentMetrics??.memory.usagePercent || 0)}
           />
 
           <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-gray-400">Cores</p>
-              <p className="text-white font-semibold">{systemMetrics?.cpu.cores || 0}</p>
+              <p className="text-white font-semibold">{currentMetrics??.cpu.cores || 0}</p>
             </div>
             <div>
               <p className="text-gray-400">RAM Total</p>
               <p className="text-white font-semibold">
-                {systemMetrics ? (systemMetrics.memory.total / 1024 / 1024 / 1024).toFixed(1) : 0} GB
+                {currentMetrics? ? (currentMetrics?.memory.total / 1024 / 1024 / 1024).toFixed(1) : 0} GB
               </p>
             </div>
           </div>
 
-          {systemMetrics?.cpu.temperature && (
+          {currentMetrics??.cpu.temperature && (
             <div className="mt-4 p-3 bg-blue-600/20 rounded-lg">
               <p className="text-sm text-gray-300">
-                🌡️ Temperatura CPU: <span className="font-bold text-white">{systemMetrics.cpu.temperature.toFixed(1)}°C</span>
+                🌡️ Temperatura CPU: <span className="font-bold text-white">{currentMetrics?.cpu.temperature.toFixed(1)}°C</span>
               </p>
             </div>
           )}
@@ -241,13 +301,13 @@ const Dashboard = () => {
 
           <ProgressBar
             label="Disco"
-            value={systemMetrics?.disk.usagePercent || 0}
-            color={getUsageColor(systemMetrics?.disk.usagePercent || 0)}
+            value={currentMetrics??.disk.usagePercent || 0}
+            color={getUsageColor(currentMetrics??.disk.usagePercent || 0)}
           />
 
-          {systemMetrics?.gpu && systemMetrics.gpu.length > 0 && (
+          {currentMetrics??.gpu && currentMetrics?.gpu.length > 0 && (
             <>
-              {systemMetrics.gpu.map((gpu, idx) => (
+              {currentMetrics?.gpu.map((gpu, idx) => (
                 <div key={idx} className="mb-4">
                   <ProgressBar
                     label={`VRAM GPU ${idx} (${gpu.model.substring(0, 20)}...)`}
@@ -269,13 +329,13 @@ const Dashboard = () => {
             <div>
               <p className="text-gray-400">Disco Livre</p>
               <p className="text-white font-semibold">
-                {systemMetrics ? (systemMetrics.disk.free / 1024 / 1024 / 1024).toFixed(1) : 0} GB
+                {currentMetrics? ? (currentMetrics?.disk.free / 1024 / 1024 / 1024).toFixed(1) : 0} GB
               </p>
             </div>
             <div>
               <p className="text-gray-400">Disco Total</p>
               <p className="text-white font-semibold">
-                {systemMetrics ? (systemMetrics.disk.total / 1024 / 1024 / 1024).toFixed(1) : 0} GB
+                {currentMetrics? ? (currentMetrics?.disk.total / 1024 / 1024 / 1024).toFixed(1) : 0} GB
               </p>
             </div>
           </div>
@@ -313,7 +373,7 @@ const Dashboard = () => {
       )}
 
       {/* Processos */}
-      {systemMetrics?.processes.lmstudio && (
+      {currentMetrics??.processes.lmstudio && (
         <div className="card">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
             <Zap className="text-green-500" />
@@ -322,18 +382,18 @@ const Dashboard = () => {
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div>
               <p className="text-gray-400">PID</p>
-              <p className="text-white font-semibold">{systemMetrics.processes.pid}</p>
+              <p className="text-white font-semibold">{currentMetrics?.processes.pid}</p>
             </div>
             <div>
               <p className="text-gray-400">CPU</p>
               <p className="text-white font-semibold">
-                {systemMetrics.processes.cpuUsage?.toFixed(1) || 0}%
+                {currentMetrics?.processes.cpuUsage?.toFixed(1) || 0}%
               </p>
             </div>
             <div>
               <p className="text-gray-400">RAM</p>
               <p className="text-white font-semibold">
-                {systemMetrics.processes.memUsage?.toFixed(1) || 0}%
+                {currentMetrics?.processes.memUsage?.toFixed(1) || 0}%
               </p>
             </div>
           </div>
