@@ -72,10 +72,14 @@ export const usersRouter = router({
     .mutation(async ({ input }) => {
       const { userId, ...updates } = input;
 
-      const [updated] = await db.update(users)
+      await db.update(users)
         .set(updates)
+        .where(eq(users.id, userId));
+
+      const [updated] = await db.select()
+        .from(users)
         .where(eq(users.id, userId))
-        .returning();
+        .limit(1);
 
       const { passwordHash, ...safeUser } = updated;
 
@@ -171,12 +175,16 @@ export const usersRouter = router({
       preferences: z.any(),
     }))
     .mutation(async ({ input }) => {
-      const [updated] = await db.update(users)
+      await db.update(users)
         .set({
           preferences: JSON.stringify(input.preferences),
         })
+        .where(eq(users.id, input.userId));
+
+      const [updated] = await db.select()
+        .from(users)
         .where(eq(users.id, input.userId))
-        .returning();
+        .limit(1);
 
       return { success: true, preferences: updated.preferences };
     }),

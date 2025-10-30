@@ -40,15 +40,17 @@ export const authRouter = router({
       const hashedPassword = await bcrypt.hash(input.password, 10);
 
       // Create user
-      const [user] = await db.insert(users).values({
+      const result: any = await db.insert(users).values({
         email: input.email,
         passwordHash: hashedPassword,
         name: input.name,
         username: input.username || input.email.split('@')[0],
-      }).returning();
+      });
+
+      const userId = result[0]?.insertId || result.insertId;
 
       // Generate token
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
 
       return {
         success: true,

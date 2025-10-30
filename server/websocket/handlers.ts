@@ -101,12 +101,18 @@ export async function handleChatSend(
 ): Promise<void> {
   try {
     // 1. Salvar mensagem do usuário
-    const [userMessage] = await db.insert(chatMessages).values({
+    const result: any = await db.insert(chatMessages).values({
       conversationId: data.conversationId || 1,
       role: 'user',
       content: data.message,
       timestamp: new Date(),
-    }).returning();
+    });
+
+    const messageId = result[0]?.insertId || result.insertId;
+    const [userMessage] = await db.select()
+      .from(chatMessages)
+      .where(eq(chatMessages.id, messageId))
+      .limit(1);
 
     // Enviar confirmação
     ws.send(JSON.stringify({
@@ -172,12 +178,18 @@ export async function handleChatSend(
     }
 
     // 6. Salvar resposta completa
-    const [assistantMessage] = await db.insert(chatMessages).values({
+    const result2: any = await db.insert(chatMessages).values({
       conversationId: data.conversationId || 1,
       role: 'assistant',
       content: fullResponse || 'Desculpe, não consegui gerar uma resposta.',
       timestamp: new Date(),
-    }).returning();
+    });
+
+    const assistantMessageId = result2[0]?.insertId || result2.insertId;
+    const [assistantMessage] = await db.select()
+      .from(chatMessages)
+      .where(eq(chatMessages.id, assistantMessageId))
+      .limit(1);
 
     // Enviar mensagem completa
     ws.send(JSON.stringify({
