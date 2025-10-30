@@ -537,5 +537,130 @@ ON DUPLICATE KEY UPDATE
   `instructions` = 'Para obter token de bot do Discord:\n1. Acesse discord.com/developers/applications\n2. Crie uma nova aplicação\n3. Vá em "Bot" e clique em "Add Bot"\n4. Copie o token do bot\n5. Configure as permissões necessárias';
 
 -- ==================================================
+-- TABELAS PARA MODEL TRAINING SERVICE
+-- ==================================================
+
+-- Tabela: trainingDatasets
+CREATE TABLE IF NOT EXISTS `trainingDatasets` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `userId` INT NOT NULL,
+  `name` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `datasetType` ENUM('text', 'code', 'qa', 'completion', 'chat') NOT NULL DEFAULT 'text',
+  `format` ENUM('jsonl', 'csv', 'txt', 'parquet') NOT NULL DEFAULT 'jsonl',
+  `filePath` VARCHAR(500),
+  `fileSize` BIGINT,
+  `recordCount` INT DEFAULT 0,
+  `metadata` JSON,
+  `isActive` BOOLEAN NOT NULL DEFAULT 1,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_userId` (`userId`),
+  INDEX `idx_datasetType` (`datasetType`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela: trainingJobs
+CREATE TABLE IF NOT EXISTS `trainingJobs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `userId` INT NOT NULL,
+  `datasetId` INT NOT NULL,
+  `baseModelId` INT NOT NULL,
+  `name` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `status` ENUM('pending', 'preparing', 'training', 'validating', 'completed', 'failed', 'cancelled') NOT NULL DEFAULT 'pending',
+  `trainingType` ENUM('fine-tuning', 'lora', 'qlora', 'full') NOT NULL DEFAULT 'lora',
+  `hyperparameters` JSON COMMENT 'learning_rate, epochs, batch_size, etc',
+  `progress` DECIMAL(5,2) DEFAULT 0.00 COMMENT 'Progresso em %',
+  `currentEpoch` INT DEFAULT 0,
+  `totalEpochs` INT DEFAULT 1,
+  `trainingLoss` DECIMAL(10,6),
+  `validationLoss` DECIMAL(10,6),
+  `trainingAccuracy` DECIMAL(5,2),
+  `validationAccuracy` DECIMAL(5,2),
+  `estimatedTimeRemaining` INT COMMENT 'Tempo estimado em segundos',
+  `startedAt` TIMESTAMP NULL,
+  `completedAt` TIMESTAMP NULL,
+  `errorMessage` TEXT,
+  `logFilePath` VARCHAR(500),
+  `metadata` JSON,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`datasetId`) REFERENCES `trainingDatasets`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`baseModelId`) REFERENCES `aiModels`(`id`) ON DELETE CASCADE,
+  INDEX `idx_userId` (`userId`),
+  INDEX `idx_status` (`status`),
+  INDEX `idx_datasetId` (`datasetId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela: modelVersions
+CREATE TABLE IF NOT EXISTS `modelVersions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `userId` INT NOT NULL,
+  `baseModelId` INT NOT NULL,
+  `trainingJobId` INT,
+  `versionName` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `modelPath` VARCHAR(500) NOT NULL,
+  `sizeBytes` BIGINT,
+  `format` ENUM('gguf', 'safetensors', 'pytorch', 'onnx') NOT NULL DEFAULT 'gguf',
+  `quantization` VARCHAR(50) COMMENT 'Q4_K_M, Q5_K_S, FP16, etc',
+  `parameters` VARCHAR(50) COMMENT '3B, 7B, 13B, etc',
+  `performanceMetrics` JSON COMMENT 'accuracy, perplexity, bleu, rouge, etc',
+  `benchmarkScores` JSON COMMENT 'mmlu, hellaswag, truthfulqa, etc',
+  `isActive` BOOLEAN NOT NULL DEFAULT 1,
+  `isPublic` BOOLEAN NOT NULL DEFAULT 0,
+  `downloadCount` INT DEFAULT 0,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`baseModelId`) REFERENCES `aiModels`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`trainingJobId`) REFERENCES `trainingJobs`(`id`) ON DELETE SET NULL,
+  INDEX `idx_userId` (`userId`),
+  INDEX `idx_baseModelId` (`baseModelId`),
+  INDEX `idx_isPublic` (`isPublic`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela: puppeteerSessions (para Puppeteer Service)
+CREATE TABLE IF NOT EXISTS `puppeteerSessions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `sessionId` VARCHAR(255) NOT NULL UNIQUE,
+  `userId` INT NOT NULL,
+  `status` ENUM('active', 'closed', 'error') NOT NULL DEFAULT 'active',
+  `config` JSON COMMENT 'headless, proxy, userAgent, etc',
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `expiresAt` TIMESTAMP NULL,
+  FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_userId` (`userId`),
+  INDEX `idx_sessionId` (`sessionId`),
+  INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabela: puppeteerResults (para armazenar resultados de scraping)
+CREATE TABLE IF NOT EXISTS `puppeteerResults` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `sessionId` VARCHAR(255) NOT NULL,
+  `resultType` ENUM('screenshot', 'pdf', 'data', 'html') NOT NULL,
+  `data` LONGTEXT,
+  `url` VARCHAR(1000),
+  `metadata` JSON,
+  `createdAt` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`sessionId`) REFERENCES `puppeteerSessions`(`sessionId`) ON DELETE CASCADE,
+  INDEX `idx_sessionId` (`sessionId`),
+  INDEX `idx_resultType` (`resultType`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==================================================
+-- DADOS INICIAIS PARA TRAINING
+-- ==================================================
+
+-- Dataset de exemplo
+INSERT INTO `trainingDatasets` (`userId`, `name`, `description`, `datasetType`, `format`, `recordCount`, `isActive`) VALUES
+(1, 'Dataset de Exemplo - Conversação', 'Dataset de exemplo com conversas em português', 'chat', 'jsonl', 100, 1)
+ON DUPLICATE KEY UPDATE `name` = `name`;
+
+-- ==================================================
 -- FIM DO SCHEMA
 -- ==================================================

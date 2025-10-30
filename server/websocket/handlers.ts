@@ -1,11 +1,12 @@
 /**
- * WebSocket Handlers - Chat e Monitoramento em Tempo Real
+ * WebSocket Handlers - Chat, Monitoramento e Terminal em Tempo Real
  */
 
 import { WebSocket } from 'ws';
 import { db } from '../db/index.js';
 import { chatMessages, executionLogs, tasks, subtasks } from '../db/schema.js';
 import { lmstudioService } from '../services/lmstudioService.js';
+import { terminalService } from '../services/terminalService.js';
 import { eq, desc } from 'drizzle-orm';
 
 // Tipos de mensagens WebSocket
@@ -16,6 +17,10 @@ export type WSMessage =
   | { type: 'monitoring:unsubscribe' }
   | { type: 'task:subscribe'; data: { taskId: number } }
   | { type: 'task:unsubscribe'; data: { taskId: number } }
+  | { type: 'terminal:create' }
+  | { type: 'terminal:input'; data: { sessionId: string; input: string } }
+  | { type: 'terminal:resize'; data: { sessionId: string; cols: number; rows: number } }
+  | { type: 'terminal:close'; data: { sessionId: string } }
   | { type: 'ping' };
 
 export type WSResponse =
@@ -24,6 +29,9 @@ export type WSResponse =
   | { type: 'chat:history'; data: Array<any> }
   | { type: 'metrics'; data: any }
   | { type: 'task:update'; data: any }
+  | { type: 'terminal:created'; data: { sessionId: string } }
+  | { type: 'terminal:output'; data: { sessionId: string; output: string } }
+  | { type: 'terminal:exit'; data: { sessionId: string; exitCode: number; signal?: number } }
   | { type: 'error'; data: { message: string } }
   | { type: 'pong' };
 
@@ -301,6 +309,42 @@ export async function handleMessage(ws: WebSocket, message: string): Promise<voi
       case 'task:unsubscribe':
         connectionManager.unsubscribeTask(ws, parsed.data.taskId);
         ws.send(JSON.stringify({ type: 'task:unsubscribed', data: { taskId: parsed.data.taskId } }));
+        break;
+
+      case 'terminal:create':
+        const sessionId = terminalService.createSession(ws);
+        ws.send(JSON.stringify({
+          type: 'terminal:created',
+          data: { sessionId },
+        }));
+        break;
+
+      case 'terminal:input':
+        const inputSuccess = terminalService.sendInput(parsed.data.sessionId, parsed.data.input);
+        if (!inputSuccess) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            data: { message: 'Terminal session not found' },
+          }));
+        }
+        break;
+
+      case 'terminal:resize':
+        const resizeSuccess = terminalService.resize(
+          parsed.data.sessionId,
+          parsed.data.cols,
+          parsed.data.rows
+        );
+        if (!resizeSuccess) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            data: { message: 'Failed to resize terminal' },
+          }));
+        }
+        break;
+
+      case 'terminal:close':
+        terminalService.closeSession(parsed.data.sessionId);
         break;
 
       case 'ping':

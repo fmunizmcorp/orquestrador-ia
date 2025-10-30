@@ -500,3 +500,165 @@ export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
     references: [chatConversations.id],
   }),
 }));
+
+// ==================================================
+// TABELAS PARA MODEL TRAINING SERVICE
+// ==================================================
+
+export const trainingDatasets = mysqlTable('trainingDatasets', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  datasetType: mysqlEnum('datasetType', ['text', 'code', 'qa', 'completion', 'chat']).default('text'),
+  format: mysqlEnum('format', ['jsonl', 'csv', 'txt', 'parquet']).default('jsonl'),
+  filePath: varchar('filePath', { length: 500 }),
+  fileSize: bigint('fileSize', { mode: 'number' }),
+  recordCount: int('recordCount').default(0),
+  metadata: json('metadata'),
+  isActive: boolean('isActive').notNull().default(true),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  datasetTypeIdx: index('idx_datasetType').on(table.datasetType),
+}));
+
+export const trainingJobs = mysqlTable('trainingJobs', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  datasetId: int('datasetId').notNull().references(() => trainingDatasets.id, { onDelete: 'cascade' }),
+  baseModelId: int('baseModelId').notNull().references(() => aiModels.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  status: mysqlEnum('status', ['pending', 'preparing', 'training', 'validating', 'completed', 'failed', 'cancelled']).default('pending'),
+  trainingType: mysqlEnum('trainingType', ['fine-tuning', 'lora', 'qlora', 'full']).default('lora'),
+  hyperparameters: json('hyperparameters'),
+  progress: decimal('progress', { precision: 5, scale: 2 }).default('0.00'),
+  currentEpoch: int('currentEpoch').default(0),
+  totalEpochs: int('totalEpochs').default(1),
+  trainingLoss: decimal('trainingLoss', { precision: 10, scale: 6 }),
+  validationLoss: decimal('validationLoss', { precision: 10, scale: 6 }),
+  trainingAccuracy: decimal('trainingAccuracy', { precision: 5, scale: 2 }),
+  validationAccuracy: decimal('validationAccuracy', { precision: 5, scale: 2 }),
+  estimatedTimeRemaining: int('estimatedTimeRemaining'),
+  startedAt: timestamp('startedAt'),
+  completedAt: timestamp('completedAt'),
+  errorMessage: text('errorMessage'),
+  logFilePath: varchar('logFilePath', { length: 500 }),
+  metadata: json('metadata'),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  statusIdx: index('idx_status').on(table.status),
+  datasetIdIdx: index('idx_datasetId').on(table.datasetId),
+}));
+
+export const modelVersions = mysqlTable('modelVersions', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  baseModelId: int('baseModelId').notNull().references(() => aiModels.id, { onDelete: 'cascade' }),
+  trainingJobId: int('trainingJobId').references(() => trainingJobs.id, { onDelete: 'set null' }),
+  versionName: varchar('versionName', { length: 255 }).notNull(),
+  description: text('description'),
+  modelPath: varchar('modelPath', { length: 500 }).notNull(),
+  sizeBytes: bigint('sizeBytes', { mode: 'number' }),
+  format: mysqlEnum('format', ['gguf', 'safetensors', 'pytorch', 'onnx']).default('gguf'),
+  quantization: varchar('quantization', { length: 50 }),
+  parameters: varchar('parameters', { length: 50 }),
+  performanceMetrics: json('performanceMetrics'),
+  benchmarkScores: json('benchmarkScores'),
+  isActive: boolean('isActive').notNull().default(true),
+  isPublic: boolean('isPublic').notNull().default(false),
+  downloadCount: int('downloadCount').default(0),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  baseModelIdIdx: index('idx_baseModelId').on(table.baseModelId),
+  isPublicIdx: index('idx_isPublic').on(table.isPublic),
+}));
+
+export const puppeteerSessions = mysqlTable('puppeteerSessions', {
+  id: int('id').primaryKey().autoincrement(),
+  sessionId: varchar('sessionId', { length: 255 }).notNull().unique(),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  status: mysqlEnum('status', ['active', 'closed', 'error']).default('active'),
+  config: json('config'),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+  expiresAt: timestamp('expiresAt'),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  sessionIdIdx: index('idx_sessionId').on(table.sessionId),
+  statusIdx: index('idx_status').on(table.status),
+}));
+
+export const puppeteerResults = mysqlTable('puppeteerResults', {
+  id: int('id').primaryKey().autoincrement(),
+  sessionId: varchar('sessionId', { length: 255 }).notNull().references(() => puppeteerSessions.sessionId, { onDelete: 'cascade' }),
+  resultType: mysqlEnum('resultType', ['screenshot', 'pdf', 'data', 'html']).notNull(),
+  data: text('data', { length: 'long' }),
+  url: varchar('url', { length: 1000 }),
+  metadata: json('metadata'),
+  createdAt: timestamp('createdAt').defaultNow(),
+}, (table) => ({
+  sessionIdIdx: index('idx_sessionId').on(table.sessionId),
+  resultTypeIdx: index('idx_resultType').on(table.resultType),
+}));
+
+// Relations para Training
+export const trainingDatasetsRelations = relations(trainingDatasets, ({ one, many }) => ({
+  user: one(users, {
+    fields: [trainingDatasets.userId],
+    references: [users.id],
+  }),
+  trainingJobs: many(trainingJobs),
+}));
+
+export const trainingJobsRelations = relations(trainingJobs, ({ one, many }) => ({
+  user: one(users, {
+    fields: [trainingJobs.userId],
+    references: [users.id],
+  }),
+  dataset: one(trainingDatasets, {
+    fields: [trainingJobs.datasetId],
+    references: [trainingDatasets.id],
+  }),
+  baseModel: one(aiModels, {
+    fields: [trainingJobs.baseModelId],
+    references: [aiModels.id],
+  }),
+  modelVersions: many(modelVersions),
+}));
+
+export const modelVersionsRelations = relations(modelVersions, ({ one }) => ({
+  user: one(users, {
+    fields: [modelVersions.userId],
+    references: [users.id],
+  }),
+  baseModel: one(aiModels, {
+    fields: [modelVersions.baseModelId],
+    references: [aiModels.id],
+  }),
+  trainingJob: one(trainingJobs, {
+    fields: [modelVersions.trainingJobId],
+    references: [trainingJobs.id],
+  }),
+}));
+
+export const puppeteerSessionsRelations = relations(puppeteerSessions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [puppeteerSessions.userId],
+    references: [users.id],
+  }),
+  results: many(puppeteerResults),
+}));
+
+export const puppeteerResultsRelations = relations(puppeteerResults, ({ one }) => ({
+  session: one(puppeteerSessions, {
+    fields: [puppeteerResults.sessionId],
+    references: [puppeteerSessions.sessionId],
+  }),
+}));
