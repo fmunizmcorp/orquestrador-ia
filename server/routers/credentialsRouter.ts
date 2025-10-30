@@ -86,7 +86,7 @@ export const credentialsRouter = router({
           ...rest,
           encryptedData,
         })
-        .$returningId();
+        .returning();
 
       return { id: cred.id, success: true };
     }),

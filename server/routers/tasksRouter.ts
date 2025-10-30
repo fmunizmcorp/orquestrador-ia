@@ -101,7 +101,7 @@ export const tasksRouter = router({
     .mutation(async ({ input }) => {
       const [task] = await db.insert(tasks)
         .values(input)
-        .$returningId();
+        .returning();
 
       return { id: task.id, success: true };
     }),

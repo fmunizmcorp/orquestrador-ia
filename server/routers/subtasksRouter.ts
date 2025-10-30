@@ -52,7 +52,7 @@ export const subtasksRouter = router({
     .mutation(async ({ input }) => {
       const [subtask] = await db.insert(subtasks)
         .values(input)
-        .$returningId();
+        .returning();
 
       return { id: subtask.id, success: true };
     }),

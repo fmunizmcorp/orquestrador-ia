@@ -95,6 +95,7 @@ export const updateTaskSchema = z.object({
   description: z.string().min(1).optional(),
   status: z.enum(['pending', 'planning', 'executing', 'validating', 'completed', 'failed', 'paused']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  completedAt: z.date().optional(),
 });
 
 export const createSubtaskSchema = z.object({
@@ -107,6 +108,108 @@ export const createSubtaskSchema = z.object({
 });
 
 export const updateSubtaskSchema = createSubtaskSchema.partial().extend({
+  id: idSchema,
+  completedAt: z.date().optional(),
+});
+
+// Chat schemas
+export const createChatConversationSchema = z.object({
+  userId: idSchema.default(1),
+  title: z.string().min(1).max(500).optional(),
+  metadata: z.any().optional(),
+});
+
+export const createChatMessageSchema = z.object({
+  conversationId: idSchema,
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string().min(1),
+  metadata: z.any().optional(),
+});
+
+// External API Account schemas
+export const createExternalAPIAccountSchema = z.object({
+  userId: idSchema.default(1),
+  service: z.string().min(1).max(100),
+  accountIdentifier: z.string().min(1).max(255),
+  credentialId: idSchema,
+  isActive: z.boolean().default(true),
+  metadata: z.any().optional(),
+});
+
+export const updateExternalAPIAccountSchema = createExternalAPIAccountSchema.partial().extend({
+  id: idSchema,
+});
+
+// Instruction schemas
+export const createInstructionSchema = z.object({
+  userId: idSchema.default(1),
+  title: z.string().min(1).max(500),
+  description: z.string().optional(),
+  category: z.string().max(100).optional(),
+  instructionText: z.string().min(1),
+  usageCount: z.number().int().min(0).default(0),
+  isActive: z.boolean().default(true),
+});
+
+export const updateInstructionSchema = createInstructionSchema.partial().extend({
+  id: idSchema,
+});
+
+// Knowledge Base schemas
+export const createKnowledgeBaseSchema = z.object({
+  userId: idSchema.default(1),
+  title: z.string().min(1).max(500),
+  description: z.string().optional(),
+  category: z.string().max(100).optional(),
+  tags: z.array(z.string()).optional(),
+  isPublic: z.boolean().default(false),
+  isActive: z.boolean().default(true),
+});
+
+export const updateKnowledgeBaseSchema = createKnowledgeBaseSchema.partial().extend({
+  id: idSchema,
+});
+
+// Knowledge Source schemas
+export const createKnowledgeSourceSchema = z.object({
+  knowledgeBaseId: idSchema,
+  sourceType: z.enum(['text', 'file', 'url', 'api']),
+  content: z.string().optional(),
+  url: z.string().url().optional(),
+  metadata: z.any().optional(),
+  isActive: z.boolean().default(true),
+});
+
+export const updateKnowledgeSourceSchema = createKnowledgeSourceSchema.partial().extend({
+  id: idSchema,
+});
+
+// Template schemas
+export const createTemplateSchema = z.object({
+  userId: idSchema.default(1),
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  category: z.string().max(100).optional(),
+  templateData: z.any(),
+  isPublic: z.boolean().default(false),
+  isActive: z.boolean().default(true),
+});
+
+export const updateTemplateSchema = createTemplateSchema.partial().extend({
+  id: idSchema,
+});
+
+// Workflow schemas
+export const createWorkflowSchema = z.object({
+  userId: idSchema.default(1),
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  category: z.string().max(100).optional(),
+  steps: z.array(z.any()),
+  isActive: z.boolean().default(true),
+});
+
+export const updateWorkflowSchema = createWorkflowSchema.partial().extend({
   id: idSchema,
 });
 

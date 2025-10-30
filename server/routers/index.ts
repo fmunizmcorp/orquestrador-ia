@@ -22,7 +22,7 @@ import { slackRouter } from './slackRouter.js';
 import { notionRouter } from './notionRouter.js';
 import { sheetsRouter } from './sheetsRouter.js';
 import { discordRouter } from './discordRouter.js';
-import { trainingRouter } from './trainingRouter.js';
+// import { trainingRouter } from './trainingRouter.js'; // TEMPORARIAMENTE DESABILITADO - faltam tabelas no schema
 
 export const appRouter = router({
   providers: providersRouter,
@@ -48,7 +48,7 @@ export const appRouter = router({
   notion: notionRouter,
   sheets: sheetsRouter,
   discord: discordRouter,
-  training: trainingRouter,
+  // training: trainingRouter, // TEMPORARIAMENTE DESABILITADO
 });
 
 export type AppRouter = typeof appRouter;

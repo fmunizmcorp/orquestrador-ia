@@ -80,7 +80,7 @@ export const providersRouter = router({
       try {
         const [provider] = await db.insert(aiProviders)
           .values(input)
-          .$returningId();
+          .returning();
 
         return { id: provider.id, success: true };
       } catch (error) {

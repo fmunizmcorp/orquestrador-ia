@@ -82,7 +82,7 @@ export const modelsRouter = router({
     .mutation(async ({ input }) => {
       const [model] = await db.insert(aiModels)
         .values(input)
-        .$returningId();
+        .returning();
 
       return { id: model.id, success: true };
     }),

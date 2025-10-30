@@ -36,7 +36,7 @@ export const knowledgeSourcesRouter = router({
     .mutation(async ({ input }) => {
       const [source] = await db.insert(knowledgeSources)
         .values(input)
-        .$returningId();
+        .returning();
 
       return { id: source.id, success: true };
     }),

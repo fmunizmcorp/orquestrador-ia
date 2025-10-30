@@ -12,7 +12,7 @@
 
 import puppeteer, { Browser, Page, ElementHandle, ScreenshotOptions, PDFOptions } from 'puppeteer';
 import { db } from '../db/index.js';
-import { puppeteerSessions, puppeteerResults } from '../db/schema.js';
+// import { puppeteerSessions, puppeteerResults } from '../db/schema.js';
 import { withErrorHandling } from '../middleware/errorHandler.js';
 
 interface BrowserConfig {
@@ -416,15 +416,15 @@ class PuppeteerService {
         }) as Buffer;
 
         // Salvar resultado no banco se tiver path
-        if (options?.path) {
-          await db.insert(puppeteerResults).values({
-            sessionId,
-            resultType: 'screenshot',
-            data: screenshot.toString('base64'),
-            url: page.url(),
-            createdAt: new Date(),
-          });
-        }
+        // if (options?.path) {
+        //   await db.insert(puppeteerResults).values({
+        //     sessionId,
+        //     resultType: 'screenshot',
+        //     data: screenshot.toString('base64'),
+        //     url: page.url(),
+        //     createdAt: new Date(),
+        //   });
+        // }
 
         return screenshot;
       },
@@ -450,13 +450,13 @@ class PuppeteerService {
         });
 
         // Salvar no banco
-        await db.insert(puppeteerResults).values({
-          sessionId,
-          resultType: 'pdf',
-          data: pdf.toString('base64'),
-          url: page.url(),
-          createdAt: new Date(),
-        });
+        // await db.insert(puppeteerResults).values({
+        //   sessionId,
+        //   resultType: 'pdf',
+        //   data: pdf.toString('base64'),
+        //   url: page.url(),
+        //   createdAt: new Date(),
+        // });
 
         return pdf;
       },

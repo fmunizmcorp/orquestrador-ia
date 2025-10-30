@@ -4,9 +4,9 @@
  */
 import { db } from '../db/index.js';
 import {
-  trainingDatasets,
-  trainingJobs,
-  modelVersions,
+  // trainingDatasets,
+  // trainingJobs,
+  // modelVersions,
   aiModels,
 } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';

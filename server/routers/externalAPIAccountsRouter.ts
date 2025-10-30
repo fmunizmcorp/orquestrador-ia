@@ -74,7 +74,7 @@ export const externalAPIAccountsRouter = router({
     .mutation(async ({ input }) => {
       const [account] = await db.insert(externalAPIAccounts)
         .values(input)
-        .$returningId();
+        .returning();
 
       return { id: account.id, success: true };
     }),

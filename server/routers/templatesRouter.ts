@@ -60,7 +60,7 @@ export const templatesRouter = router({
     .mutation(async ({ input }) => {
       const [template] = await db.insert(aiTemplates)
         .values(input)
-        .$returningId();
+        .returning();
 
       return { id: template.id, success: true };
     }),

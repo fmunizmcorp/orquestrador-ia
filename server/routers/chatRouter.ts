@@ -1,9 +1,8 @@
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../db/index.js';
 import { chatConversations, chatMessages } from '../db/schema.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { idSchema, createChatConversationSchema, createChatMessageSchema, searchSchema } from '../utils/validation.js';
-import { z } from 'zod';
 
 export const chatRouter = router({
   listConversations: publicProcedure
@@ -60,9 +59,14 @@ export const chatRouter = router({
   createConversation: publicProcedure
     .input(createChatConversationSchema)
     .mutation(async ({ input }) => {
-      const [conversation] = await db.insert(chatConversations)
-        .values(input)
-        .$returningId();
+      await db.insert(chatConversations)
+        .values(input);
+
+      // Buscar último ID inserido
+      const [conversation] = await db.select()
+        .from(chatConversations)
+        .orderBy(desc(chatConversations.id))
+        .limit(1);
 
       return { id: conversation.id, success: true };
     }),
@@ -70,9 +74,14 @@ export const chatRouter = router({
   createMessage: publicProcedure
     .input(createChatMessageSchema)
     .mutation(async ({ input }) => {
-      const [message] = await db.insert(chatMessages)
-        .values(input)
-        .$returningId();
+      await db.insert(chatMessages)
+        .values(input);
+
+      // Buscar último ID inserido
+      const [message] = await db.select()
+        .from(chatMessages)
+        .orderBy(desc(chatMessages.id))
+        .limit(1);
 
       // Atualizar timestamp da conversa
       await db.update(chatConversations)

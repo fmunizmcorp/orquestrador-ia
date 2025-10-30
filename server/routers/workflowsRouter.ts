@@ -60,7 +60,7 @@ export const workflowsRouter = router({
     .mutation(async ({ input }) => {
       const [workflow] = await db.insert(aiWorkflows)
         .values(input)
-        .$returningId();
+        .returning();
 
       return { id: workflow.id, success: true };
     }),

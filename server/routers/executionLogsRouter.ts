@@ -68,7 +68,7 @@ export const executionLogsRouter = router({
     .mutation(async ({ input }) => {
       const [log] = await db.insert(executionLogs)
         .values(input)
-        .$returningId();
+        .returning();
 
       return { id: log.id, success: true };
     }),

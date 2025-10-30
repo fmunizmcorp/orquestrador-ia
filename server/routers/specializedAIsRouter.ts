@@ -75,7 +75,7 @@ export const specializedAIsRouter = router({
     .mutation(async ({ input }) => {
       const [ai] = await db.insert(specializedAIs)
         .values(input)
-        .$returningId();
+        .returning();
 
       return { id: ai.id, success: true };
     }),

@@ -60,7 +60,7 @@ export const knowledgeBaseRouter = router({
     .mutation(async ({ input }) => {
       const [kb] = await db.insert(knowledgeBase)
         .values(input)
-        .$returningId();
+        .returning();
 
       return { id: kb.id, success: true };
     }),

@@ -72,7 +72,7 @@ export const instructionsRouter = router({
     .mutation(async ({ input }) => {
       const [instruction] = await db.insert(instructions)
         .values(input)
-        .$returningId();
+        .returning();
 
       return { id: instruction.id, success: true };
     }),
