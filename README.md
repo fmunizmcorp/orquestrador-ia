@@ -2,6 +2,44 @@
 
 Sistema COMPLETO de orquestração de múltiplas IAs com validação cruzada obrigatória e detecção de alucinação.
 
+---
+
+## ⚡ INSTALAÇÃO RÁPIDA - UM COMANDO ÚNICO
+
+**Copie e cole este comando no seu servidor para instalar TUDO automaticamente:**
+
+```bash
+cd ~ && rm -rf orquestrador-ia 2>/dev/null; git clone https://github.com/fmunizmcorp/orquestrador-ia.git && cd orquestrador-ia && chmod +x install.sh && ./install.sh
+```
+
+### O que este comando faz:
+1. ✅ Remove instalação anterior (se existir)
+2. ✅ Clona repositório completo do GitHub
+3. ✅ Navega para a pasta correta
+4. ✅ Dá permissão de execução ao instalador
+5. ✅ Executa instalação automatizada (10 etapas)
+   - Verifica requisitos (Node.js, MySQL, Git)
+   - Instala dependências npm
+   - Cria arquivo .env com secrets gerados
+   - Configura MySQL (solicita credenciais)
+   - Cria database automaticamente
+   - Executa migrations (todas as tabelas)
+   - Compila frontend e backend
+   - Libera porta 3001
+   - Inicia com PM2
+   - Mostra resumo completo
+
+### Resultado:
+- 🌐 Sistema rodando em `http://localhost:3001`
+- 🔄 Gerenciado pelo PM2 (auto-restart)
+- 📊 Dashboard com CRUD completo
+- 🌙 Dark mode funcional
+- 🔐 Autenticação JWT pronta
+
+**Para mais detalhes:** Consulte `DEPLOY_COMPLETO.md`
+
+---
+
 ## 📋 Características Principais
 
 ### ✅ Funcionalidades Implementadas (100%)
@@ -63,41 +101,28 @@ Sistema COMPLETO de orquestração de múltiplas IAs com validação cruzada obr
 22. `credentialTemplates` - Templates de credenciais
 23. `aiQualityMetrics` - Métricas de qualidade das IAs
 
-## 📦 Instalação
+## 📦 Instalação Detalhada
 
-### Requisitos
+### Requisitos Mínimos
 
-- Ubuntu 22.04 ou superior
-- Usuário com privilégios sudo
-- LM Studio rodando localmente (opcional)
-- Mínimo 4GB RAM
-- Mínimo 10GB espaço em disco
+- **Sistema:** Ubuntu 22.04+ / Debian 11+ / CentOS 8+
+- **Node.js:** v18 ou superior
+- **MySQL:** 8.0 ou superior
+- **Git:** Qualquer versão recente
+- **RAM:** Mínimo 1GB (recomendado 2GB)
+- **Disco:** Mínimo 2GB livres
+- **Portas:** 3001 disponível
 
-### Instalação Automática (Recomendado)
+### Instalação Manual (se preferir)
 
-```bash
-# 1. Extrair arquivos
-tar -xzf orquestrador-v3.tar.gz
+Veja o guia completo em `INSTALL.md` com:
+- 📋 8 passos detalhados
+- 🔧 Configurações avançadas
+- 🐛 Troubleshooting (8 problemas comuns)
+- 🔄 Guia de atualização
+- 🗑️ Guia de desinstalação
 
-# 2. Entrar no diretório
-cd orquestrador-v3
-
-# 3. Executar instalador
-./instalar.sh
-```
-
-O instalador irá:
-- ✅ Instalar todas as dependências
-- ✅ Configurar MySQL
-- ✅ Criar banco de dados (23 tabelas)
-- ✅ Instalar Node.js 20.x e pnpm
-- ✅ Fazer build do projeto
-- ✅ Configurar PM2
-- ✅ Iniciar aplicação
-- ✅ Validar instalação
-- ✅ Criar scripts de manutenção
-
-**Tempo estimado:** 10-15 minutos
+**Tempo estimado:** 5-10 minutos (automático)
 
 ## 🎮 Uso
 
