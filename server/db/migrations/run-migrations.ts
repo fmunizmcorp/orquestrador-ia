@@ -3,13 +3,34 @@
  * Executa o schema.sql completo no banco MySQL
  */
 
+import { config } from 'dotenv';
 import { createConnection } from 'mysql2/promise';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Carregar variáveis de ambiente do arquivo .env
+const envPath = join(__dirname, '../../../.env');
+if (existsSync(envPath)) {
+  config({ path: envPath });
+  console.log('✅ Arquivo .env carregado');
+} else {
+  console.log('⚠️  Arquivo .env não encontrado, usando valores padrão');
+}
+
+// Exibir configuração (sem mostrar senha completa)
+const dbPassword = process.env.DB_PASSWORD || '';
+const maskedPassword = dbPassword ? dbPassword.substring(0, 3) + '***' : '(vazio)';
+console.log(`📝 Configuração do banco:`);
+console.log(`   Host: ${process.env.DB_HOST || 'localhost'}`);
+console.log(`   Port: ${process.env.DB_PORT || '3306'}`);
+console.log(`   User: ${process.env.DB_USER || 'root'}`);
+console.log(`   Pass: ${maskedPassword}`);
+console.log(`   Database: ${process.env.DB_NAME || 'orquestrador_ia'}`);
+console.log();
 
 const DB_CONFIG = {
   host: process.env.DB_HOST || 'localhost',
