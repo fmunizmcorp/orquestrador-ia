@@ -4,7 +4,7 @@
 import axios from 'axios';
 import { db } from '../../db/index.js';
 import { credentials } from '../../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import CryptoJS from 'crypto-js';
 
 const SLACK_API = 'https://slack.com/api';
@@ -13,8 +13,10 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key';
 class SlackService {
   private async getToken(userId: number): Promise<string> {
     const [cred] = await db.select().from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'slack')).limit(1);
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'slack')
+      )).limit(1);
     if (!cred) throw new Error('Slack credentials not found');
     const bytes = CryptoJS.AES.decrypt(cred.encryptedData, ENCRYPTION_KEY);
     return JSON.parse(bytes.toString(CryptoJS.enc.Utf8)).accessToken;
@@ -22,7 +24,11 @@ class SlackService {
 
   async saveToken(userId: number, token: string) {
     const encrypted = CryptoJS.AES.encrypt(JSON.stringify({ accessToken: token }), ENCRYPTION_KEY).toString();
-    const existing = await db.select().from(credentials).where(eq(credentials.userId, userId)).where(eq(credentials.service, 'slack')).limit(1);
+    const existing = await db.select().from(credentials)
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'slack')
+      )).limit(1);
     if (existing.length > 0) {
       await db.update(credentials).set({ encryptedData: encrypted }).where(eq(credentials.id, existing[0].id));
     } else {

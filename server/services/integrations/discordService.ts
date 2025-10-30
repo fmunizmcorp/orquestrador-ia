@@ -5,7 +5,7 @@
 import axios from 'axios';
 import { db } from '../../db/index.js';
 import { credentials } from '../../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import CryptoJS from 'crypto-js';
 
 const DISCORD_API = 'https://discord.com/api/v10';
@@ -40,8 +40,10 @@ interface EmbedOptions {
 class DiscordService {
   private async getToken(userId: number): Promise<{ botToken?: string; accessToken?: string }> {
     const [cred] = await db.select().from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'discord'))
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'discord')
+      ))
       .limit(1);
     
     if (!cred) {
@@ -69,8 +71,10 @@ class DiscordService {
 
     const existing = await db.select()
       .from(credentials)
-      .where(eq(credentials.userId, userId))
-      .where(eq(credentials.service, 'discord'))
+      .where(and(
+        eq(credentials.userId, userId),
+        eq(credentials.service, 'discord')
+      ))
       .limit(1);
 
     if (existing.length > 0) {
