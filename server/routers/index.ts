@@ -21,6 +21,7 @@ import { driveRouter } from './driveRouter.js';
 import { slackRouter } from './slackRouter.js';
 import { notionRouter } from './notionRouter.js';
 import { sheetsRouter } from './sheetsRouter.js';
+import { discordRouter } from './discordRouter.js';
 
 export const appRouter = router({
   providers: providersRouter,
@@ -45,6 +46,7 @@ export const appRouter = router({
   slack: slackRouter,
   notion: notionRouter,
   sheets: sheetsRouter,
+  discord: discordRouter,
 });
 
 export type AppRouter = typeof appRouter;
