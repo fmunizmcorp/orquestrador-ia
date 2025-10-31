@@ -23,15 +23,18 @@ export const tasksRouter = router({
       offset: z.number().min(0).optional().default(0),
     }))
     .query(async ({ input }) => {
-      let query = db.select().from(tasks);
+      const conditions = [];
 
       if (input.projectId) {
-        query = query.where(eq(tasks.projectId, input.projectId));
+        conditions.push(eq(tasks.projectId, input.projectId));
+      }
+      if (input.status) {
+        conditions.push(eq(tasks.status, input.status));
       }
 
-      if (input.status) {
-        query = query.where(eq(tasks.status, input.status));
-      }
+      const query = conditions.length > 0
+        ? db.select().from(tasks).where(and(...conditions))
+        : db.select().from(tasks);
 
       const allTasks = await query
         .orderBy(desc(tasks.createdAt))
@@ -95,6 +98,7 @@ export const tasksRouter = router({
     }))
     .mutation(async ({ input }) => {
       const result: any = await db.insert(tasks).values({
+        userId: 1, // TODO: Get from context
         title: input.title,
         description: input.description,
         projectId: input.projectId,
@@ -102,8 +106,8 @@ export const tasksRouter = router({
         priority: input.priority,
         status: 'pending',
         estimatedHours: input.estimatedHours,
-        dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
-      });
+        dueDate: input.dueDate ? new Date(input.dueDate) : null,
+      } as any);
 
       const taskId = result[0]?.insertId || result.insertId;
       const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
@@ -127,14 +131,14 @@ export const tasksRouter = router({
       dueDate: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const { id, ...updates } = input;
+      const { id, dueDate, ...updates } = input;
 
       await db.update(tasks)
         .set({
           ...updates,
-          dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
+          dueDate: dueDate ? new Date(dueDate) : null,
           updatedAt: new Date(),
-        })
+        } as any)
         .where(eq(tasks.id, id));
 
       const [updated] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
@@ -171,6 +175,7 @@ export const tasksRouter = router({
           taskId: input.id,
           title: breakdown[i].title,
           description: breakdown[i].description,
+          prompt: breakdown[i].description || breakdown[i].title,
           status: 'pending',
           orderIndex: i,
           estimatedDifficulty: breakdown[i].estimatedDifficulty,
@@ -221,6 +226,7 @@ export const tasksRouter = router({
         taskId: input.taskId,
         title: input.title,
         description: input.description,
+        prompt: input.description || input.title,
         assignedModelId: input.assignedModelId,
         status: 'pending',
         orderIndex: input.orderIndex || 0,
@@ -291,7 +297,7 @@ export const tasksRouter = router({
     .input(z.object({
       taskId: z.number(),
       dependsOnTaskId: z.number(),
-      dependencyType: z.enum(['blocks', 'requires', 'related']).optional().default('blocks'),
+      dependencyType: z.enum(['finish_to_start', 'start_to_start', 'finish_to_finish', 'start_to_finish']).optional().default('finish_to_start'),
     }))
     .mutation(async ({ input }) => {
       const result: any = await db.insert(taskDependencies).values({
@@ -327,17 +333,20 @@ export const tasksRouter = router({
       projectId: z.number().optional(),
     }))
     .query(async ({ input }) => {
-      let dbQuery = db.select().from(tasks)
-        .where(or(
+      const conditions = [
+        or(
           like(tasks.title, `%${input.query}%`),
           like(tasks.description, `%${input.query}%`)
-        ));
+        )
+      ];
 
       if (input.projectId) {
-        dbQuery = dbQuery.where(eq(tasks.projectId, input.projectId));
+        conditions.push(eq(tasks.projectId, input.projectId));
       }
 
-      const results = await dbQuery.limit(20);
+      const results = await db.select().from(tasks)
+        .where(and(...conditions))
+        .limit(20);
 
       return { success: true, tasks: results };
     }),
@@ -350,7 +359,9 @@ export const tasksRouter = router({
       projectId: z.number().optional(),
     }))
     .query(async ({ input }) => {
-      let query = db.select().from(tasks);
+      const query = input.projectId
+        ? db.select().from(tasks).where(eq(tasks.projectId, input.projectId))
+        : db.select().from(tasks);
 
       if (input.projectId) {
         query = query.where(eq(tasks.projectId, input.projectId));

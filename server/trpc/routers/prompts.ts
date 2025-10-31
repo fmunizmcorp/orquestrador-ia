@@ -23,19 +23,21 @@ export const promptsRouter = router({
       offset: z.number().min(0).optional().default(0),
     }))
     .query(async ({ input }) => {
-      let query = db.select().from(prompts);
+      const conditions = [];
 
       if (input.userId) {
-        query = query.where(eq(prompts.userId, input.userId));
+        conditions.push(eq(prompts.userId, input.userId));
       }
-
       if (input.category) {
-        query = query.where(eq(prompts.category, input.category));
+        conditions.push(eq(prompts.category, input.category));
+      }
+      if (input.isPublic !== undefined) {
+        conditions.push(eq(prompts.isPublic, input.isPublic));
       }
 
-      if (input.isPublic !== undefined) {
-        query = query.where(eq(prompts.isPublic, input.isPublic));
-      }
+      const query = conditions.length > 0
+        ? db.select().from(prompts).where(and(...conditions))
+        : db.select().from(prompts);
 
       const allPrompts = await query
         .orderBy(desc(prompts.createdAt))
@@ -92,8 +94,8 @@ export const promptsRouter = router({
         description: input.description,
         content: input.content,
         category: input.category,
-        tags: input.tags ? JSON.stringify(input.tags) : undefined,
-        variables: input.variables ? JSON.stringify(input.variables) : undefined,
+        tags: input.tags as any,
+        variables: input.variables as any,
         isPublic: input.isPublic,
         currentVersion: 1,
       });
@@ -150,16 +152,16 @@ export const promptsRouter = router({
             createdByUserId: userId,
           });
 
-          updates.currentVersion = newVersion;
+          // currentVersion is managed automatically
         }
       }
 
-      // Converter arrays para JSON
+      // JSON fields handled automatically by Drizzle
       if (input.tags) {
-        updates.tags = JSON.stringify(input.tags);
+        updates.tags = input.tags as any;
       }
       if (input.variables) {
-        updates.variables = JSON.stringify(input.variables);
+        updates.variables = input.variables as any;
       }
 
       await db.update(prompts)
@@ -193,18 +195,21 @@ export const promptsRouter = router({
       limit: z.number().min(1).max(50).optional().default(20),
     }))
     .query(async ({ input }) => {
-      let dbQuery = db.select().from(prompts)
-        .where(or(
+      const conditions = [
+        or(
           like(prompts.title, `%${input.query}%`),
           like(prompts.description, `%${input.query}%`),
           like(prompts.content, `%${input.query}%`)
-        ));
+        )
+      ];
 
       if (input.userId) {
-        dbQuery = dbQuery.where(eq(prompts.userId, input.userId));
+        conditions.push(eq(prompts.userId, input.userId));
       }
 
-      const results = await dbQuery.limit(input.limit);
+      const results = await db.select().from(prompts)
+        .where(and(...conditions))
+        .limit(input.limit);
 
       return { success: true, prompts: results };
     }),
@@ -294,7 +299,7 @@ export const promptsRouter = router({
       });
 
       // Atualizar prompt
-      const [updated] = await db.update(prompts)
+      await db.update(prompts)
         .set({
           content: oldVersion.content,
           currentVersion: newVersion,
