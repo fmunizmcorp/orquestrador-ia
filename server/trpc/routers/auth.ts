@@ -45,9 +45,15 @@ export const authRouter = router({
         passwordHash: hashedPassword,
         name: input.name,
         username: input.username || input.email.split('@')[0],
-      });
+      } as any);
 
       const userId = result[0]?.insertId || result.insertId;
+
+      // Fetch created user
+      const [user] = await db.select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
 
       // Generate token
       const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });

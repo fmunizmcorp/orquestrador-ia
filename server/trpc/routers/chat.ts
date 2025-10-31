@@ -303,15 +303,16 @@ export const chatRouter = router({
       limit: z.number().min(1).max(50).optional().default(20),
     }))
     .query(async ({ input }) => {
-      let dbQuery = db.select()
-        .from(messages)
-        .where(sql`${messages.content} LIKE ${`%${input.query}%`}`);
+      const conditions = [sql`${messages.content} LIKE ${`%${input.query}%`}`];
 
       if (input.conversationId) {
-        dbQuery = dbQuery.where(eq(messages.conversationId, input.conversationId));
+        conditions.push(eq(messages.conversationId, input.conversationId));
       }
 
-      const results = await dbQuery.limit(input.limit);
+      const results = await db.select()
+        .from(messages)
+        .where(and(...conditions))
+        .limit(input.limit);
 
       return { success: true, messages: results };
     }),

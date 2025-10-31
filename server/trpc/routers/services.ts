@@ -168,9 +168,11 @@ export const servicesRouter = router({
         1,
         input.owner,
         input.repo,
-        input.title,
-        input.body,
-        input.labels
+        {
+          title: input.title,
+          body: input.body,
+          labels: input.labels,
+        }
       );
       return { success: true, issue };
     }),

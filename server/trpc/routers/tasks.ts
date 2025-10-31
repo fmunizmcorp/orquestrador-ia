@@ -179,7 +179,7 @@ export const tasksRouter = router({
           status: 'pending',
           orderIndex: i,
           estimatedDifficulty: breakdown[i].estimatedDifficulty,
-        });
+        } as any);
         
         const subId = result[0]?.insertId || result.insertId;
         const [subtask] = await db.select().from(subtasks).where(eq(subtasks.id, subId)).limit(1);
@@ -362,10 +362,6 @@ export const tasksRouter = router({
       const query = input.projectId
         ? db.select().from(tasks).where(eq(tasks.projectId, input.projectId))
         : db.select().from(tasks);
-
-      if (input.projectId) {
-        query = query.where(eq(tasks.projectId, input.projectId));
-      }
 
       const allTasks = await query;
 

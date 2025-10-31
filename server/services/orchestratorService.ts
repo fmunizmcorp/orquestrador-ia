@@ -289,7 +289,7 @@ Exemplo:
       if (validatorModelId === executorModelId) {
         // Buscar modelo fallback
         const fallbackIds = validatorAI.fallbackModelIds 
-          ? JSON.parse(validatorAI.fallbackModelIds as string) as number[]
+          ? (validatorAI.fallbackModelIds as any as number[])
           : [];
         
         const differentModelId = fallbackIds.find(
@@ -439,7 +439,7 @@ Exemplo:
       let tiebreakerModelId = tiebreakerAI.defaultModelId;
       if (usedModelIds.includes(tiebreakerModelId)) {
         const fallbackIds = tiebreakerAI.fallbackModelIds 
-          ? JSON.parse(tiebreakerAI.fallbackModelIds as string) as number[]
+          ? (tiebreakerAI.fallbackModelIds as any as number[])
           : [];
         
         const differentId = fallbackIds.find(

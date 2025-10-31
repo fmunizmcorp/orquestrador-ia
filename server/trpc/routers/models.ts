@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../../db/index.js';
 import { aiModels, specializedAIs } from '../../db/schema.js';
-import { eq, desc, like } from 'drizzle-orm';
+import { eq, desc, like, and } from 'drizzle-orm';
 
 export const modelsRouter = router({
   /**
@@ -20,11 +20,9 @@ export const modelsRouter = router({
       limit: z.number().min(1).max(100).optional().default(50),
     }))
     .query(async ({ input }) => {
-      let query = db.select().from(aiModels);
-
-      if (input.isActive !== undefined) {
-        query = query.where(eq(aiModels.isActive, input.isActive));
-      }
+      const query = input.isActive !== undefined
+        ? db.select().from(aiModels).where(eq(aiModels.isActive, input.isActive))
+        : db.select().from(aiModels);
 
       const models = await query
         .orderBy(desc(aiModels.createdAt))
@@ -69,6 +67,7 @@ export const modelsRouter = router({
     }))
     .mutation(async ({ input }) => {
       const result: any = await db.insert(aiModels).values({
+        userId: 1,
         modelName: input.modelName,
         modelId: input.modelId,
         provider: input.provider,
@@ -76,9 +75,9 @@ export const modelsRouter = router({
         contextWindow: input.contextWindow,
         parameters: input.parameters,
         quantization: input.quantization,
-        capabilities: input.capabilities ? JSON.stringify(input.capabilities) : undefined,
+        capabilities: input.capabilities as any,
         isActive: true,
-      });
+      } as any);
 
       const modelId = result[0]?.insertId || result.insertId;
       const [model] = await db.select().from(aiModels).where(eq(aiModels.id, modelId)).limit(1);
@@ -154,15 +153,19 @@ export const modelsRouter = router({
       isActive: z.boolean().optional(),
     }))
     .query(async ({ input }) => {
-      let query = db.select().from(specializedAIs);
+      const conditions = [];
 
       if (input.category) {
-        query = query.where(eq(specializedAIs.category, input.category));
+        conditions.push(eq(specializedAIs.category, input.category));
       }
 
       if (input.isActive !== undefined) {
-        query = query.where(eq(specializedAIs.isActive, input.isActive));
+        conditions.push(eq(specializedAIs.isActive, input.isActive));
       }
+
+      const query = conditions.length > 0
+        ? db.select().from(specializedAIs).where(and(...conditions))
+        : db.select().from(specializedAIs);
 
       const ais = await query;
 
@@ -183,14 +186,15 @@ export const modelsRouter = router({
     }))
     .mutation(async ({ input }) => {
       const result: any = await db.insert(specializedAIs).values({
+        userId: 1,
         name: input.name,
         description: input.description,
         category: input.category,
         systemPrompt: input.systemPrompt,
         defaultModelId: input.defaultModelId,
-        fallbackModelIds: input.fallbackModelIds ? JSON.stringify(input.fallbackModelIds) : undefined,
+        fallbackModelIds: input.fallbackModelIds as any,
         isActive: true,
-      });
+      } as any);
 
       const aiId = result[0]?.insertId || result.insertId;
       const [ai] = await db.select().from(specializedAIs).where(eq(specializedAIs.id, aiId)).limit(1);
@@ -214,12 +218,8 @@ export const modelsRouter = router({
     .mutation(async ({ input }) => {
       const { id, ...updates } = input;
 
-      if (updates.fallbackModelIds) {
-        updates.fallbackModelIds = JSON.stringify(updates.fallbackModelIds);
-      }
-
       await db.update(specializedAIs)
-        .set(updates)
+        .set(updates as any)
         .where(eq(specializedAIs.id, id));
 
       const [updated] = await db.select().from(specializedAIs).where(eq(specializedAIs.id, id)).limit(1);

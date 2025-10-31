@@ -133,9 +133,9 @@ class SystemMonitorService {
         model: controller.model || 'Unknown',
         vramTotal: controller.vram || 0,
         vramUsed: controller.vramDynamic || 0,
-        vramFree: (controller.vram || 0) - (controller.vramDynamic || 0),
+        vramFree: (controller.vram || 0) - (parseFloat(controller.vramDynamic as any) || 0),
         vramUsagePercent: controller.vram
-          ? parseFloat(((controller.vramDynamic || 0) / controller.vram * 100).toFixed(2))
+          ? parseFloat((((parseFloat(controller.vramDynamic as any) || 0) / controller.vram) * 100).toFixed(2))
           : 0,
         temperature: controller.temperatureGpu || null,
         utilization: controller.utilizationGpu || null,
@@ -187,12 +187,12 @@ class SystemMonitorService {
       };
 
       // Adicionar ao histórico
-      this.addToHistory(metrics);
+      this.addToHistory(metrics as any);
 
       // Verificar e criar alertas
-      await this.checkAndCreateAlerts(metrics);
+      await this.checkAndCreateAlerts(metrics as any);
 
-      return metrics;
+      return metrics as any;
     } catch (error) {
       console.error('Erro ao coletar métricas do sistema:', error);
       throw error;

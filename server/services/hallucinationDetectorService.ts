@@ -87,14 +87,14 @@ class HallucinationDetectorService {
         throw new Error('IA alternativa não disponível');
       }
 
-      let alternativeModelId = alternativeAI.defaultModelId;
+      let alternativeModelId: number | null = alternativeAI.defaultModelId;
       
       // Garantir modelo DIFERENTE
       if (!alternativeModelId || alternativeModelId === originalModelId) {
         const fallbacks = alternativeAI.fallbackModelIds 
-          ? (JSON.parse(alternativeAI.fallbackModelIds as string) as number[])
+          ? (alternativeAI.fallbackModelIds as any as number[])
           : [];
-        alternativeModelId = fallbacks.find((id: number) => id !== originalModelId);
+        alternativeModelId = fallbacks.find((id: number) => id !== originalModelId) || null;
       }
 
       if (!alternativeModelId) {

@@ -107,8 +107,8 @@ class ModelTrainingService {
       filePath,
       recordCount: data.length,
       sizeBytes: Buffer.byteLength(jsonlData),
-      metadata: JSON.stringify(stats),
-    });
+      metadata: stats as any,
+    } as any);
 
     const datasetId = result[0]?.insertId || result.insertId;
     const [dataset] = await db.select().from(trainingDatasets).where(eq(trainingDatasets.id, datasetId)).limit(1);
@@ -311,8 +311,10 @@ class ModelTrainingService {
       const versionName = `${baseModel.modelName}-finetuned-${Date.now()}`;
       
       const versionResult: any = await db.insert(modelVersions).values({
-        modelId: config.modelId,
-        version: versionName,
+        userId: 1,
+        baseModelId: config.modelId,
+        versionName: versionName,
+        modelPath: `/models/${versionName}`,
         trainingJobId: jobId,
         isActive: true,
         performanceMetrics: {
@@ -320,7 +322,7 @@ class ModelTrainingService {
           bestLoss,
           totalSteps: globalStep,
         } as any,
-      });
+      } as any);
 
       // Update job status
       await db.update(trainingJobs)
@@ -464,7 +466,7 @@ class ModelTrainingService {
 
       // Generate prediction (using base model for simulation)
       const [model] = await db.select().from(aiModels)
-        .where(eq(aiModels.id, version.modelId))
+        .where(eq(aiModels.id, version.baseModelId))
         .limit(1);
 
       const generated = await lmstudioService.generateCompletion(
@@ -547,11 +549,9 @@ class ModelTrainingService {
    * List all training jobs
    */
   async listTrainingJobs(userId?: number, status?: string) {
-    let query = db.select().from(trainingJobs);
-
-    if (status) {
-      query = query.where(eq(trainingJobs.status, status as any));
-    }
+    const query = status
+      ? db.select().from(trainingJobs).where(eq(trainingJobs.status, status as any))
+      : db.select().from(trainingJobs);
 
     const jobs = await query.orderBy(desc(trainingJobs.startedAt)).limit(100);
     return jobs;
@@ -561,11 +561,9 @@ class ModelTrainingService {
    * List all datasets
    */
   async listDatasets(userId?: number) {
-    let query = db.select().from(trainingDatasets);
-
-    if (userId) {
-      query = query.where(eq(trainingDatasets.userId, userId));
-    }
+    const query = userId
+      ? db.select().from(trainingDatasets).where(eq(trainingDatasets.userId, userId))
+      : db.select().from(trainingDatasets);
 
     const datasets = await query.orderBy(desc(trainingDatasets.createdAt)).limit(100);
     return datasets;

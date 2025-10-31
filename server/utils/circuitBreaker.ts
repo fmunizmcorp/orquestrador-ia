@@ -78,7 +78,7 @@ export class CircuitBreaker {
     if (this.failureCount >= this.config.failureThreshold) {
       this.state = CircuitState.OPEN;
       this.nextAttempt = Date.now() + this.config.timeout;
-      console.error(`🔴 Circuit breaker ${this.name}: ${this.state === CircuitState.HALF_OPEN ? 'HALF_OPEN' : 'CLOSED'} -> OPEN (too many failures)`);
+      console.error(`🔴 Circuit breaker ${this.name}: OPENING (too many failures)`);
     }
   }
 

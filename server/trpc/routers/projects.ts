@@ -22,15 +22,19 @@ export const projectsRouter = router({
       offset: z.number().min(0).optional().default(0),
     }))
     .query(async ({ input }) => {
-      let query = db.select().from(projects);
+      const conditions = [];
 
       if (input.teamId) {
-        query = query.where(eq(projects.teamId, input.teamId));
+        conditions.push(eq(projects.teamId, input.teamId));
       }
 
       if (input.status) {
-        query = query.where(eq(projects.status, input.status));
+        conditions.push(eq(projects.status, input.status));
       }
+
+      const query = conditions.length > 0
+        ? db.select().from(projects).where(and(...conditions))
+        : db.select().from(projects);
 
       const allProjects = await query
         .orderBy(desc(projects.createdAt))
@@ -86,14 +90,15 @@ export const projectsRouter = router({
     }))
     .mutation(async ({ input }) => {
       const result: any = await db.insert(projects).values({
+        userId: 1, // TODO: Get from context
         name: input.name,
         description: input.description,
         teamId: input.teamId,
         status: 'active',
-        startDate: input.startDate ? new Date(input.startDate) : undefined,
-        endDate: input.endDate ? new Date(input.endDate) : undefined,
+        startDate: input.startDate ? new Date(input.startDate) : null,
+        endDate: input.endDate ? new Date(input.endDate) : null,
         budget: input.budget,
-      });
+      } as any);
 
       const projId = result[0]?.insertId || result.insertId;
       const [project] = await db.select().from(projects).where(eq(projects.id, projId)).limit(1);
@@ -169,8 +174,8 @@ export const projectsRouter = router({
         completionRate: projectTasks.length > 0
           ? (projectTasks.filter(t => t.status === 'completed').length / projectTasks.length) * 100
           : 0,
-        estimatedHours: projectTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0),
-        actualHours: projectTasks.reduce((sum, t) => sum + (t.actualHours || 0), 0),
+        estimatedHours: projectTasks.reduce((sum, t) => sum + (parseFloat(t.estimatedHours as any) || 0), 0),
+        actualHours: projectTasks.reduce((sum, t) => sum + (parseFloat(t.actualHours as any) || 0), 0),
       };
 
       return { success: true, stats };
@@ -186,14 +191,15 @@ export const projectsRouter = router({
       limit: z.number().min(1).max(50).optional().default(20),
     }))
     .query(async ({ input }) => {
-      let dbQuery = db.select().from(projects)
-        .where(like(projects.name, `%${input.query}%`));
+      const conditions = [like(projects.name, `%${input.query}%`)];
 
       if (input.teamId) {
-        dbQuery = dbQuery.where(eq(projects.teamId, input.teamId));
+        conditions.push(eq(projects.teamId, input.teamId));
       }
 
-      const results = await dbQuery.limit(input.limit);
+      const results = await db.select().from(projects)
+        .where(and(...conditions))
+        .limit(input.limit);
 
       return { success: true, projects: results };
     }),

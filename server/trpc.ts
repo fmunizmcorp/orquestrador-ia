@@ -1,5 +1,6 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import { CreateExpressContextOptions } from '@trpc/server/adapters/express';
+// @ts-ignore - superjson has no types
 import superjson from 'superjson';
 import jwt from 'jsonwebtoken';
 

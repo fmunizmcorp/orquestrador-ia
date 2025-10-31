@@ -78,7 +78,7 @@ export const monitoringRouter = router({
    */
   getErrorLogs: publicProcedure
     .input(z.object({
-      level: z.enum(['error', 'warning', 'info']).optional(),
+      level: z.enum(['error', 'warning', 'critical']).optional(),
       hours: z.number().min(1).max(168).optional().default(24),
       limit: z.number().min(1).max(1000).optional().default(100),
     }))
@@ -90,8 +90,9 @@ export const monitoringRouter = router({
         conditions.push(eq(errorLogs.level, input.level));
       }
 
+      const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
       const logs = await db.select().from(errorLogs)
-        .where(and(...conditions))
+        .where(whereClause)
         .orderBy(desc(errorLogs.timestamp))
         .limit(input.limit);
 
