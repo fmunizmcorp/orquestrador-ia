@@ -94,7 +94,7 @@ export const tasksRouter = router({
       dueDate: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const [task] = await db.insert(tasks).values({
+      const result: any = await db.insert(tasks).values({
         title: input.title,
         description: input.description,
         projectId: input.projectId,
@@ -103,7 +103,10 @@ export const tasksRouter = router({
         status: 'pending',
         estimatedHours: input.estimatedHours,
         dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
-      }).returning();
+      });
+
+      const taskId = result[0]?.insertId || result.insertId;
+      const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
 
       return { success: true, task };
     }),
@@ -126,14 +129,15 @@ export const tasksRouter = router({
     .mutation(async ({ input }) => {
       const { id, ...updates } = input;
 
-      const [updated] = await db.update(tasks)
+      await db.update(tasks)
         .set({
           ...updates,
           dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
           updatedAt: new Date(),
         })
-        .where(eq(tasks.id, id))
-        .returning();
+        .where(eq(tasks.id, id));
+
+      const [updated] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
 
       return { success: true, task: updated };
     }),
@@ -163,15 +167,17 @@ export const tasksRouter = router({
       // Criar subtarefas no banco
       const createdSubtasks = [];
       for (let i = 0; i < breakdown.length; i++) {
-        const [subtask] = await db.insert(subtasks).values({
+        const result: any = await db.insert(subtasks).values({
           taskId: input.id,
           title: breakdown[i].title,
           description: breakdown[i].description,
           status: 'pending',
           orderIndex: i,
           estimatedDifficulty: breakdown[i].estimatedDifficulty,
-        }).returning();
+        });
         
+        const subId = result[0]?.insertId || result.insertId;
+        const [subtask] = await db.select().from(subtasks).where(eq(subtasks.id, subId)).limit(1);
         createdSubtasks.push(subtask);
       }
 
@@ -211,14 +217,17 @@ export const tasksRouter = router({
       orderIndex: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
-      const [subtask] = await db.insert(subtasks).values({
+      const result: any = await db.insert(subtasks).values({
         taskId: input.taskId,
         title: input.title,
         description: input.description,
         assignedModelId: input.assignedModelId,
         status: 'pending',
         orderIndex: input.orderIndex || 0,
-      }).returning();
+      });
+
+      const subId = result[0]?.insertId || result.insertId;
+      const [subtask] = await db.select().from(subtasks).where(eq(subtasks.id, subId)).limit(1);
 
       return { success: true, subtask };
     }),
@@ -238,10 +247,11 @@ export const tasksRouter = router({
     .mutation(async ({ input }) => {
       const { id, ...updates } = input;
 
-      const [updated] = await db.update(subtasks)
+      await db.update(subtasks)
         .set(updates)
-        .where(eq(subtasks.id, id))
-        .returning();
+        .where(eq(subtasks.id, id));
+
+      const [updated] = await db.select().from(subtasks).where(eq(subtasks.id, id)).limit(1);
 
       return { success: true, subtask: updated };
     }),
@@ -284,11 +294,14 @@ export const tasksRouter = router({
       dependencyType: z.enum(['blocks', 'requires', 'related']).optional().default('blocks'),
     }))
     .mutation(async ({ input }) => {
-      const [dependency] = await db.insert(taskDependencies).values({
+      const result: any = await db.insert(taskDependencies).values({
         taskId: input.taskId,
         dependsOnTaskId: input.dependsOnTaskId,
         dependencyType: input.dependencyType,
-      }).returning();
+      });
+
+      const depId = result[0]?.insertId || result.insertId;
+      const [dependency] = await db.select().from(taskDependencies).where(eq(taskDependencies.id, depId)).limit(1);
 
       return { success: true, dependency };
     }),
