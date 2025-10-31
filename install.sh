@@ -1,332 +1,377 @@
 #!/bin/bash
 
-# 🚀 Script de Instalação e Deploy Completo - Orquestrador de IAs V3.0
-# Execute: chmod +x install.sh && ./install.sh
+#═══════════════════════════════════════════════════════════════════════════════
+# SCRIPT DE INSTALAÇÃO AUTOMÁTICA - ORQUESTRADOR IA
+# Versão: 1.0.0
+# Autor: GenSpark AI
+# Data: 2025-10-31
+# Requisitos: Ubuntu 24.04 LTS (ou 20.04+), sudo, internet
+#═══════════════════════════════════════════════════════════════════════════════
 
-set -e  # Exit on error
+set -e  # Parar em caso de erro
 
-# Colors for output
+# Cores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# Função para imprimir com cor
+print_success() { echo -e "${GREEN}✅ $1${NC}"; }
+print_error() { echo -e "${RED}❌ $1${NC}"; }
+print_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+print_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
+print_step() { echo -e "\n${BLUE}═══════════════════════════════════════════════════════${NC}"; echo -e "${BLUE}🚀 $1${NC}"; echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}\n"; }
+
 # Banner
-echo -e "${CYAN}"
+clear
+echo -e "${GREEN}"
 cat << "EOF"
-╔═══════════════════════════════════════════════════════════╗
-║                                                           ║
-║     🤖 ORQUESTRADOR DE IAs V3.0 - INSTALADOR COMPLETO    ║
-║                                                           ║
-║     Sistema de Orquestração de Inteligências Artificiais ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════════════════╗
+║                                                                   ║
+║     ██████╗ ██████╗  ██████╗ ██╗   ██╗███████╗███████╗████████╗ ║
+║    ██╔═══██╗██╔══██╗██╔═══██╗██║   ██║██╔════╝██╔════╝╚══██╔══╝ ║
+║    ██║   ██║██████╔╝██║   ██║██║   ██║█████╗  ███████╗   ██║    ║
+║    ██║   ██║██╔══██╗██║▄▄ ██║██║   ██║██╔══╝  ╚════██║   ██║    ║
+║    ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝███████╗███████║   ██║    ║
+║     ╚═════╝ ╚═╝  ╚═╝ ╚══▀▀═╝  ╚═════╝ ╚══════╝╚══════╝   ╚═╝    ║
+║                                                                   ║
+║              INSTALADOR AUTOMÁTICO - ORQUESTRADOR IA              ║
+║                      Versão 1.0.0 - 2025                          ║
+║                                                                   ║
+╚═══════════════════════════════════════════════════════════════════╝
 EOF
 echo -e "${NC}\n"
 
-# Configuration
-PORT=3001
-DB_NAME="orquestraia"
-DB_USER="root"
-DB_PASSWORD=""
-FRONTEND_PORT=3000
+# Verificar se está rodando como sudo
+if [ "$EUID" -ne 0 ]; then 
+   print_error "Este script precisa ser executado com sudo"
+   echo "Execute: sudo ./install.sh"
+   exit 1
+fi
 
-# Functions
-print_step() {
-    echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${CYAN}▶ $1${NC}"
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
-}
+# Obter usuário real (não root)
+REAL_USER=${SUDO_USER:-$USER}
+REAL_HOME=$(eval echo ~$REAL_USER)
+PROJECT_DIR="$REAL_HOME/orquestrador-ia"
 
-print_success() {
-    echo -e "${GREEN}✅ $1${NC}"
-}
+print_info "Usuário: $REAL_USER"
+print_info "Home: $REAL_HOME"
+print_info "Diretório do projeto: $PROJECT_DIR"
+sleep 2
 
-print_error() {
-    echo -e "${RED}❌ $1${NC}"
-}
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 1: Atualizar sistema
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 1/12: Atualizando sistema"
+apt update -y
+print_success "Sistema atualizado"
 
-print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
-}
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 2: Instalar Node.js 20.x
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 2/12: Instalando Node.js 20.x LTS"
 
-print_info() {
-    echo -e "${MAGENTA}ℹ️  $1${NC}"
-}
-
-check_command() {
-    if command -v $1 &> /dev/null; then
-        print_success "$1 está instalado"
-        return 0
+if command -v node &> /dev/null; then
+    NODE_VERSION=$(node -v)
+    print_warning "Node.js já instalado: $NODE_VERSION"
+    if [[ $NODE_VERSION == v20* ]]; then
+        print_success "Versão correta (20.x)"
     else
-        print_error "$1 não está instalado"
-        return 1
+        print_warning "Atualizando para Node.js 20.x..."
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+        apt install -y nodejs
     fi
-}
-
-# Step 1: Verificar pré-requisitos
-print_step "1/10 - Verificando pré-requisitos"
-
-if check_command node; then
-    NODE_VERSION=$(node --version)
-    print_info "Node.js version: $NODE_VERSION"
 else
-    print_error "Node.js não encontrado. Por favor, instale Node.js v18+ antes de continuar."
-    exit 1
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt install -y nodejs
 fi
 
-if check_command npm; then
-    NPM_VERSION=$(npm --version)
-    print_info "npm version: $NPM_VERSION"
-else
-    print_error "npm não encontrado. Por favor, instale npm antes de continuar."
-    exit 1
-fi
+print_info "Node.js $(node -v)"
+print_info "npm $(npm -v)"
+print_success "Node.js 20.x instalado"
 
-if check_command mysql; then
-    MYSQL_VERSION=$(mysql --version)
-    print_info "MySQL: $MYSQL_VERSION"
-else
-    print_warning "MySQL client não encontrado. Você precisará configurar o banco manualmente."
-fi
-
-if check_command git; then
-    print_success "Git está instalado"
-else
-    print_warning "Git não encontrado. Clone manual será necessário."
-fi
-
-# Step 2: Instalar dependências
-print_step "2/10 - Instalando dependências do Node.js"
-
-npm install
-print_success "Dependências instaladas com sucesso!"
-
-# Step 3: Configurar .env
-print_step "3/10 - Configurando arquivo .env"
-
-if [ -f .env ]; then
-    print_warning ".env já existe. Fazendo backup..."
-    cp .env .env.backup
-    print_info "Backup criado: .env.backup"
-fi
-
-cat > .env << EOF
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=${DB_USER}
-DB_PASSWORD=${DB_PASSWORD}
-DB_NAME=${DB_NAME}
-
-# Server Configuration
-PORT=${PORT}
-NODE_ENV=production
-
-# JWT Secret (CHANGE THIS IN PRODUCTION!)
-JWT_SECRET=$(openssl rand -base64 32 2>/dev/null || echo "change-this-secret-key-in-production")
-
-# LM Studio Configuration
-LM_STUDIO_URL=http://localhost:1234/v1
-
-# Encryption Key (CHANGE THIS IN PRODUCTION!)
-ENCRYPTION_KEY=$(openssl rand -base64 32 2>/dev/null || echo "change-this-encryption-key-32-chars")
-
-# Frontend URL
-VITE_API_URL=http://localhost:${PORT}
-EOF
-
-print_success ".env criado com sucesso!"
-print_info "JWT_SECRET e ENCRYPTION_KEY foram gerados automaticamente"
-
-# Step 4: Solicitar credenciais do MySQL
-print_step "4/10 - Configuração do Banco de Dados MySQL"
-
-read -p "$(echo -e ${CYAN}Digite o usuário do MySQL [root]: ${NC})" input_user
-DB_USER=${input_user:-root}
-
-read -sp "$(echo -e ${CYAN}Digite a senha do MySQL: ${NC})" input_pass
-echo
-DB_PASSWORD=${input_pass}
-
-# Se senha estiver vazia, solicitar novamente
-while [ -z "$DB_PASSWORD" ]; do
-    print_warning "Senha não pode estar vazia!"
-    read -sp "$(echo -e ${CYAN}Digite a senha do MySQL: ${NC})" input_pass
-    echo
-    DB_PASSWORD=${input_pass}
-done
-
-read -p "$(echo -e ${CYAN}Digite o nome do banco de dados [orquestraia]: ${NC})" input_db
-DB_NAME=${input_db:-orquestraia}
-
-# Atualizar .env com credenciais corretas
-sed -i "s/DB_USER=.*/DB_USER=${DB_USER}/" .env
-sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=${DB_PASSWORD}/" .env
-sed -i "s/DB_NAME=.*/DB_NAME=${DB_NAME}/" .env
-
-print_success "Credenciais do banco de dados configuradas!"
-
-# Step 5: Criar banco de dados
-print_step "5/10 - Criando banco de dados"
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 3: Instalar MySQL 8.0
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 3/12: Instalando MySQL 8.0"
 
 if command -v mysql &> /dev/null; then
-    echo "Tentando criar banco de dados com usuário '${DB_USER}'..."
-    
-    # Tentar criar banco de dados com credenciais fornecidas
-    mysql -u"$DB_USER" -p"$DB_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;" 2>/dev/null
-    
-    if [ $? -eq 0 ]; then
-        print_success "Banco de dados '${DB_NAME}' criado/verificado!"
-    else
-        print_warning "Não foi possível criar banco com as credenciais fornecidas."
-        print_info "Tentando com sudo mysql..."
-        
-        # Tentar criar banco e usuário usando sudo
-        sudo mysql <<EOSQL
-CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;
-CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
-GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';
+    print_warning "MySQL já instalado"
+    mysql --version
+else
+    print_info "Instalando MySQL Server..."
+    DEBIAN_FRONTEND=noninteractive apt install -y mysql-server
+    systemctl start mysql
+    systemctl enable mysql
+fi
+
+print_success "MySQL instalado e rodando"
+
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 4: Configurar MySQL
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 4/12: Configurando banco de dados"
+
+# Gerar senha aleatória
+DB_PASSWORD=$(openssl rand -base64 16 | tr -d "=+/" | cut -c1-16)
+
+print_info "Criando banco de dados 'orquestrador_ia'..."
+mysql -u root <<MYSQL_SCRIPT
+-- Criar banco de dados
+DROP DATABASE IF EXISTS orquestrador_ia;
+CREATE DATABASE orquestrador_ia CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Criar usuário
+DROP USER IF EXISTS 'orquestrador'@'localhost';
+CREATE USER 'orquestrador'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
+
+-- Conceder privilégios
+GRANT ALL PRIVILEGES ON orquestrador_ia.* TO 'orquestrador'@'localhost';
 FLUSH PRIVILEGES;
-EOSQL
-        
-        if [ $? -eq 0 ]; then
-            print_success "Banco de dados e usuário criados com sudo!"
-            print_info "Usuário: ${DB_USER} | Banco: ${DB_NAME}"
-        else
-            print_error "Falha ao criar banco. Você precisará criar manualmente:"
-            print_info "sudo mysql -e \"CREATE DATABASE ${DB_NAME};\""
-            print_info "sudo mysql -e \"CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY 'sua_senha';\""
-            print_info "sudo mysql -e \"GRANT ALL ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';\""
-        fi
-    fi
-else
-    print_warning "MySQL não disponível. Você precisará criar o banco manualmente."
-    print_info "Execute: CREATE DATABASE ${DB_NAME};"
+
+SELECT 'Database setup complete!' AS Status;
+MYSQL_SCRIPT
+
+print_success "Banco de dados configurado"
+print_info "Usuário: orquestrador"
+print_info "Senha: $DB_PASSWORD"
+print_info "Banco: orquestrador_ia"
+
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 5: Verificar/Clonar repositório
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 5/12: Verificando código do projeto"
+
+if [ ! -d "$PROJECT_DIR" ]; then
+    print_error "Diretório do projeto não encontrado: $PROJECT_DIR"
+    print_info "Clone o repositório primeiro:"
+    print_info "git clone https://github.com/fmunizmcorp/orquestrador-ia.git $PROJECT_DIR"
+    exit 1
 fi
 
-# Step 6: Executar migrations
-print_step "6/10 - Executando migrations do banco de dados"
+cd "$PROJECT_DIR"
+print_success "Projeto encontrado em: $PROJECT_DIR"
 
-npm run db:migrate
-print_success "Migrations executadas com sucesso!"
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 6: Criar arquivo .env
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 6/12: Criando arquivo de configuração .env"
 
-# Step 7: Build do frontend
-print_step "7/10 - Compilando frontend (Vite)"
+cat > "$PROJECT_DIR/.env" <<ENV_FILE
+# Database Configuration
+DATABASE_URL="mysql://orquestrador:${DB_PASSWORD}@localhost:3306/orquestrador_ia"
+DB_HOST="localhost"
+DB_PORT="3306"
+DB_USER="orquestrador"
+DB_PASSWORD="${DB_PASSWORD}"
+DB_NAME="orquestrador_ia"
 
-npm run build:client || npm run build
-print_success "Frontend compilado com sucesso!"
+# Server Configuration
+NODE_ENV="production"
+PORT="5000"
+FRONTEND_URL="http://localhost:3000"
 
-# Step 8: Build do backend
-print_step "8/10 - Compilando backend (TypeScript)"
+# JWT Secret (change in production!)
+JWT_SECRET="$(openssl rand -base64 32)"
 
-npm run build:server || npm run build
-print_success "Backend compilado com sucesso!"
+# LM Studio Configuration (optional)
+LMSTUDIO_URL="http://localhost:1234"
+LMSTUDIO_API_KEY=""
 
-# Step 9: Verificar porta disponível
-print_step "9/10 - Verificando portas disponíveis"
+# API Keys (configure as needed)
+OPENAI_API_KEY=""
+ANTHROPIC_API_KEY=""
+GOOGLE_API_KEY=""
 
-if lsof -Pi :${PORT} -sTCP:LISTEN -t >/dev/null 2>&1; then
-    print_warning "Porta ${PORT} está em uso. Matando processo..."
-    lsof -ti:${PORT} | xargs kill -9 2>/dev/null || true
-    sleep 2
-    print_success "Porta ${PORT} liberada!"
-else
-    print_success "Porta ${PORT} está disponível!"
-fi
+# Session Secret
+SESSION_SECRET="$(openssl rand -base64 32)"
 
-# Step 10: Iniciar servidor
-print_step "10/10 - Iniciando servidor"
+# CORS
+CORS_ORIGIN="http://localhost:3000"
+ENV_FILE
 
-# Verificar se PM2 está instalado
-if command -v pm2 &> /dev/null; then
-    print_info "PM2 detectado. Usando PM2 para gerenciamento..."
-    
-    # Parar processo existente
-    pm2 delete orquestrador-v3 2>/dev/null || true
-    
-    # Iniciar com PM2
-    pm2 start dist/index.js --name orquestrador-v3 --time
-    pm2 save
-    
-    print_success "Servidor iniciado com PM2!"
-    print_info "Use 'pm2 status' para ver o status"
-    print_info "Use 'pm2 logs orquestrador-v3' para ver os logs"
-    print_info "Use 'pm2 restart orquestrador-v3' para reiniciar"
-    print_info "Use 'pm2 stop orquestrador-v3' para parar"
-    
-else
-    print_info "PM2 não detectado. Instalando PM2 globalmente..."
+chown $REAL_USER:$REAL_USER "$PROJECT_DIR/.env"
+chmod 600 "$PROJECT_DIR/.env"
+
+print_success "Arquivo .env criado"
+print_warning "⚠️  IMPORTANTE: Revise o arquivo .env e configure as API keys necessárias"
+
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 7: Instalar dependências
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 7/12: Instalando dependências npm"
+
+sudo -u $REAL_USER npm install
+print_success "Dependências instaladas"
+
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 8: Executar migrations
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 8/12: Executando migrations do banco de dados"
+
+print_info "Gerando migrations..."
+sudo -u $REAL_USER npm run db:generate
+
+print_info "Aplicando migrations..."
+sudo -u $REAL_USER npm run db:push
+
+print_success "Migrations executadas com sucesso"
+
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 9: Build do projeto
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 9/12: Build do projeto (frontend + backend)"
+
+print_info "Compilando backend TypeScript..."
+sudo -u $REAL_USER npm run build
+
+print_info "Compilando frontend React..."
+cd client
+sudo -u $REAL_USER npm install
+sudo -u $REAL_USER npm run build
+cd ..
+
+print_success "Build concluído"
+
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 10: Instalar PM2
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 10/12: Instalando PM2 (gerenciador de processos)"
+
+if ! command -v pm2 &> /dev/null; then
     npm install -g pm2
-    
-    # Iniciar com PM2
-    pm2 start dist/index.js --name orquestrador-v3 --time
-    pm2 save
-    
-    print_success "PM2 instalado e servidor iniciado!"
+    print_success "PM2 instalado"
+else
+    print_warning "PM2 já instalado"
 fi
 
-# Final summary
-echo -e "\n${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}          ✅ INSTALAÇÃO CONCLUÍDA COM SUCESSO! ✅${NC}"
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 11: Configurar e iniciar aplicação com PM2
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 11/12: Iniciando aplicação com PM2"
 
-cat << EOF
-${CYAN}📊 Informações do Sistema:${NC}
-   • Backend URL: http://localhost:${PORT}
-   • API Endpoint: http://localhost:${PORT}/api/trpc
-   • Banco de Dados: ${DB_NAME}
-   • Processo: orquestrador-v3 (PM2)
+# Parar instâncias antigas se existirem
+sudo -u $REAL_USER pm2 delete all 2>/dev/null || true
 
-${CYAN}🚀 Como usar:${NC}
-   • Ver status:    pm2 status
-   • Ver logs:      pm2 logs orquestrador-v3
-   • Reiniciar:     pm2 restart orquestrador-v3
-   • Parar:         pm2 stop orquestrador-v3
-   • Deletar:       pm2 delete orquestrador-v3
+# Iniciar com PM2
+print_info "Iniciando backend e frontend..."
+sudo -u $REAL_USER pm2 start ecosystem.config.cjs
 
-${CYAN}🌐 Próximos Passos:${NC}
-   1. Acesse: http://localhost:${PORT}
-   2. Registre um novo usuário em /register
-   3. Faça login e explore o sistema!
+# Salvar configuração PM2
+sudo -u $REAL_USER pm2 save
 
-${CYAN}📝 Arquivos Criados:${NC}
-   • .env (configurações do ambiente)
-   • .env.backup (backup do .env anterior, se existia)
-   • dist/ (código compilado)
+# Configurar PM2 para iniciar no boot
+env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u $REAL_USER --hp $REAL_HOME
 
-${CYAN}🔧 Comandos Úteis:${NC}
-   • Deploy:        ./deploy.sh
-   • Migrations:    npm run db:migrate
-   • Dev mode:      npm run dev
-   • Build:         npm run build
+print_success "Aplicação iniciada com PM2"
 
-${YELLOW}⚠️  IMPORTANTE:${NC}
-   • Altere JWT_SECRET e ENCRYPTION_KEY no .env antes de usar em produção
-   • Configure seu firewall para permitir tráfego na porta ${PORT}
-   • Faça backup regular do banco de dados
+#═══════════════════════════════════════════════════════════════════════════════
+# PASSO 12: Configurar firewall (opcional)
+#═══════════════════════════════════════════════════════════════════════════════
+print_step "PASSO 12/12: Configurando firewall (UFW)"
 
-${GREEN}✨ Obrigado por usar o Orquestrador de IAs V3.0! ✨${NC}
+if command -v ufw &> /dev/null; then
+    print_info "Configurando UFW..."
+    ufw --force enable
+    ufw allow 22/tcp comment 'SSH'
+    ufw allow 3000/tcp comment 'Frontend Orquestrador'
+    ufw allow 5000/tcp comment 'Backend Orquestrador'
+    ufw reload
+    print_success "Firewall configurado"
+else
+    print_warning "UFW não instalado, pulando configuração de firewall"
+fi
 
+#═══════════════════════════════════════════════════════════════════════════════
+# FINALIZAÇÃO
+#═══════════════════════════════════════════════════════════════════════════════
+clear
+echo -e "${GREEN}"
+cat << "EOF"
+╔═══════════════════════════════════════════════════════════════════╗
+║                                                                   ║
+║                  ✅ INSTALAÇÃO CONCLUÍDA COM SUCESSO! ✅           ║
+║                                                                   ║
+╚═══════════════════════════════════════════════════════════════════╝
 EOF
+echo -e "${NC}\n"
 
-# Save installation info
-cat > installation.log << EOF
-Instalação concluída em: $(date)
-Node.js: $(node --version)
-npm: $(npm --version)
-Backend Port: ${PORT}
-Database: ${DB_NAME}
-PM2 Status: $(pm2 --version)
-EOF
+# Obter IP do servidor
+SERVER_IP=$(hostname -I | awk '{print $1}')
 
-print_success "Log de instalação salvo em: installation.log"
+print_success "Orquestrador IA instalado e rodando!"
+echo ""
+print_info "═══════════════════════════════════════════════════════"
+print_info "📊 INFORMAÇÕES DE ACESSO:"
+print_info "═══════════════════════════════════════════════════════"
+echo ""
+print_info "🌐 URLs de Acesso:"
+echo "   Frontend: http://localhost:3000"
+echo "   Frontend: http://$SERVER_IP:3000"
+echo "   Backend:  http://localhost:5000"
+echo "   Backend:  http://$SERVER_IP:5000"
+echo ""
+print_info "🗄️  Banco de Dados:"
+echo "   Host:     localhost"
+echo "   Porta:    3306"
+echo "   Banco:    orquestrador_ia"
+echo "   Usuário:  orquestrador"
+echo "   Senha:    $DB_PASSWORD"
+echo ""
+print_info "🛠️  Gerenciamento (PM2):"
+echo "   Ver status:    pm2 status"
+echo "   Ver logs:      pm2 logs"
+echo "   Reiniciar:     pm2 restart all"
+echo "   Parar:         pm2 stop all"
+echo ""
+print_info "📁 Localização:"
+echo "   Projeto: $PROJECT_DIR"
+echo "   Config:  $PROJECT_DIR/.env"
+echo ""
+print_warning "⚠️  PRÓXIMOS PASSOS:"
+echo "   1. Configure as API keys no arquivo .env"
+echo "   2. Reinicie: pm2 restart all"
+echo "   3. Acesse: http://$SERVER_IP:3000"
+echo ""
+print_info "🔐 Configurar acesso remoto SSH+VPN (opcional):"
+echo "   cd $PROJECT_DIR"
+echo "   sudo ./setup-acesso-remoto.sh"
+echo ""
+print_success "✅ Instalação completa!"
+print_info "═══════════════════════════════════════════════════════"
 
-echo -e "\n${CYAN}Pressione qualquer tecla para ver o status do PM2...${NC}"
-read -n 1 -s
-pm2 status
+# Salvar informações em arquivo
+cat > "$PROJECT_DIR/INSTALACAO_INFO.txt" <<INFO_FILE
+═══════════════════════════════════════════════════════════════════
+INFORMAÇÕES DA INSTALAÇÃO - ORQUESTRADOR IA
+Data: $(date)
+═══════════════════════════════════════════════════════════════════
 
-exit 0
+ACESSO À APLICAÇÃO:
+  Frontend: http://$SERVER_IP:3000
+  Backend:  http://$SERVER_IP:5000
+
+BANCO DE DADOS:
+  Host:     localhost
+  Porta:    3306
+  Banco:    orquestrador_ia
+  Usuário:  orquestrador
+  Senha:    $DB_PASSWORD
+
+PM2 COMMANDS:
+  pm2 status
+  pm2 logs
+  pm2 restart all
+  pm2 stop all
+
+LOCALIZAÇÃO:
+  Projeto: $PROJECT_DIR
+  Config:  $PROJECT_DIR/.env
+
+═══════════════════════════════════════════════════════════════════
+INFO_FILE
+
+chown $REAL_USER:$REAL_USER "$PROJECT_DIR/INSTALACAO_INFO.txt"
+print_success "Informações salvas em: $PROJECT_DIR/INSTALACAO_INFO.txt"
