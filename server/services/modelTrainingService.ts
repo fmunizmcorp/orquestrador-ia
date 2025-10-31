@@ -44,7 +44,7 @@ interface TrainingMetrics {
   timestamp: Date;
 }
 
-interface EvaluationResult {
+export interface EvaluationResult {
   accuracy: number;
   loss: number;
   perplexity: number;
@@ -58,8 +58,8 @@ interface EvaluationResult {
 
 class ModelTrainingService {
   private trainingProcesses: Map<number, any> = new Map();
-  private readonly trainingDataPath = '/home/user/webapp/training_data';
-  private readonly checkpointsPath = '/home/user/webapp/model_checkpoints';
+  private readonly trainingDataPath = '/home/flavio/webapp/training_data';
+  private readonly checkpointsPath = '/home/flavio/webapp/model_checkpoints';
 
   constructor() {
     // Ensure directories exist

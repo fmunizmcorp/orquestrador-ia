@@ -7,8 +7,8 @@ export default {
   dbCredentials: {
     host: 'localhost',
     port: 3306,
-    user: 'orquestrador',
-    password: 'orquestrador123',
+    user: 'flavio',
+    password: 'bdflavioia',
     database: 'orquestraia',
   },
 } satisfies Config;

@@ -12,14 +12,14 @@ import axios from 'axios';
 const LM_STUDIO_URL = process.env.LM_STUDIO_URL || 'http://localhost:1234/v1';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
-interface ModelInfo {
+export interface ModelInfo {
   id: string;
   object: string;
   created: number;
   owned_by: string;
 }
 
-interface LoadedModelInfo extends ModelInfo {
+export interface LoadedModelInfo extends ModelInfo {
   isLoaded: boolean;
   size?: number;
   parameters?: string;

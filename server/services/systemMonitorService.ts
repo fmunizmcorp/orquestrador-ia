@@ -9,7 +9,7 @@
 
 import si from 'systeminformation';
 
-interface SystemMetrics {
+export interface SystemMetrics {
   cpu: {
     usage: number;
     temperature: number | null;
@@ -59,12 +59,12 @@ interface ResourceLimits {
   diskMax: number;
 }
 
-interface MetricsHistory {
+export interface MetricsHistory {
   timestamp: number;
   metrics: SystemMetrics;
 }
 
-interface Alert {
+export interface Alert {
   id: string;
   level: 'warning' | 'critical';
   message: string;
