@@ -6,6 +6,34 @@ import { idSchema, searchSchema } from '../utils/validation.js';
 import { z } from 'zod';
 
 export const executionLogsRouter = router({
+  list: publicProcedure
+    .input(z.object({
+      limit: z.number().default(50),
+      offset: z.number().default(0),
+    }))
+    .query(async ({ input }) => {
+      const { limit, offset } = input;
+
+      const items = await db.select()
+        .from(executionLogs)
+        .orderBy(desc(executionLogs.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const [countResult] = await db.select({ count: executionLogs.id })
+        .from(executionLogs);
+
+      return {
+        items,
+        pagination: {
+          page: Math.floor(offset / limit) + 1,
+          limit,
+          total: countResult?.count || 0,
+          totalPages: Math.ceil((countResult?.count || 0) / limit),
+        },
+      };
+    }),
+
   listByTask: publicProcedure
     .input(z.object({
       taskId: idSchema,

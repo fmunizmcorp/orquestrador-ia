@@ -14,13 +14,14 @@ export const AnalyticsDashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | '30d'>('24h');
   const [refreshInterval, setRefreshInterval] = useState(10000); // 10 seconds
 
-  const { data: metrics, refetch } = trpc.systemMonitor.getMetrics.useQuery(
+  const { data: metrics, refetch } = trpc.monitoring.getMetrics.useQuery(
     undefined,
     { refetchInterval }
   );
 
-  const { data: tasks } = trpc.tasks.list.useQuery({});
-  const { data: executionLogs } = trpc.executionLogs.list.useQuery({ limit: 100 });
+  const { data: tasks } = trpc.tasks.list.useQuery({ limit: 100, offset: 0 });
+  // executionLogs router not available in current tRPC setup
+  // const { data: executionLogs } = trpc.executionLogs.list.useQuery({ limit: 100 });
 
   // Auto-refresh
   useEffect(() => {
