@@ -86,7 +86,7 @@ export const promptsRouter = router({
       isPublic: z.boolean().optional().default(false),
     }))
     .mutation(async ({ input }) => {
-      const [prompt] = await db.insert(prompts).values({
+      const result: any = await db.insert(prompts).values({
         userId: input.userId,
         title: input.title,
         description: input.description,
@@ -96,7 +96,10 @@ export const promptsRouter = router({
         variables: input.variables ? JSON.stringify(input.variables) : undefined,
         isPublic: input.isPublic,
         currentVersion: 1,
-      }).returning();
+      });
+
+      const promptId = result[0]?.insertId || result.insertId;
+      const [prompt] = await db.select().from(prompts).where(eq(prompts.id, promptId)).limit(1);
 
       // Criar primeira versão
       await db.insert(promptVersions).values({
@@ -159,10 +162,11 @@ export const promptsRouter = router({
         updates.variables = JSON.stringify(input.variables);
       }
 
-      const [updated] = await db.update(prompts)
+      await db.update(prompts)
         .set({ ...updates, updatedAt: new Date() })
-        .where(eq(prompts.id, id))
-        .returning();
+        .where(eq(prompts.id, id));
+
+      const [updated] = await db.select().from(prompts).where(eq(prompts.id, id)).limit(1);
 
       return { success: true, prompt: updated };
     }),
@@ -296,8 +300,9 @@ export const promptsRouter = router({
           currentVersion: newVersion,
           updatedAt: new Date(),
         })
-        .where(eq(prompts.id, input.promptId))
-        .returning();
+        .where(eq(prompts.id, input.promptId));
+
+      const [updated] = await db.select().from(prompts).where(eq(prompts.id, input.promptId)).limit(1);
 
       return { success: true, prompt: updated };
     }),
@@ -321,7 +326,7 @@ export const promptsRouter = router({
         throw new Error('Prompt original não encontrado');
       }
 
-      const [duplicate] = await db.insert(prompts).values({
+      const result: any = await db.insert(prompts).values({
         userId: input.userId,
         title: input.newTitle || `${original.title} (cópia)`,
         description: original.description,
@@ -331,7 +336,10 @@ export const promptsRouter = router({
         variables: original.variables,
         isPublic: false,
         currentVersion: 1,
-      }).returning();
+      });
+
+      const dupId = result[0]?.insertId || result.insertId;
+      const [duplicate] = await db.select().from(prompts).where(eq(prompts.id, dupId)).limit(1);
 
       // Criar primeira versão do duplicado
       await db.insert(promptVersions).values({
