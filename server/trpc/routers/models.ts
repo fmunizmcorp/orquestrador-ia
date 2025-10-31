@@ -68,7 +68,7 @@ export const modelsRouter = router({
       capabilities: z.any().optional(),
     }))
     .mutation(async ({ input }) => {
-      const [model] = await db.insert(aiModels).values({
+      const result: any = await db.insert(aiModels).values({
         modelName: input.modelName,
         modelId: input.modelId,
         provider: input.provider,
@@ -78,7 +78,10 @@ export const modelsRouter = router({
         quantization: input.quantization,
         capabilities: input.capabilities ? JSON.stringify(input.capabilities) : undefined,
         isActive: true,
-      }).returning();
+      });
+
+      const modelId = result[0]?.insertId || result.insertId;
+      const [model] = await db.select().from(aiModels).where(eq(aiModels.id, modelId)).limit(1);
 
       return { success: true, model };
     }),
@@ -103,10 +106,11 @@ export const modelsRouter = router({
         updates.capabilities = JSON.stringify(updates.capabilities);
       }
 
-      const [updated] = await db.update(aiModels)
+      await db.update(aiModels)
         .set(updates)
-        .where(eq(aiModels.id, id))
-        .returning();
+        .where(eq(aiModels.id, id));
+
+      const [updated] = await db.select().from(aiModels).where(eq(aiModels.id, id)).limit(1);
 
       return { success: true, model: updated };
     }),
@@ -132,10 +136,11 @@ export const modelsRouter = router({
       isActive: z.boolean(),
     }))
     .mutation(async ({ input }) => {
-      const [updated] = await db.update(aiModels)
+      await db.update(aiModels)
         .set({ isActive: input.isActive })
-        .where(eq(aiModels.id, input.id))
-        .returning();
+        .where(eq(aiModels.id, input.id));
+
+      const [updated] = await db.select().from(aiModels).where(eq(aiModels.id, input.id)).limit(1);
 
       return { success: true, model: updated };
     }),
@@ -177,7 +182,7 @@ export const modelsRouter = router({
       fallbackModelIds: z.array(z.number()).optional(),
     }))
     .mutation(async ({ input }) => {
-      const [ai] = await db.insert(specializedAIs).values({
+      const result: any = await db.insert(specializedAIs).values({
         name: input.name,
         description: input.description,
         category: input.category,
@@ -185,7 +190,10 @@ export const modelsRouter = router({
         defaultModelId: input.defaultModelId,
         fallbackModelIds: input.fallbackModelIds ? JSON.stringify(input.fallbackModelIds) : undefined,
         isActive: true,
-      }).returning();
+      });
+
+      const aiId = result[0]?.insertId || result.insertId;
+      const [ai] = await db.select().from(specializedAIs).where(eq(specializedAIs.id, aiId)).limit(1);
 
       return { success: true, specializedAI: ai };
     }),
@@ -210,10 +218,11 @@ export const modelsRouter = router({
         updates.fallbackModelIds = JSON.stringify(updates.fallbackModelIds);
       }
 
-      const [updated] = await db.update(specializedAIs)
+      await db.update(specializedAIs)
         .set(updates)
-        .where(eq(specializedAIs.id, id))
-        .returning();
+        .where(eq(specializedAIs.id, id));
+
+      const [updated] = await db.select().from(specializedAIs).where(eq(specializedAIs.id, id)).limit(1);
 
       return { success: true, specializedAI: updated };
     }),
