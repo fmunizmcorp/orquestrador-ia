@@ -85,7 +85,7 @@ export const projectsRouter = router({
       budget: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
-      const [project] = await db.insert(projects).values({
+      const result: any = await db.insert(projects).values({
         name: input.name,
         description: input.description,
         teamId: input.teamId,
@@ -93,7 +93,10 @@ export const projectsRouter = router({
         startDate: input.startDate ? new Date(input.startDate) : undefined,
         endDate: input.endDate ? new Date(input.endDate) : undefined,
         budget: input.budget,
-      }).returning();
+      });
+
+      const projId = result[0]?.insertId || result.insertId;
+      const [project] = await db.select().from(projects).where(eq(projects.id, projId)).limit(1);
 
       return { success: true, project };
     }),
@@ -124,10 +127,11 @@ export const projectsRouter = router({
         finalUpdates.endDate = new Date(input.endDate);
       }
 
-      const [updated] = await db.update(projects)
+      await db.update(projects)
         .set(finalUpdates)
-        .where(eq(projects.id, id))
-        .returning();
+        .where(eq(projects.id, id));
+
+      const [updated] = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
 
       return { success: true, project: updated };
     }),
@@ -202,10 +206,11 @@ export const projectsRouter = router({
       id: z.number(),
     }))
     .mutation(async ({ input }) => {
-      const [updated] = await db.update(projects)
+      await db.update(projects)
         .set({ status: 'archived' })
-        .where(eq(projects.id, input.id))
-        .returning();
+        .where(eq(projects.id, input.id));
+
+      const [updated] = await db.select().from(projects).where(eq(projects.id, input.id)).limit(1);
 
       return { success: true, project: updated };
     }),
@@ -218,10 +223,11 @@ export const projectsRouter = router({
       id: z.number(),
     }))
     .mutation(async ({ input }) => {
-      const [updated] = await db.update(projects)
+      await db.update(projects)
         .set({ status: 'active' })
-        .where(eq(projects.id, input.id))
-        .returning();
+        .where(eq(projects.id, input.id));
+
+      const [updated] = await db.select().from(projects).where(eq(projects.id, input.id)).limit(1);
 
       return { success: true, project: updated };
     }),
@@ -244,13 +250,16 @@ export const projectsRouter = router({
         throw new Error('Project not found');
       }
 
-      const [duplicate] = await db.insert(projects).values({
+      const result: any = await db.insert(projects).values({
         name: input.newName || `${original.name} (copy)`,
         description: original.description,
         teamId: original.teamId,
         status: 'active',
         budget: original.budget,
-      }).returning();
+      });
+
+      const dupId = result[0]?.insertId || result.insertId;
+      const [duplicate] = await db.select().from(projects).where(eq(projects.id, dupId)).limit(1);
 
       return { success: true, project: duplicate };
     }),
