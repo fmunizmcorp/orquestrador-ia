@@ -99,7 +99,7 @@ export const AnalyticsDashboard: React.FC = () => {
         {data.labels.map((label, index) => (
           <div key={label} className="space-y-1">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">{label}</span>
+              <span className="text-gray-600 dark:text-gray-300">{label}</span>
               <span className="font-semibold">{data.values[index]}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
@@ -125,12 +125,12 @@ export const AnalyticsDashboard: React.FC = () => {
     icon: string;
     color: string;
   }> = ({ title, value, subtitle, icon, color }) => (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">{title}</p>
           <p className={`text-3xl font-bold ${color}`}>{value}</p>
-          {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+          {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>}
         </div>
         <div className={`text-4xl ${color}`}>{icon}</div>
       </div>
@@ -157,12 +157,12 @@ export const AnalyticsDashboard: React.FC = () => {
   const health = getHealthStatus();
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
-          <p className="text-gray-600">Real-time system performance and AI metrics</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Analytics Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-300">Real-time system performance and AI metrics</p>
         </div>
 
         <div className="flex items-center space-x-4">
@@ -170,7 +170,7 @@ export const AnalyticsDashboard: React.FC = () => {
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as any)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="1h">Last Hour</option>
             <option value="24h">Last 24 Hours</option>
@@ -182,7 +182,7 @@ export const AnalyticsDashboard: React.FC = () => {
           <select
             value={refreshInterval}
             onChange={(e) => setRefreshInterval(Number(e.target.value))}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="5000">Refresh: 5s</option>
             <option value="10000">Refresh: 10s</option>
@@ -191,7 +191,7 @@ export const AnalyticsDashboard: React.FC = () => {
           </select>
 
           {/* System health indicator */}
-          <div className="flex items-center space-x-2 px-4 py-2 bg-white rounded-lg border border-gray-200">
+          <div className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200">
             <span className={`text-2xl ${health.color}`}>●</span>
             <span className="font-medium">{health.label}</span>
           </div>
@@ -237,8 +237,8 @@ export const AnalyticsDashboard: React.FC = () => {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Task Status Distribution */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Task Status Distribution</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Task Status Distribution</h2>
           <BarChart
             data={taskStatusData}
             colors={['#f59e0b', '#3b82f6', '#10b981', '#ef4444']}
@@ -246,8 +246,8 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
 
         {/* Task Priority Distribution */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Task Priority Distribution</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Task Priority Distribution</h2>
           <BarChart
             data={taskPriorityData}
             colors={['#6b7280', '#3b82f6', '#f59e0b', '#ef4444']}
@@ -258,8 +258,8 @@ export const AnalyticsDashboard: React.FC = () => {
       {/* System Resources */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* CPU */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">CPU Usage</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">CPU Usage</h3>
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
               <span>Current Usage</span>
@@ -271,7 +271,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 style={{ width: `${metrics?.cpu.usage || 0}%` }}
               />
             </div>
-            <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mt-4">
+            <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300 mt-4">
               <div>Cores: {metrics?.cpu.cores}</div>
               <div>Speed: {metrics?.cpu.speed} MHz</div>
             </div>
@@ -279,8 +279,8 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
 
         {/* Memory */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Memory Usage</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Memory Usage</h3>
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
               <span>Used / Total</span>
@@ -294,15 +294,15 @@ export const AnalyticsDashboard: React.FC = () => {
                 style={{ width: `${metrics?.memory.usagePercent || 0}%` }}
               />
             </div>
-            <div className="text-sm text-gray-600 mt-4">
+            <div className="text-sm text-gray-600 dark:text-gray-300 mt-4">
               Usage: {metrics?.memory.usagePercent.toFixed(1)}%
             </div>
           </div>
         </div>
 
         {/* Disk */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Disk Usage</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Disk Usage</h3>
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
               <span>Used / Total</span>
@@ -316,7 +316,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 style={{ width: `${metrics?.disk.usagePercent || 0}%` }}
               />
             </div>
-            <div className="text-sm text-gray-600 mt-4">
+            <div className="text-sm text-gray-600 dark:text-gray-300 mt-4">
               Usage: {metrics?.disk.usagePercent.toFixed(1)}%
             </div>
           </div>
@@ -324,24 +324,24 @@ export const AnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* Recent Execution Logs */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Execution Logs</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Recent Execution Logs</h2>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Task</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Model</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tokens</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Task</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Model</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tokens</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Time</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Timestamp</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200">
               {executionLogs?.slice(0, 10).map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <tr key={log.id} className="hover:bg-gray-50 dark:bg-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     Task #{log.subtaskId || log.taskId}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -353,16 +353,16 @@ export const AnalyticsDashboard: React.FC = () => {
                       {log.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                     Model #{log.modelId}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                     {log.tokensUsed?.toLocaleString() || '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                     {log.executionTime ? `${(log.executionTime / 1000).toFixed(2)}s` : '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {new Date(log.createdAt).toLocaleTimeString()}
                   </td>
                 </tr>

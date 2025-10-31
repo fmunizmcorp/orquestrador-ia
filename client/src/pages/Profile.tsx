@@ -66,14 +66,14 @@ export default function Profile() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Meu Perfil</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Meu Perfil</h1>
+        <p className="text-gray-600 dark:text-gray-300 mt-1">
           Gerencie suas informações pessoais e preferências
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-6">
             <div className="relative">
               {userData.avatarUrl ? (
@@ -87,16 +87,16 @@ export default function Profile() {
                   {userData.name.charAt(0).toUpperCase()}
                 </div>
               )}
-              <button className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-lg hover:bg-gray-50">
-                <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <button className="absolute bottom-0 right-0 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg hover:bg-gray-50">
+                <svg className="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </button>
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">{userData.name}</h2>
-              <p className="text-gray-600">{userData.email}</p>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{userData.name}</h2>
+              <p className="text-gray-600 dark:text-gray-300">{userData.email}</p>
               <span className="inline-block mt-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                 {userData.role === 'admin' ? 'Administrador' : 'Usuário'}
               </span>
@@ -119,7 +119,7 @@ export default function Profile() {
 
           <div className="space-y-6">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Nome
               </label>
               <input
@@ -127,13 +127,13 @@ export default function Profile() {
                 type="text"
                 value={userData.name}
                 onChange={(e) => setUserData({ ...userData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Email
               </label>
               <input
@@ -141,13 +141,13 @@ export default function Profile() {
                 type="email"
                 value={userData.email}
                 onChange={(e) => setUserData({ ...userData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="bio" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Bio
               </label>
               <textarea
@@ -155,7 +155,7 @@ export default function Profile() {
                 value={userData.bio}
                 onChange={(e) => setUserData({ ...userData, bio: e.target.value })}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Conte um pouco sobre você..."
               />
             </div>
@@ -182,7 +182,7 @@ export default function Profile() {
                     });
                   }
                 }}
-                className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                className="border border-gray-300 text-gray-700 dark:text-gray-200 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancelar
               </button>
@@ -192,10 +192,10 @@ export default function Profile() {
       </div>
 
       {/* Seção de Segurança */}
-      <div className="mt-6 bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Segurança</h2>
-          <p className="text-sm text-gray-600 mt-1">
+      <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Segurança</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
             Gerencie sua senha e configurações de segurança
           </p>
         </div>
@@ -207,32 +207,32 @@ export default function Profile() {
       </div>
 
       {/* Seção de Preferências */}
-      <div className="mt-6 bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Preferências</h2>
-          <p className="text-sm text-gray-600 mt-1">
+      <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Preferências</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
             Configure suas preferências do sistema
           </p>
         </div>
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-gray-900">Notificações por Email</p>
-              <p className="text-sm text-gray-600">Receba atualizações por email</p>
+              <p className="font-medium text-gray-900 dark:text-white">Notificações por Email</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Receba atualizações por email</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-800 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-gray-900">Modo Escuro</p>
-              <p className="text-sm text-gray-600">Ativar tema escuro</p>
+              <p className="font-medium text-gray-900 dark:text-white">Modo Escuro</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Ativar tema escuro</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-800 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
         </div>

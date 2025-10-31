@@ -149,8 +149,8 @@ export default function Prompts() {
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Biblioteca de Prompts</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Biblioteca de Prompts</h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">
             Gerencie seus prompts para IAs
           </p>
         </div>
@@ -173,7 +173,7 @@ export default function Prompts() {
             placeholder="Buscar prompts..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <svg
             className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
@@ -221,17 +221,17 @@ export default function Prompts() {
       {isLoading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 mt-4">Carregando prompts...</p>
+          <p className="text-gray-600 dark:text-gray-300 mt-4">Carregando prompts...</p>
         </div>
       ) : filteredPrompts.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300">
           <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">
+          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
             {searchTerm ? 'Nenhum prompt encontrado' : 'Nenhum prompt'}
           </h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {searchTerm ? 'Tente uma busca diferente.' : 'Comece criando um novo prompt.'}
           </p>
           {!searchTerm && (
@@ -248,9 +248,9 @@ export default function Prompts() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPrompts.map((prompt: any) => (
-            <div key={prompt.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+            <div key={prompt.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-lg font-semibold text-gray-900 flex-1 line-clamp-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex-1 line-clamp-1">
                   {prompt.title}
                 </h3>
                 {prompt.isPublic && (
@@ -261,12 +261,12 @@ export default function Prompts() {
               </div>
               
               {prompt.category && (
-                <span className="inline-block text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded mb-3">
+                <span className="inline-block text-xs bg-gray-100 text-gray-700 dark:text-gray-200 px-2 py-1 rounded mb-3">
                   {prompt.category}
                 </span>
               )}
               
-              <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+              <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3 mb-4">
                 {prompt.content || 'Sem conteúdo'}
               </p>
               
@@ -304,7 +304,7 @@ export default function Prompts() {
                 <button
                   onClick={() => handleDuplicate(prompt)}
                   disabled={createPromptMutation.isLoading}
-                  className="flex-1 text-gray-600 hover:text-gray-700 text-sm font-medium border border-gray-600 rounded px-3 py-1 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="flex-1 text-gray-600 hover:text-gray-700 dark:text-gray-200 text-sm font-medium border border-gray-600 rounded px-3 py-1 hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Duplicar
                 </button>
@@ -317,14 +317,14 @@ export default function Prompts() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 {editingPrompt ? 'Editar Prompt' : 'Novo Prompt'}
               </h2>
               <button
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-300"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -335,7 +335,7 @@ export default function Prompts() {
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Título do Prompt *
                   </label>
                   <input
@@ -343,13 +343,13 @@ export default function Prompts() {
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Conteúdo do Prompt *
                   </label>
                   <textarea
@@ -357,18 +357,18 @@ export default function Prompts() {
                     value={formData.content}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                     rows={8}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                     placeholder="Escreva seu prompt aqui..."
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Dica: Use variáveis como {'{'}nome{'}'} para personalizar seu prompt
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                       Categoria
                     </label>
                     <input
@@ -376,13 +376,13 @@ export default function Prompts() {
                       type="text"
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Ex: Marketing, Código, Criativo"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="tags" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                       Tags
                     </label>
                     <input
@@ -390,7 +390,7 @@ export default function Prompts() {
                       type="text"
                       value={formData.tags}
                       onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="tag1, tag2, tag3"
                     />
                   </div>
@@ -402,9 +402,9 @@ export default function Prompts() {
                     type="checkbox"
                     checked={formData.isPublic}
                     onChange={(e) => setFormData({ ...formData, isPublic: e.target.checked })}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
                   />
-                  <label htmlFor="isPublic" className="ml-2 block text-sm text-gray-700">
+                  <label htmlFor="isPublic" className="ml-2 block text-sm text-gray-700 dark:text-gray-200">
                     Tornar este prompt público (outros usuários poderão vê-lo)
                   </label>
                 </div>
@@ -414,7 +414,7 @@ export default function Prompts() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors"
                 >
                   Cancelar
                 </button>

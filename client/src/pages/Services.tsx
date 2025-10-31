@@ -49,8 +49,8 @@ export default function Services() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Serviços Externos</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Serviços Externos</h1>
+        <p className="text-gray-600 dark:text-gray-300 mt-1">
           Conecte e gerencie integrações com serviços externos
         </p>
       </div>
@@ -58,18 +58,18 @@ export default function Services() {
       {isLoading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 mt-4">Carregando serviços...</p>
+          <p className="text-gray-600 dark:text-gray-300 mt-4">Carregando serviços...</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {allServices.map((service) => (
-            <div key={service.name} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
+            <div key={service.name} className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow">
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <span className="text-3xl">{service.icon}</span>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{service.name}</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{service.name}</h3>
                       <span
                         className={`inline-block text-xs px-2 py-1 rounded-full mt-1 ${
                           service.status === 'connected'
@@ -83,7 +83,7 @@ export default function Services() {
                   </div>
                 </div>
 
-                <div className="space-y-2 text-sm text-gray-600 mb-4">
+                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-4">
                   <p>{serviceDescriptions[service.serviceName] || 'Serviço de integração'}</p>
                 </div>
 
@@ -122,10 +122,10 @@ export default function Services() {
       )}
 
       {/* Seção de Credenciais API */}
-      <div className="mt-8 bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Credenciais de API</h2>
-          <p className="text-sm text-gray-600 mt-1">
+      <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Credenciais de API</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
             Gerencie chaves de API para serviços que não usam OAuth
           </p>
         </div>
@@ -134,8 +134,8 @@ export default function Services() {
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhuma credencial configurada</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">Nenhuma credencial configurada</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Adicione chaves de API para OpenAI, Anthropic, e outros serviços
             </p>
             <div className="mt-6">

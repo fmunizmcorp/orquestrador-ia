@@ -71,11 +71,14 @@ app.get('/api/health', async (req, res) => {
 
 // Servir frontend em produção
 if (process.env.NODE_ENV === 'production') {
-  const clientPath = path.join(__dirname, '../dist/client');
+  const clientPath = path.join(__dirname, './client');
+  console.log('📁 Serving frontend from:', clientPath);
   app.use(express.static(clientPath));
   
   app.get('*', (req, res) => {
-    res.sendFile(path.join(clientPath, 'index.html'));
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/ws')) {
+      res.sendFile(path.join(clientPath, 'index.html'));
+    }
   });
 }
 

@@ -17,15 +17,15 @@ export const WorkflowBuilder: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col">
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <button
             onClick={() => navigate('/workflows')}
-            className="text-gray-600 hover:text-gray-900"
+            className="text-gray-600 hover:text-gray-900 dark:text-white"
           >
             ← Back
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Workflow Builder</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Workflow Builder</h1>
         </div>
       </div>
 

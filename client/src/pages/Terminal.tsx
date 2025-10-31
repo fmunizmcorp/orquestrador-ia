@@ -281,7 +281,7 @@ const Terminal = () => {
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="text-6xl mb-4">💻</div>
             <p className="text-gray-400 text-lg mb-2">Nenhum terminal ativo</p>
-            <p className="text-gray-500 text-sm mb-6">
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
               Crie um novo terminal para começar a executar comandos
             </p>
             <button

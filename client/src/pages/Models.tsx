@@ -278,9 +278,9 @@ const Models = () => {
         </div>
       ) : (
         <div className="card text-center py-12">
-          <AlertCircle className="mx-auto mb-4 text-gray-500" size={48} />
+          <AlertCircle className="mx-auto mb-4 text-gray-500 dark:text-gray-400" size={48} />
           <p className="text-gray-400 text-lg mb-2">Nenhum modelo encontrado</p>
-          <p className="text-gray-500 text-sm mb-6">
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
             {searchQuery 
               ? 'Tente ajustar sua busca ou filtros' 
               : 'Comece adicionando seu primeiro modelo de IA'}

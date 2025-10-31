@@ -156,7 +156,7 @@ const Layout = () => {
                   Sair
                 </button>
               </div>
-              <div className="text-xs text-gray-500 text-center">
+              <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
                 v3.0.0 - Sistema de Orquestração
               </div>
             </div>

@@ -15,8 +15,8 @@ export default function Monitoring() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Monitoramento do Sistema</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Monitoramento do Sistema</h1>
+        <p className="text-gray-600 dark:text-gray-300 mt-1">
           Acompanhe métricas, logs e performance em tempo real
         </p>
       </div>
@@ -24,17 +24,17 @@ export default function Monitoring() {
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 mt-4">Carregando métricas...</p>
+          <p className="text-gray-600 dark:text-gray-300 mt-4">Carregando métricas...</p>
         </div>
       ) : (
         <>
           {/* Métricas do Sistema */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">CPU</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">CPU</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
                     {metrics?.cpu ? `${metrics.cpu.toFixed(1)}%` : '0%'}
                   </p>
                 </div>
@@ -51,11 +51,11 @@ export default function Monitoring() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Memória</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Memória</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
                     {metrics?.memory ? `${metrics.memory.toFixed(1)}%` : '0%'}
                   </p>
                 </div>
@@ -72,11 +72,11 @@ export default function Monitoring() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Disco</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Disco</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
                     {metrics?.disk ? `${metrics.disk.toFixed(1)}%` : '0%'}
                   </p>
                 </div>
@@ -93,11 +93,11 @@ export default function Monitoring() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Conexões</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Conexões</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
                     {metrics?.connections || 0}
                   </p>
                 </div>
@@ -107,15 +107,15 @@ export default function Monitoring() {
                   </svg>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-4">Ativas no momento</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">Ativas no momento</p>
             </div>
           </div>
 
           {/* Logs e Alertas */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Logs Recentes</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Logs Recentes</h2>
               </div>
               <div className="p-6">
                 {errorLogs?.logs && errorLogs.logs.length > 0 ? (
@@ -130,8 +130,8 @@ export default function Monitoring() {
                           {log.level?.toUpperCase() || 'INFO'}
                         </span>
                         <div className="flex-1">
-                          <p className="text-sm text-gray-900">{log.message || 'Sem mensagem'}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-sm text-gray-900 dark:text-white">{log.message || 'Sem mensagem'}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Sem data'}
                           </p>
                         </div>
@@ -139,19 +139,19 @@ export default function Monitoring() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 text-center py-4">Nenhum log recente</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Nenhum log recente</p>
                 )}
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Status dos Serviços</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Status dos Serviços</h2>
               </div>
               <div className="p-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-900">Banco de Dados</span>
+                    <span className="text-sm text-gray-900 dark:text-white">Banco de Dados</span>
                     <span className={`text-xs px-2 py-1 rounded ${
                       serviceStatus?.status?.database ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
@@ -159,7 +159,7 @@ export default function Monitoring() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-900">LM Studio</span>
+                    <span className="text-sm text-gray-900 dark:text-white">LM Studio</span>
                     <span className={`text-xs px-2 py-1 rounded ${
                       serviceStatus?.status?.lmstudio ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
@@ -167,11 +167,11 @@ export default function Monitoring() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-900">API tRPC</span>
+                    <span className="text-sm text-gray-900 dark:text-white">API tRPC</span>
                     <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Online</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-900">Redis</span>
+                    <span className="text-sm text-gray-900 dark:text-white">Redis</span>
                     <span className={`text-xs px-2 py-1 rounded ${
                       serviceStatus?.status?.redis ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
