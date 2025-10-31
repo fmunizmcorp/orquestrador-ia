@@ -42,12 +42,15 @@ export const chatRouter = router({
       systemPrompt: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const [conversation] = await db.insert(conversations).values({
+      const result: any = await db.insert(conversations).values({
         userId: input.userId,
         title: input.title || 'Nova Conversa',
         modelId: input.modelId,
         systemPrompt: input.systemPrompt,
-      }).returning();
+      });
+
+      const convId = result[0]?.insertId || result.insertId;
+      const [conversation] = await db.select().from(conversations).where(eq(conversations.id, convId)).limit(1);
 
       return { success: true, conversation };
     }),
@@ -85,10 +88,11 @@ export const chatRouter = router({
     .mutation(async ({ input }) => {
       const { id, ...updates } = input;
 
-      const [updated] = await db.update(conversations)
+      await db.update(conversations)
         .set(updates)
-        .where(eq(conversations.id, id))
-        .returning();
+        .where(eq(conversations.id, id));
+
+      const [updated] = await db.select().from(conversations).where(eq(conversations.id, id)).limit(1);
 
       return { success: true, conversation: updated };
     }),
@@ -136,12 +140,15 @@ export const chatRouter = router({
       parentMessageId: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
-      const [message] = await db.insert(messages).values({
+      const result: any = await db.insert(messages).values({
         conversationId: input.conversationId,
         content: input.content,
         role: input.role,
         parentMessageId: input.parentMessageId,
-      }).returning();
+      });
+
+      const msgId = result[0]?.insertId || result.insertId;
+      const [message] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
 
       // Atualizar lastMessageAt da conversa
       await db.update(conversations)
@@ -196,13 +203,16 @@ export const chatRouter = router({
       fileSize: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
-      const [attachment] = await db.insert(messageAttachments).values({
+      const result: any = await db.insert(messageAttachments).values({
         messageId: input.messageId,
         fileName: input.fileName,
         fileType: input.fileType,
         fileUrl: input.fileUrl,
         fileSize: input.fileSize,
-      }).returning();
+      });
+
+      const attId = result[0]?.insertId || result.insertId;
+      const [attachment] = await db.select().from(messageAttachments).where(eq(messageAttachments.id, attId)).limit(1);
 
       return { success: true, attachment };
     }),
@@ -236,11 +246,14 @@ export const chatRouter = router({
       }
 
       // Adicionar reação
-      const [reaction] = await db.insert(messageReactions).values({
+      const result: any = await db.insert(messageReactions).values({
         messageId: input.messageId,
         userId: input.userId,
         emoji: input.emoji,
-      }).returning();
+      });
+
+      const reactId = result[0]?.insertId || result.insertId;
+      const [reaction] = await db.select().from(messageReactions).where(eq(messageReactions.id, reactId)).limit(1);
 
       return { success: true, action: 'added', reaction };
     }),
@@ -266,14 +279,15 @@ export const chatRouter = router({
       content: z.string().min(1),
     }))
     .mutation(async ({ input }) => {
-      const [updated] = await db.update(messages)
+      await db.update(messages)
         .set({
           content: input.content,
           isEdited: true,
           updatedAt: new Date(),
         })
-        .where(eq(messages.id, input.id))
-        .returning();
+        .where(eq(messages.id, input.id));
+
+      const [updated] = await db.select().from(messages).where(eq(messages.id, input.id)).limit(1);
 
       return { success: true, message: updated };
     }),
