@@ -80,10 +80,7 @@ class HallucinationDetectorService {
       // 2. Buscar modelo alternativo DIFERENTE
       const [alternativeAI] = await db.select()
         .from(specializedAIs)
-        .where(and(
-          eq(specializedAIs.category, subtask.category || 'general'),
-          eq(specializedAIs.isActive, true)
-        ))
+        .where(eq(specializedAIs.isActive, true))
         .limit(1);
 
       if (!alternativeAI) {
@@ -95,7 +92,7 @@ class HallucinationDetectorService {
       // Garantir modelo DIFERENTE
       if (!alternativeModelId || alternativeModelId === originalModelId) {
         const fallbacks = alternativeAI.fallbackModelIds 
-          ? JSON.parse(alternativeAI.fallbackModelIds as string)
+          ? (JSON.parse(alternativeAI.fallbackModelIds as string) as number[])
           : [];
         alternativeModelId = fallbacks.find((id: number) => id !== originalModelId);
       }

@@ -26,7 +26,7 @@ export const monitoringRouter = router({
    */
   getHealth: publicProcedure
     .query(async () => {
-      const health = systemMonitorService.getHealthStatus();
+      const health = await systemMonitorService.getMetrics();
       return { success: true, health };
     }),
 
@@ -60,14 +60,13 @@ export const monitoringRouter = router({
     .query(async ({ input }) => {
       const since = new Date(Date.now() - input.hours * 60 * 60 * 1000);
 
-      let query = db.select().from(apiUsage)
-        .where(gte(apiUsage.timestamp, since));
-
+      const conditions = [gte(apiUsage.timestamp, since)];
       if (input.userId) {
-        query = query.where(eq(apiUsage.userId, input.userId));
+        conditions.push(eq(apiUsage.userId, input.userId));
       }
 
-      const usage = await query
+      const usage = await db.select().from(apiUsage)
+        .where(and(...conditions))
         .orderBy(desc(apiUsage.timestamp))
         .limit(1000);
 
@@ -86,14 +85,13 @@ export const monitoringRouter = router({
     .query(async ({ input }) => {
       const since = new Date(Date.now() - input.hours * 60 * 60 * 1000);
 
-      let query = db.select().from(errorLogs)
-        .where(gte(errorLogs.timestamp, since));
-
+      const conditions = [gte(errorLogs.timestamp, since)];
       if (input.level) {
-        query = query.where(eq(errorLogs.level, input.level));
+        conditions.push(eq(errorLogs.level, input.level));
       }
 
-      const logs = await query
+      const logs = await db.select().from(errorLogs)
+        .where(and(...conditions))
         .orderBy(desc(errorLogs.timestamp))
         .limit(input.limit);
 
@@ -113,18 +111,16 @@ export const monitoringRouter = router({
     .query(async ({ input }) => {
       const since = new Date(Date.now() - input.hours * 60 * 60 * 1000);
 
-      let query = db.select().from(auditLogs)
-        .where(gte(auditLogs.timestamp, since));
-
+      const conditions = [gte(auditLogs.timestamp, since)];
       if (input.userId) {
-        query = query.where(eq(auditLogs.userId, input.userId));
+        conditions.push(eq(auditLogs.userId, input.userId));
       }
-
       if (input.action) {
-        query = query.where(eq(auditLogs.action, input.action));
+        conditions.push(eq(auditLogs.action, input.action));
       }
 
-      const logs = await query
+      const logs = await db.select().from(auditLogs)
+        .where(and(...conditions))
         .orderBy(desc(auditLogs.timestamp))
         .limit(input.limit);
 
@@ -136,11 +132,12 @@ export const monitoringRouter = router({
    */
   getServiceStatus: publicProcedure
     .query(async () => {
+      const metrics = await systemMonitorService.getMetrics();
       const status = {
         database: true,
         lmstudio: false,
         redis: false,
-        services: systemMonitorService.getHealthStatus(),
+        services: metrics,
       };
 
       return { success: true, status };
@@ -176,12 +173,12 @@ export const monitoringRouter = router({
       }
 
       const summary = {
-        avgCpu: history.reduce((sum, m) => sum + (m.cpuUsage || 0), 0) / history.length,
-        avgMemory: history.reduce((sum, m) => sum + (m.memoryUsage || 0), 0) / history.length,
-        avgDisk: history.reduce((sum, m) => sum + (m.diskUsage || 0), 0) / history.length,
-        maxCpu: Math.max(...history.map(m => m.cpuUsage || 0)),
-        maxMemory: Math.max(...history.map(m => m.memoryUsage || 0)),
-        maxDisk: Math.max(...history.map(m => m.diskUsage || 0)),
+        avgCpu: history.reduce((sum, m) => sum + parseFloat(m.cpuUsage || '0'), 0) / history.length,
+        avgMemory: history.reduce((sum, m) => sum + parseFloat(m.memoryUsage || '0'), 0) / history.length,
+        avgDisk: history.reduce((sum, m) => sum + parseFloat(m.diskUsage || '0'), 0) / history.length,
+        maxCpu: Math.max(...history.map(m => parseFloat(m.cpuUsage || '0'))),
+        maxMemory: Math.max(...history.map(m => parseFloat(m.memoryUsage || '0'))),
+        maxDisk: Math.max(...history.map(m => parseFloat(m.diskUsage || '0'))),
       };
 
       return { success: true, summary };

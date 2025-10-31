@@ -552,11 +552,13 @@ Exemplo:
       if (existing) {
         // Atualizar existente
         const newTotal = (existing.totalTasks || 0) + 1;
-        const newSuccesses = ((existing.successRate || 0) * (existing.totalTasks || 0)) / 100;
+        const currentSuccessRate = parseFloat(existing.successRate || '0');
+        const newSuccesses = (currentSuccessRate * (existing.totalTasks || 0)) / 100;
         const finalSuccesses = newSuccesses + (wasSuccessful ? 1 : 0);
         const newSuccessRate = (finalSuccesses / newTotal) * 100;
 
-        const newScoreTotal = (existing.avgScore || 0) * (existing.totalTasks || 0);
+        const currentAvgScore = parseFloat(existing.avgScore || '0');
+        const newScoreTotal = currentAvgScore * (existing.totalTasks || 0);
         const finalScoreTotal = newScoreTotal + score;
         const newAvgScore = finalScoreTotal / newTotal;
 

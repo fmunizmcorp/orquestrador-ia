@@ -89,8 +89,8 @@ class ModelTrainingService {
     this.validateDataset(dataType, data);
 
     // Save dataset to file
-    const datasetId = Date.now();
-    const filePath = path.join(this.trainingDataPath, `dataset_${datasetId}.jsonl`);
+    const timestamp = Date.now();
+    const filePath = path.join(this.trainingDataPath, `dataset_${timestamp}.jsonl`);
     
     const jsonlData = data.map(item => JSON.stringify(item)).join('\n');
     await fs.writeFile(filePath, jsonlData, 'utf-8');
@@ -99,7 +99,7 @@ class ModelTrainingService {
     const stats = this.calculateDatasetStats(data);
 
     // Insert into database
-    const [dataset] = await db.insert(trainingDatasets).values({
+    const result: any = await db.insert(trainingDatasets).values({
       userId,
       name,
       description,
@@ -108,7 +108,10 @@ class ModelTrainingService {
       recordCount: data.length,
       sizeBytes: Buffer.byteLength(jsonlData),
       metadata: JSON.stringify(stats),
-    }).returning();
+    });
+
+    const datasetId = result[0]?.insertId || result.insertId;
+    const [dataset] = await db.select().from(trainingDatasets).where(eq(trainingDatasets.id, datasetId)).limit(1);
 
     return dataset;
   }
@@ -194,13 +197,18 @@ class ModelTrainingService {
     }
 
     // Create training job record
-    const [job] = await db.insert(trainingJobs).values({
+    const result: any = await db.insert(trainingJobs).values({
+      userId: 1, // TODO: Get from context
+      name: `Training ${config.modelId}`,
       baseModelId: config.modelId,
       datasetId: config.datasetId,
-      status: 'running',
-      hyperparameters: JSON.stringify(config.hyperparameters),
-      startTime: new Date(),
-    }).returning();
+      status: 'training',
+      hyperparameters: config.hyperparameters as any,
+      startedAt: new Date(),
+    });
+
+    const jobId = result[0]?.insertId || result.insertId;
+    const [job] = await db.select().from(trainingJobs).where(eq(trainingJobs.id, jobId)).limit(1);
 
     // Start training in background
     this.runTraining(job.id, config, dataset.filePath!);
@@ -272,8 +280,8 @@ class ModelTrainingService {
             await db.update(trainingJobs)
               .set({
                 currentEpoch: epoch + 1,
-                currentStep: globalStep,
-                metrics: JSON.stringify(metrics),
+                progress: ((globalStep / (epochs * stepsPerEpoch)) * 100).toFixed(2),
+                metadata: metrics as any,
               })
               .where(eq(trainingJobs.id, jobId));
           }
@@ -302,24 +310,24 @@ class ModelTrainingService {
 
       const versionName = `${baseModel.modelName}-finetuned-${Date.now()}`;
       
-      await db.insert(modelVersions).values({
+      const versionResult: any = await db.insert(modelVersions).values({
         modelId: config.modelId,
         version: versionName,
         trainingJobId: jobId,
         isActive: true,
-        performanceMetrics: JSON.stringify({
+        performanceMetrics: {
           finalLoss: metricsHistory[metricsHistory.length - 1]?.loss,
           bestLoss,
           totalSteps: globalStep,
-        }),
+        } as any,
       });
 
       // Update job status
       await db.update(trainingJobs)
         .set({
           status: 'completed',
-          endTime: new Date(),
-          finalMetrics: JSON.stringify(metricsHistory[metricsHistory.length - 1]),
+          completedAt: new Date(),
+          metadata: metricsHistory[metricsHistory.length - 1] as any,
         })
         .where(eq(trainingJobs.id, jobId));
 
@@ -329,7 +337,7 @@ class ModelTrainingService {
       await db.update(trainingJobs)
         .set({
           status: 'failed',
-          endTime: new Date(),
+          completedAt: new Date(),
           errorMessage: error.message,
         })
         .where(eq(trainingJobs.id, jobId));
@@ -411,7 +419,7 @@ class ModelTrainingService {
     await db.update(trainingJobs)
       .set({
         status: 'cancelled',
-        endTime: new Date(),
+        completedAt: new Date(),
       })
       .where(eq(trainingJobs.id, jobId));
 
@@ -460,7 +468,7 @@ class ModelTrainingService {
         .limit(1);
 
       const generated = await lmstudioService.generateCompletion(
-        model.id,
+        model.id.toString(),
         input,
         { maxTokens: 200, temperature: 0.7 }
       );
@@ -545,7 +553,7 @@ class ModelTrainingService {
       query = query.where(eq(trainingJobs.status, status as any));
     }
 
-    const jobs = await query.orderBy(desc(trainingJobs.startTime)).limit(100);
+    const jobs = await query.orderBy(desc(trainingJobs.startedAt)).limit(100);
     return jobs;
   }
 

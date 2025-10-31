@@ -5,6 +5,16 @@
 import { Request, Response, NextFunction } from 'express';
 import { z, ZodSchema } from 'zod';
 
+// Extend Express Request type to include multer file properties
+declare global {
+  namespace Express {
+    interface Request {
+      file?: Express.Multer.File;
+      files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
+    }
+  }
+}
+
 /**
  * Validate request body against Zod schema
  */

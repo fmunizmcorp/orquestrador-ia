@@ -160,12 +160,10 @@ export const trainingRouter = router({
         success: true,
         metrics: {
           currentEpoch: job.currentEpoch,
-          currentStep: job.currentStep,
           status: job.status,
-          startTime: job.startTime,
-          endTime: job.endTime,
-          metrics: job.metrics ? JSON.parse(job.metrics as string) : null,
-          finalMetrics: job.finalMetrics ? JSON.parse(job.finalMetrics as string) : null,
+          startTime: job.startedAt,
+          endTime: job.completedAt,
+          metadata: job.metadata,
         },
       };
     }),
@@ -180,9 +178,9 @@ export const trainingRouter = router({
       
       // Simular logs baseado no status
       const logs = [];
-      if (job.startTime) {
+      if (job.startedAt) {
         logs.push({
-          timestamp: job.startTime,
+          timestamp: job.startedAt,
           level: 'info',
           message: 'Training job started',
         });
@@ -192,13 +190,13 @@ export const trainingRouter = router({
         logs.push({
           timestamp: new Date(),
           level: 'info',
-          message: `Training epoch ${job.currentEpoch}, step ${job.currentStep}`,
+          message: `Training epoch ${job.currentEpoch}`,
         });
       }
       
-      if (job.endTime) {
+      if (job.completedAt) {
         logs.push({
-          timestamp: job.endTime,
+          timestamp: job.completedAt,
           level: job.status === 'completed' ? 'info' : 'error',
           message: `Training ${job.status}`,
         });

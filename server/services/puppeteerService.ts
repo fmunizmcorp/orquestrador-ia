@@ -13,6 +13,7 @@
 import puppeteer, { Browser, Page, ElementHandle, ScreenshotOptions, PDFOptions } from 'puppeteer';
 import { db } from '../db/index.js';
 import { puppeteerSessions, puppeteerResults } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
 import { withErrorHandling } from '../middleware/errorHandler.js';
 
 interface BrowserConfig {
@@ -139,9 +140,8 @@ class PuppeteerService {
         await db.insert(puppeteerSessions).values({
           sessionId,
           userId,
-          isActive: true,
-          startedAt: new Date(),
-          metadata: config ? JSON.stringify(config) : null,
+          status: 'active',
+          config: config as any,
         });
 
         console.log(`✅ Sessão Puppeteer criada: ${sessionId}`);
@@ -181,8 +181,8 @@ class PuppeteerService {
 
       // Atualizar banco
       await db.update(puppeteerSessions)
-        .set({ isActive: false, endedAt: new Date() })
-        .where((sessions) => sessions.sessionId === sessionId);
+        .set({ status: 'closed' })
+        .where(eq(puppeteerSessions.sessionId, sessionId));
 
       console.log(`❌ Sessão Puppeteer fechada: ${sessionId}`);
     }
@@ -338,7 +338,7 @@ class PuppeteerService {
               break;
 
             case 'file':
-              await element.uploadFile(field.value);
+              await (element as any).uploadFile(field.value);
               break;
           }
 

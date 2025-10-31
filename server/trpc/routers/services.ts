@@ -29,15 +29,19 @@ export const servicesRouter = router({
       isActive: z.boolean().optional(),
     }))
     .query(async ({ input }) => {
-      let query = db.select().from(externalServices);
+      const conditions = [];
 
       if (input.userId) {
-        query = query.where(eq(externalServices.userId, input.userId));
+        conditions.push(eq(externalServices.userId, input.userId));
       }
 
       if (input.isActive !== undefined) {
-        query = query.where(eq(externalServices.isActive, input.isActive));
+        conditions.push(eq(externalServices.isActive, input.isActive));
       }
+
+      const query = conditions.length > 0
+        ? db.select().from(externalServices).where(and(...conditions))
+        : db.select().from(externalServices);
 
       const services = await query.orderBy(desc(externalServices.createdAt));
 
@@ -68,12 +72,15 @@ export const servicesRouter = router({
       config: z.any().optional(),
     }))
     .mutation(async ({ input }) => {
-      const [service] = await db.insert(externalServices).values({
+      const result: any = await db.insert(externalServices).values({
         userId: input.userId,
         serviceName: input.serviceName,
         config: input.config ? JSON.stringify(input.config) : undefined,
         isActive: true,
-      }).returning();
+      });
+
+      const svcId = result[0]?.insertId || result.insertId;
+      const [service] = await db.select().from(externalServices).where(eq(externalServices.id, svcId)).limit(1);
 
       return { success: true, service };
     }),
@@ -91,10 +98,11 @@ export const servicesRouter = router({
         updates.config = JSON.stringify(updates.config);
       }
 
-      const [updated] = await db.update(externalServices)
+      await db.update(externalServices)
         .set(updates)
-        .where(eq(externalServices.id, id))
-        .returning();
+        .where(eq(externalServices.id, id));
+
+      const [updated] = await db.select().from(externalServices).where(eq(externalServices.id, id)).limit(1);
 
       return { success: true, service: updated };
     }),
@@ -117,7 +125,7 @@ export const servicesRouter = router({
       username: z.string().optional(),
     }))
     .query(async ({ input }) => {
-      const repos = await githubService.listRepositories(input.username);
+      const repos = await githubService.listRepos(1); // TODO: Get userId from context
       return { success: true, repos };
     }),
 
@@ -128,7 +136,7 @@ export const servicesRouter = router({
       repo: z.string(),
     }))
     .query(async ({ input }) => {
-      const repo = await githubService.getRepository(input.owner, input.repo);
+      const repo = await githubService.getRepo(1, input.owner, input.repo);
       return { success: true, repo };
     }),
 
@@ -140,7 +148,7 @@ export const servicesRouter = router({
       state: z.enum(['open', 'closed', 'all']).optional().default('open'),
     }))
     .query(async ({ input }) => {
-      const issues = await githubService.listIssues(input.owner, input.repo, {
+      const issues = await githubService.listIssues(1, input.owner, input.repo, {
         state: input.state,
       });
       return { success: true, issues };
@@ -157,6 +165,7 @@ export const servicesRouter = router({
     }))
     .mutation(async ({ input }) => {
       const issue = await githubService.createIssue(
+        1,
         input.owner,
         input.repo,
         input.title,
@@ -174,7 +183,7 @@ export const servicesRouter = router({
       state: z.enum(['open', 'closed', 'all']).optional().default('open'),
     }))
     .query(async ({ input }) => {
-      const prs = await githubService.listPullRequests(input.owner, input.repo, {
+      const prs = await githubService.listPRs(1, input.owner, input.repo, {
         state: input.state,
       });
       return { success: true, pullRequests: prs };
@@ -190,9 +199,9 @@ export const servicesRouter = router({
       query: z.string().optional(),
     }))
     .query(async ({ input }) => {
-      const messages = await gmailService.listMessages({
+      const messages = await gmailService.listEmails(1, {
         maxResults: input.maxResults,
-        q: input.query,
+        query: input.query,
       });
       return { success: true, messages };
     }),
@@ -203,7 +212,7 @@ export const servicesRouter = router({
       messageId: z.string(),
     }))
     .query(async ({ input }) => {
-      const message = await gmailService.getMessage(input.messageId);
+      const message = await gmailService.getEmail(1, input.messageId);
       return { success: true, message };
     }),
 
@@ -217,7 +226,7 @@ export const servicesRouter = router({
       bcc: z.array(z.string().email()).optional(),
     }))
     .mutation(async ({ input }) => {
-      const message = await gmailService.sendMessage({
+      const message = await gmailService.sendEmail(1, {
         to: input.to,
         subject: input.subject,
         body: input.body,
@@ -234,7 +243,7 @@ export const servicesRouter = router({
       maxResults: z.number().optional().default(20),
     }))
     .query(async ({ input }) => {
-      const messages = await gmailService.searchMessages(input.query, input.maxResults);
+      const messages = await gmailService.searchEmails(1, input.query, input.maxResults);
       return { success: true, messages };
     }),
 
@@ -244,7 +253,7 @@ export const servicesRouter = router({
       messageId: z.string(),
     }))
     .mutation(async ({ input }) => {
-      await gmailService.deleteMessage(input.messageId);
+      await gmailService.deleteEmail(1, input.messageId);
       return { success: true, message: 'Message deleted' };
     }),
 
@@ -258,10 +267,7 @@ export const servicesRouter = router({
       pageSize: z.number().min(1).max(1000).optional().default(100),
     }))
     .query(async ({ input }) => {
-      const files = await driveService.listFiles({
-        folderId: input.folderId,
-        pageSize: input.pageSize,
-      });
+      const files = await driveService.listFiles(1, undefined, input.pageSize);
       return { success: true, files };
     }),
 
@@ -271,7 +277,7 @@ export const servicesRouter = router({
       fileId: z.string(),
     }))
     .query(async ({ input }) => {
-      const file = await driveService.getFile(input.fileId);
+      const file = await driveService.getFile(1, input.fileId);
       return { success: true, file };
     }),
 
@@ -284,12 +290,13 @@ export const servicesRouter = router({
       folderId: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const file = await driveService.uploadFile({
-        name: input.name,
-        mimeType: input.mimeType,
-        content: Buffer.from(input.content, 'base64'),
-        folderId: input.folderId,
-      });
+      const file = await driveService.uploadFile(
+        1,
+        input.name,
+        input.content,
+        input.mimeType,
+        input.folderId
+      );
       return { success: true, file };
     }),
 
@@ -299,7 +306,7 @@ export const servicesRouter = router({
       fileId: z.string(),
     }))
     .mutation(async ({ input }) => {
-      await driveService.deleteFile(input.fileId);
+      await driveService.deleteFile(1, input.fileId);
       return { success: true, message: 'File deleted' };
     }),
 
@@ -312,6 +319,7 @@ export const servicesRouter = router({
     }))
     .mutation(async ({ input }) => {
       const permission = await driveService.shareFile(
+        1,
         input.fileId,
         input.email,
         input.role
@@ -328,7 +336,7 @@ export const servicesRouter = router({
       spreadsheetId: z.string(),
     }))
     .query(async ({ input }) => {
-      const spreadsheet = await sheetsService.getSpreadsheet(input.spreadsheetId);
+      const spreadsheet = await sheetsService.getSpreadsheet(1, input.spreadsheetId);
       return { success: true, spreadsheet };
     }),
 
@@ -339,7 +347,7 @@ export const servicesRouter = router({
       range: z.string(), // e.g., "Sheet1!A1:D10"
     }))
     .query(async ({ input }) => {
-      const data = await sheetsService.readRange(input.spreadsheetId, input.range);
+      const data = await sheetsService.getSpreadsheetValues(1, input.spreadsheetId, input.range);
       return { success: true, data };
     }),
 
@@ -351,7 +359,8 @@ export const servicesRouter = router({
       values: z.array(z.array(z.any())),
     }))
     .mutation(async ({ input }) => {
-      const result = await sheetsService.writeRange(
+      const result = await sheetsService.updateSpreadsheetValues(
+        1,
         input.spreadsheetId,
         input.range,
         input.values
@@ -367,10 +376,11 @@ export const servicesRouter = router({
       values: z.array(z.any()),
     }))
     .mutation(async ({ input }) => {
-      const result = await sheetsService.appendRow(
+      const result = await sheetsService.appendSpreadsheetValues(
+        1,
         input.spreadsheetId,
         input.sheetName,
-        input.values
+        [input.values]
       );
       return { success: true, result };
     }),
@@ -383,6 +393,7 @@ export const servicesRouter = router({
     }))
     .mutation(async ({ input }) => {
       const spreadsheet = await sheetsService.createSpreadsheet(
+        1,
         input.title,
         input.sheetNames
       );
@@ -447,12 +458,15 @@ export const servicesRouter = router({
       encryptedData: z.string(), // Already encrypted on client
     }))
     .mutation(async ({ input }) => {
-      const [credential] = await db.insert(apiCredentials).values({
+      const result: any = await db.insert(apiCredentials).values({
         userId: input.userId,
         serviceName: input.serviceName,
         credentialName: input.credentialName,
         encryptedData: input.encryptedData,
-      }).returning();
+      });
+
+      const credId = result[0]?.insertId || result.insertId;
+      const [credential] = await db.select().from(apiCredentials).where(eq(apiCredentials.id, credId)).limit(1);
 
       return { success: true, credential };
     }),
