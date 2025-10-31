@@ -139,7 +139,7 @@ const Chat = () => {
         <div>
           <h1 className="text-2xl font-bold text-white">Chat com IA</h1>
           <p className="text-gray-400 text-sm">
-            Converse com o assistente do Orquestrador V3.1
+            Converse com o assistente do Orquestrador V3.2
           </p>
         </div>
         <div className="flex items-center gap-2">
