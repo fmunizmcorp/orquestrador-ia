@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { trpc } from '../lib/trpc';
 
 interface User {
   id: number;
@@ -22,92 +21,47 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Usuário padrão para sistema sem autenticação
+const DEFAULT_USER: User = {
+  id: 1,
+  email: 'admin@orquestrador.local',
+  name: 'Administrador',
+  username: 'admin',
+  role: 'admin',
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Sistema sem autenticação - sempre retorna usuário padrão
+  const [user] = useState<User>(DEFAULT_USER);
+  const [token] = useState<string>('no-auth-token');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Mutations
-  const loginMutation = trpc.auth.login.useMutation();
-  const registerMutation = trpc.auth.register.useMutation();
-  const verifyTokenQuery = trpc.auth.verifyToken.useQuery(
-    { token: token || '' },
-    { enabled: !!token }
-  );
-
-  // Initialize auth state from localStorage
+  // Inicialização imediata
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    if (storedToken) {
-      setToken(storedToken);
-    } else {
-      setIsLoading(false);
-    }
+    setIsLoading(false);
   }, []);
 
-  // Verify token when it changes
-  useEffect(() => {
-    if (token && verifyTokenQuery.data) {
-      if (verifyTokenQuery.data.valid && verifyTokenQuery.data.user) {
-        setUser(verifyTokenQuery.data.user as User);
-      } else {
-        // Token invalid, clear it
-        localStorage.removeItem('auth_token');
-        setToken(null);
-        setUser(null);
-      }
-      setIsLoading(false);
-    }
-  }, [token, verifyTokenQuery.data]);
-
+  // Funções vazias (não fazem nada, pois não há autenticação)
   const login = async (email: string, password: string) => {
-    try {
-      const result = await loginMutation.mutateAsync({ email, password });
-      
-      if (result.success && result.token && result.user) {
-        setToken(result.token);
-        setUser(result.user as User);
-        localStorage.setItem('auth_token', result.token);
-      } else {
-        throw new Error('Login falhou');
-      }
-    } catch (error) {
-      throw error;
-    }
+    // Sistema sem autenticação - não faz nada
+    console.log('Sistema configurado sem autenticação');
   };
 
   const register = async (name: string, email: string, password: string, username?: string) => {
-    try {
-      const result = await registerMutation.mutateAsync({ 
-        name, 
-        email, 
-        password,
-        username 
-      });
-      
-      if (result.success && result.token && result.user) {
-        setToken(result.token);
-        setUser(result.user as User);
-        localStorage.setItem('auth_token', result.token);
-      } else {
-        throw new Error('Registro falhou');
-      }
-    } catch (error) {
-      throw error;
-    }
+    // Sistema sem autenticação - não faz nada
+    console.log('Sistema configurado sem autenticação');
   };
 
   const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('auth_token');
+    // Sistema sem autenticação - não faz nada
+    console.log('Sistema configurado sem autenticação');
   };
 
   const value: AuthContextType = {
     user,
     token,
-    isAuthenticated: !!user,
-    isLoading,
+    isAuthenticated: true, // Sempre autenticado
+    isLoading: false,
     login,
     register,
     logout,

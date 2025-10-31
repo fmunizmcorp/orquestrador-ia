@@ -1,11 +1,8 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
-import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
-import Login from './pages/Login';
-import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Projects from './pages/Projects';
 import Teams from './pages/Teams';
@@ -37,42 +34,40 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <Routes>
-        {/* Rotas Públicas (sem Layout) */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        
-        {/* Rotas Protegidas (com Layout) */}
-        <Route element={<ProtectedRoute />}>
+          {/* Redirecionar login e register para dashboard */}
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/register" element={<Navigate to="/" replace />} />
+          
+          {/* Todas as rotas com Layout - SEM autenticação */}
           <Route element={<Layout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/teams" element={<Teams />} />
-        <Route path="/providers" element={<Providers />} />
-        <Route path="/models" element={<Models />} />
-        <Route path="/specialized-ais" element={<SpecializedAIs />} />
-        <Route path="/credentials" element={<Credentials />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/tasks/:id/subtasks" element={<Subtasks />} />
-        <Route path="/prompts" element={<Prompts />} />
-        <Route path="/templates" element={<Templates />} />
-        <Route path="/workflows" element={<Workflows />} />
-        <Route path="/workflows/builder" element={<WorkflowBuilder />} />
-        <Route path="/instructions" element={<Instructions />} />
-        <Route path="/knowledge-base" element={<KnowledgeBase />} />
-        <Route path="/knowledge-base/:id/sources" element={<KnowledgeSources />} />
-        <Route path="/execution-logs" element={<ExecutionLogs />} />
-        <Route path="/chat" element={<Chat />} />
-        <Route path="/external-api-accounts" element={<ExternalAPIAccounts />} />
-        <Route path="/services" element={<Services />} />
-        <Route path="/monitoring" element={<Monitoring />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/terminal" element={<Terminal />} />
-        <Route path="/model-training" element={<ModelTraining />} />
-        <Route path="/analytics" element={<Analytics />} />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/teams" element={<Teams />} />
+            <Route path="/providers" element={<Providers />} />
+            <Route path="/models" element={<Models />} />
+            <Route path="/specialized-ais" element={<SpecializedAIs />} />
+            <Route path="/credentials" element={<Credentials />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/tasks/:id/subtasks" element={<Subtasks />} />
+            <Route path="/prompts" element={<Prompts />} />
+            <Route path="/templates" element={<Templates />} />
+            <Route path="/workflows" element={<Workflows />} />
+            <Route path="/workflows/builder" element={<WorkflowBuilder />} />
+            <Route path="/instructions" element={<Instructions />} />
+            <Route path="/knowledge-base" element={<KnowledgeBase />} />
+            <Route path="/knowledge-base/:id/sources" element={<KnowledgeSources />} />
+            <Route path="/execution-logs" element={<ExecutionLogs />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/external-api-accounts" element={<ExternalAPIAccounts />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/monitoring" element={<Monitoring />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/terminal" element={<Terminal />} />
+            <Route path="/model-training" element={<ModelTraining />} />
+            <Route path="/analytics" element={<Analytics />} />
           </Route>
-        </Route>
-      </Routes>
+        </Routes>
       </AuthProvider>
     </ThemeProvider>
   );

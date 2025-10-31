@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url';
 import { appRouter } from './routers/index.js';
 import { createContext } from './trpc.js';
 import { testConnection } from './db/index.js';
+import { initDefaultUser } from './db/init-default-user.js';
 import { systemMonitorService } from './services/systemMonitorService.js';
 import { handleMessage, connectionManager, broadcastTaskUpdate } from './websocket/handlers.js';
 import { setBroadcastCallback } from './services/orchestratorService.js';
@@ -134,6 +135,9 @@ async function start() {
       process.exit(1);
     }
 
+    // Inicializar usuário padrão (sistema sem autenticação)
+    await initDefaultUser();
+
     // Configurar callback de broadcast
     setBroadcastCallback(broadcastTaskUpdate);
 
@@ -142,6 +146,7 @@ async function start() {
       console.log('');
       console.log('╔════════════════════════════════════════════╗');
       console.log('║   🚀 Orquestrador de IAs V3.0             ║');
+      console.log('║   🔓 Sistema Aberto (Sem Autenticação)    ║');
       console.log('╚════════════════════════════════════════════╝');
       console.log('');
       console.log(`✅ Servidor rodando em: http://localhost:${PORT}`);
@@ -150,6 +155,7 @@ async function start() {
       console.log(`✅ Health Check: http://localhost:${PORT}/api/health`);
       console.log('');
       console.log('📊 Sistema pronto para orquestrar IAs!');
+      console.log('🔓 Acesso direto sem necessidade de login');
       console.log('');
     });
 
