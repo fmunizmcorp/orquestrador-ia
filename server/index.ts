@@ -151,21 +151,24 @@ async function start() {
     // Configurar callback de broadcast
     setBroadcastCallback(broadcastTaskUpdate);
 
-    // Iniciar servidor
-    server.listen(PORT, () => {
+    // Iniciar servidor - BIND EM 0.0.0.0 PARA ACEITAR CONEXÕES EXTERNAS
+    const HOST = '0.0.0.0';
+    server.listen(Number(PORT), HOST, () => {
       console.log('');
       console.log('╔════════════════════════════════════════════╗');
       console.log('║   🚀 Orquestrador de IAs V3.0             ║');
       console.log('║   🔓 Sistema Aberto (Sem Autenticação)    ║');
       console.log('╚════════════════════════════════════════════╝');
       console.log('');
-      console.log(`✅ Servidor rodando em: http://localhost:${PORT}`);
-      console.log(`✅ API tRPC: http://localhost:${PORT}/api/trpc`);
-      console.log(`✅ WebSocket: ws://localhost:${PORT}/ws`);
-      console.log(`✅ Health Check: http://localhost:${PORT}/api/health`);
+      console.log(`✅ Servidor rodando em: http://0.0.0.0:${PORT}`);
+      console.log(`✅ Acesso externo: http://192.168.192.164:${PORT}`);
+      console.log(`✅ API tRPC: http://0.0.0.0:${PORT}/api/trpc`);
+      console.log(`✅ WebSocket: ws://0.0.0.0:${PORT}/ws`);
+      console.log(`✅ Health Check: http://0.0.0.0:${PORT}/api/health`);
       console.log('');
       console.log('📊 Sistema pronto para orquestrar IAs!');
       console.log('🔓 Acesso direto sem necessidade de login');
+      console.log('🌐 Acessível de qualquer IP na rede');
       console.log('');
     });
 
