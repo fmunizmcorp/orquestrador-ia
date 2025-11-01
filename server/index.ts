@@ -71,13 +71,20 @@ app.get('/api/health', async (req, res) => {
 
 // Servir frontend em produção
 if (process.env.NODE_ENV === 'production') {
-  const clientPath = path.join(__dirname, './client');
+  // __dirname em runtime será /home/flavio/webapp/dist/server
+  // Precisamos ir para /home/flavio/webapp/dist/client
+  const clientPath = path.resolve(__dirname, '../client');
   console.log('📁 Serving frontend from:', clientPath);
+  console.log('📁 __dirname:', __dirname);
+  console.log('📁 Resolved client path:', clientPath);
+  
   app.use(express.static(clientPath));
   
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api') && !req.path.startsWith('/ws')) {
-      res.sendFile(path.join(clientPath, 'index.html'));
+      const indexPath = path.join(clientPath, 'index.html');
+      console.log('📄 Sending:', indexPath);
+      res.sendFile(indexPath);
     }
   });
 }
