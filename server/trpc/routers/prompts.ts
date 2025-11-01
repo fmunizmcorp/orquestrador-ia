@@ -108,7 +108,7 @@ export const promptsRouter = router({
         promptId: prompt.id,
         version: 1,
         content: input.content,
-        changeDescription: 'Versão inicial',
+        changelog: 'Versão inicial',
         createdByUserId: input.userId,
       });
 
@@ -128,11 +128,11 @@ export const promptsRouter = router({
       tags: z.array(z.string()).optional(),
       variables: z.array(z.string()).optional(),
       isPublic: z.boolean().optional(),
-      changeDescription: z.string().optional(),
+      changelog: z.string().optional(),
       userId: z.number(), // Para criar versão
     }))
     .mutation(async ({ input }) => {
-      const { id, userId, changeDescription, ...updates } = input;
+      const { id, userId, changelog, ...updates } = input;
 
       // Se content mudou, criar nova versão
       if (input.content) {
@@ -148,7 +148,7 @@ export const promptsRouter = router({
             promptId: id,
             version: newVersion,
             content: input.content,
-            changeDescription: changeDescription || 'Atualização',
+            changelog: changelog || 'Atualização',
             createdByUserId: userId,
           });
 
@@ -294,7 +294,7 @@ export const promptsRouter = router({
         promptId: input.promptId,
         version: newVersion,
         content: oldVersion.content || '',
-        changeDescription: `Revertido para versão ${input.version}`,
+        changelog: `Revertido para versão ${input.version}`,
         createdByUserId: input.userId,
       });
 
@@ -351,7 +351,7 @@ export const promptsRouter = router({
         promptId: duplicate.id,
         version: 1,
         content: original.content || '',
-        changeDescription: `Duplicado de "${original.title}"`,
+        changelog: `Duplicado de "${original.title}"`,
         createdByUserId: input.userId,
       });
 

@@ -257,12 +257,13 @@ export const projectsRouter = router({
       }
 
       const result: any = await db.insert(projects).values({
+        userId: original.userId,
         name: input.newName || `${original.name} (copy)`,
         description: original.description,
         teamId: original.teamId,
         status: 'active',
         budget: original.budget,
-      });
+      } as any);
 
       const dupId = result[0]?.insertId || result.insertId;
       const [duplicate] = await db.select().from(projects).where(eq(projects.id, dupId)).limit(1);

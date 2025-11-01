@@ -719,14 +719,19 @@ export const projects = mysqlTable('projects', {
   id: int('id').primaryKey().autoincrement(),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
   teamId: int('teamId').references(() => teams.id, { onDelete: 'set null' }),
   status: mysqlEnum('status', ['planning', 'active', 'on_hold', 'completed', 'archived']).default('planning'),
   startDate: timestamp('startDate'),
   endDate: timestamp('endDate'),
   budget: decimal('budget', { precision: 12, scale: 2 }),
+  progress: int('progress').default(0),
+  tags: json('tags'),
+  isActive: boolean('isActive').default(true),
   createdAt: timestamp('createdAt').defaultNow(),
   updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
 }, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
   teamIdIdx: index('idx_teamId').on(table.teamId),
   statusIdx: index('idx_status').on(table.status),
 }));
@@ -967,7 +972,7 @@ export const promptVersions = mysqlTable('promptVersions', {
   promptId: int('promptId').notNull().references(() => prompts.id, { onDelete: 'cascade' }),
   version: int('version').notNull(),
   content: text('content').notNull(),
-  changeDescription: text('changeDescription'),
+  changelog: text('changelog'),
   createdByUserId: int('createdByUserId').notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp('createdAt').defaultNow(),
 }, (table) => ({
