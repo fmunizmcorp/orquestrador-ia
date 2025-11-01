@@ -56,7 +56,7 @@ export const modelsRouter = router({
    */
   create: publicProcedure
     .input(z.object({
-      modelName: z.string().min(1),
+      name: z.string().min(1),
       modelId: z.string().min(1),
       provider: z.string().optional().default('lmstudio'),
       modelType: z.string().optional(),
@@ -68,7 +68,7 @@ export const modelsRouter = router({
     .mutation(async ({ input }) => {
       const result: any = await db.insert(aiModels).values({
         userId: 1,
-        modelName: input.modelName,
+        name: input.name,
         modelId: input.modelId,
         provider: input.provider,
         modelType: input.modelType,
@@ -91,7 +91,7 @@ export const modelsRouter = router({
   update: publicProcedure
     .input(z.object({
       id: z.number(),
-      modelName: z.string().optional(),
+      name: z.string().optional(),
       contextWindow: z.number().optional(),
       parameters: z.string().optional(),
       quantization: z.string().optional(),
@@ -238,7 +238,7 @@ export const modelsRouter = router({
     .query(async ({ input }) => {
       const results = await db.select()
         .from(aiModels)
-        .where(like(aiModels.modelName, `%${input.query}%`))
+        .where(like(aiModels.name, `%${input.query}%`))
         .limit(input.limit);
 
       return { success: true, models: results };

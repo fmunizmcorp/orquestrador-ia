@@ -48,7 +48,7 @@ export const aiProviders = mysqlTable('aiProviders', {
 export const aiModels = mysqlTable('aiModels', {
   id: int('id').primaryKey().autoincrement(),
   providerId: int('providerId').notNull().references(() => aiProviders.id, { onDelete: 'cascade' }),
-  modelName: varchar('modelName', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
   modelId: varchar('modelId', { length: 255 }).notNull(),
   capabilities: json('capabilities').$type<string[]>(),
   contextWindow: int('contextWindow').default(4096),

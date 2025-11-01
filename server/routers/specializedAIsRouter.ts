@@ -25,7 +25,7 @@ export const specializedAIsRouter = router({
         description: specializedAIs.description,
         category: specializedAIs.category,
         defaultModelId: specializedAIs.defaultModelId,
-        defaultModelName: aiModels.modelName,
+        defaultModelName: aiModels.name,
         fallbackModelIds: specializedAIs.fallbackModelIds,
         systemPrompt: specializedAIs.systemPrompt,
         capabilities: specializedAIs.capabilities,

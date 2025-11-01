@@ -308,7 +308,7 @@ class ModelTrainingService {
         .where(eq(aiModels.id, config.modelId))
         .limit(1);
 
-      const versionName = `${baseModel.modelName}-finetuned-${Date.now()}`;
+      const versionName = `${baseModel.name}-finetuned-${Date.now()}`;
       
       const versionResult: any = await db.insert(modelVersions).values({
         userId: 1,

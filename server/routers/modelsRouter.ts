@@ -15,7 +15,7 @@ export const modelsRouter = router({
 
       let conditions = [];
       if (query) {
-        conditions.push(like(aiModels.modelName, `%${query}%`));
+        conditions.push(like(aiModels.name, `%${query}%`));
       }
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -24,7 +24,7 @@ export const modelsRouter = router({
         id: aiModels.id,
         providerId: aiModels.providerId,
         providerName: aiProviders.name,
-        name: aiModels.modelName,
+        name: aiModels.name,
         modelId: aiModels.modelId,
         capabilities: aiModels.capabilities,
         contextWindow: aiModels.contextWindow,
@@ -85,7 +85,7 @@ export const modelsRouter = router({
       const result: any = await db.insert(aiModels)
         .values({
           ...rest,
-          modelName: name,
+          name: name,
         });
 
       const insertId = result[0]?.insertId || result.insertId;

@@ -12,7 +12,7 @@ export const subtasksRouter = router({
         id: subtasks.id,
         taskId: subtasks.taskId,
         assignedModelId: subtasks.assignedModelId,
-        assignedModelName: aiModels.modelName,
+        assignedModelName: aiModels.name,
         title: subtasks.title,
         description: subtasks.description,
         prompt: subtasks.prompt,
