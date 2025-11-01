@@ -17,8 +17,15 @@ export const monitoringRouter = router({
    */
   getCurrentMetrics: publicProcedure
     .query(async () => {
-      const metrics = systemMonitorService.getMetrics();
-      return { success: true, metrics };
+      try {
+        console.log('[DEBUG] Getting metrics from systemMonitorService...');
+        const metrics = await systemMonitorService.getMetrics();
+        console.log('[DEBUG] Metrics received:', typeof metrics, Object.keys(metrics || {}));
+        return { success: true, metrics };
+      } catch (error) {
+        console.error('[ERROR] Failed to get metrics:', error);
+        throw error;
+      }
     }),
 
   /**
