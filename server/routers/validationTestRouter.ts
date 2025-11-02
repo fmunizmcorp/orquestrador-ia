@@ -145,29 +145,23 @@ export const validationTestRouter = router({
         .limit(1);
 
       // Buscar modelos associados
-      const getModelDetails = async (aiId: number | null) => {
-        if (!aiId) return null;
-        const ai = await db.select()
-          .from(specializedAIs)
-          .where(eq(specializedAIs.id, aiId))
-          .limit(1);
-        
-        if (!ai[0] || !ai[0].defaultModelId) return null;
+      const getModelDetails = async (aiRecord: any) => {
+        if (!aiRecord || !aiRecord.defaultModelId) return null;
 
-        const model = await db.select()
+        const [model] = await db.select()
           .from(aiModels)
-          .where(eq(aiModels.id, ai[0].defaultModelId))
+          .where(eq(aiModels.id, aiRecord.defaultModelId))
           .limit(1);
 
         return {
-          ai: ai[0],
-          model: model[0] || null,
+          ai: aiRecord,
+          model: model || null,
         };
       };
 
-      const executor = await getModelDetails(executorAI[0]?.id || null);
-      const validator = await getModelDetails(validatorAI[0]?.id || null);
-      const tiebreaker = await getModelDetails(tiebreakerAI[0]?.id || null);
+      const executor = await getModelDetails(executorAI[0] || null);
+      const validator = await getModelDetails(validatorAI[0] || null);
+      const tiebreaker = await getModelDetails(tiebreakerAI[0] || null);
 
       return {
         configured: !!(executor && validator && tiebreaker),
