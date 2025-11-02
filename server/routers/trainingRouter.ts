@@ -4,6 +4,7 @@
  */
 import { router, publicProcedure } from '../trpc.js';
 import { modelTrainingService } from '../services/modelTrainingService.js';
+import { trainingPipelineService } from '../services/trainingPipelineService.js';
 import { z } from 'zod';
 
 const hyperparametersSchema = z.object({
@@ -103,5 +104,69 @@ export const trainingRouter = router({
         input.modelVersionId,
         input.testDatasetId
       );
+    }),
+
+  // Pipeline operations
+  runPipeline: publicProcedure
+    .input(z.object({
+      modelId: z.number().positive(),
+      datasetId: z.number().positive(),
+      trainingType: z.enum(['lora', 'qlora', 'full', 'fine-tuning']).default('lora'),
+      hyperparameters: hyperparametersSchema.extend({
+        weightDecay: z.number().min(0).max(1).optional(),
+        gradientAccumulationSteps: z.number().int().positive().optional(),
+      }),
+      earlyStopping: z.object({
+        enabled: z.boolean().default(true),
+        patience: z.number().int().positive().default(3),
+        minDelta: z.number().positive().default(0.001),
+      }),
+      checkpointing: z.object({
+        enabled: z.boolean().default(true),
+        interval: z.number().int().positive().default(1),
+        keepBest: z.number().int().positive().default(3),
+      }),
+    }))
+    .mutation(async ({ input }) => {
+      return trainingPipelineService.runTrainingPipeline(input);
+    }),
+
+  validateConfig: publicProcedure
+    .input(z.object({
+      modelId: z.number().positive(),
+      datasetId: z.number().positive(),
+      trainingType: z.enum(['lora', 'qlora', 'full', 'fine-tuning']),
+      hyperparameters: hyperparametersSchema,
+      earlyStopping: z.object({
+        enabled: z.boolean(),
+        patience: z.number().int().positive(),
+        minDelta: z.number().positive(),
+      }),
+      checkpointing: z.object({
+        enabled: z.boolean(),
+        interval: z.number().int().positive(),
+        keepBest: z.number().int().positive(),
+      }),
+    }))
+    .query(async ({ input }) => {
+      return trainingPipelineService.validateTrainingConfig(input);
+    }),
+
+  exportModel: publicProcedure
+    .input(z.object({
+      modelVersionId: z.number().positive(),
+      format: z.enum(['gguf', 'safetensors', 'pytorch', 'onnx']).default('safetensors'),
+    }))
+    .mutation(async ({ input }) => {
+      return trainingPipelineService.exportModel(input.modelVersionId, input.format);
+    }),
+
+  cleanupCheckpoints: publicProcedure
+    .input(z.object({
+      jobId: z.number().positive(),
+      keepBest: z.number().int().positive().default(3),
+    }))
+    .mutation(async ({ input }) => {
+      return trainingPipelineService.cleanupCheckpoints(input.jobId, input.keepBest);
     }),
 });
