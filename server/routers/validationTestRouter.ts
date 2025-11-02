@@ -86,10 +86,13 @@ export const validationTestRouter = router({
         .orderBy(desc(executionLogs.createdAt));
 
       // Buscar modelo executor
-      const [executorModel] = await db.select()
-        .from(aiModels)
-        .where(eq(aiModels.id, subtask.assignedModelId))
-        .limit(1);
+      let executorModel = null;
+      if (subtask.assignedModelId) {
+        [executorModel] = await db.select()
+          .from(aiModels)
+          .where(eq(aiModels.id, subtask.assignedModelId))
+          .limit(1);
+      }
 
       // Buscar modelo reviewer (se houver)
       let reviewerModel = null;
