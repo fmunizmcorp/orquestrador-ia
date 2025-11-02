@@ -586,6 +586,66 @@ Exemplo:
       // Não falha a tarefa por erro em métricas
     }
   }
+
+  /**
+   * Decompor tarefa em subtarefas E salvar no banco
+   * Método público que combina planTask + criação das subtasks
+   */
+  async decomposeTask(taskId: number): Promise<TaskBreakdown[]> {
+    try {
+      // 1. Planejar (gera breakdown via IA)
+      const breakdown = await this.planTask(taskId);
+
+      // 2. Buscar IA de coding para atribuição padrão
+      const [codingAI] = await db.select()
+        .from(specializedAIs)
+        .where(and(
+          eq(specializedAIs.category, 'coding'),
+          eq(specializedAIs.isActive, true)
+        ))
+        .limit(1);
+
+      const defaultModelId = codingAI?.defaultModelId || 1;
+
+      // 3. Criar subtasks no banco
+      for (const item of breakdown) {
+        await db.insert(subtasks).values({
+          taskId,
+          title: item.title,
+          description: item.description,
+          prompt: item.description, // Usar descrição como prompt inicial
+          assignedModelId: item.assignedAI || defaultModelId,
+          status: 'pending',
+          order: breakdown.indexOf(item) + 1,
+        });
+      }
+
+      // 4. Atualizar status da tarefa
+      await db.update(tasks)
+        .set({ status: 'planning' })
+        .where(eq(tasks.id, taskId));
+
+      await notifyTaskUpdate(taskId);
+
+      // 5. Log
+      await db.insert(executionLogs).values({
+        taskId,
+        level: 'info',
+        message: `Decomposição completa: ${breakdown.length} subtarefas criadas no banco`,
+        metadata: { breakdown },
+      });
+
+      return breakdown;
+
+    } catch (error) {
+      await db.insert(executionLogs).values({
+        taskId,
+        level: 'error',
+        message: `Erro na decomposição: ${error}`,
+      });
+      throw error;
+    }
+  }
 }
 
 export const orchestratorService = new OrchestratorService();

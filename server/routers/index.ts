@@ -26,6 +26,7 @@ import { trainingRouter } from './trainingRouter.js';
 import { projectsRouter } from './projectsRouter.js';
 import { teamsRouter } from './teamsRouter.js';
 import { promptsRouter } from './promptsRouter.js';
+import { orchestrationRouter } from './orchestrationRouter.js';
 
 export const appRouter = router({
   providers: providersRouter,
@@ -34,6 +35,7 @@ export const appRouter = router({
   credentials: credentialsRouter,
   tasks: tasksRouter,
   subtasks: subtasksRouter,
+  orchestration: orchestrationRouter,
   templates: templatesRouter,
   workflows: workflowsRouter,
   instructions: instructionsRouter,
