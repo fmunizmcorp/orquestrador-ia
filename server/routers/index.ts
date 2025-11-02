@@ -27,6 +27,7 @@ import { projectsRouter } from './projectsRouter.js';
 import { teamsRouter } from './teamsRouter.js';
 import { promptsRouter } from './promptsRouter.js';
 import { orchestrationRouter } from './orchestrationRouter.js';
+import { validationTestRouter } from './validationTestRouter.js';
 
 export const appRouter = router({
   providers: providersRouter,
@@ -57,6 +58,7 @@ export const appRouter = router({
   projects: projectsRouter,
   teams: teamsRouter,
   prompts: promptsRouter,
+  validationTest: validationTestRouter,
 });
 
 export type AppRouter = typeof appRouter;
