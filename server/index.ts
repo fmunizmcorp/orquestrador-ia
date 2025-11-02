@@ -9,7 +9,7 @@ import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { appRouter } from './trpc/router.js';
+import { appRouter } from './routers/index.js';
 import { createContext } from './trpc.js';
 import { testConnection } from './db/index.js';
 import { initDefaultUser } from './db/init-default-user.js';
