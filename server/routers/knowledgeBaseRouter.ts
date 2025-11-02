@@ -25,17 +25,19 @@ export const knowledgeBaseRouter = router({
         .limit(limit)
         .offset(offset);
 
-      const [countResult] = await db.select({ count: knowledgeBase.id })
+      const countRows = await db.select({ count: knowledgeBase.id })
         .from(knowledgeBase)
         .where(where);
+
+      const total = countRows.length;
 
       return {
         items,
         pagination: {
           page,
           limit,
-          total: countResult?.count || 0,
-          totalPages: Math.ceil((countResult?.count || 0) / limit),
+          total,
+          totalPages: Math.ceil(total / limit),
         },
       };
     }),
