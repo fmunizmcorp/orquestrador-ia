@@ -23,6 +23,9 @@ import { notionRouter } from './notionRouter.js';
 import { sheetsRouter } from './sheetsRouter.js';
 import { discordRouter } from './discordRouter.js';
 import { trainingRouter } from './trainingRouter.js';
+import { projectsRouter } from './projectsRouter.js';
+import { teamsRouter } from './teamsRouter.js';
+import { promptsRouter } from './promptsRouter.js';
 
 export const appRouter = router({
   providers: providersRouter,
@@ -49,6 +52,9 @@ export const appRouter = router({
   sheets: sheetsRouter,
   discord: discordRouter,
   training: trainingRouter,
+  projects: projectsRouter,
+  teams: teamsRouter,
+  prompts: promptsRouter,
 });
 
 export type AppRouter = typeof appRouter;
