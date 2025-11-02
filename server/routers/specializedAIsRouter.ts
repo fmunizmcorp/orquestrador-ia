@@ -3,6 +3,7 @@ import { db } from '../db/index.js';
 import { specializedAIs, aiModels } from '../db/schema.js';
 import { eq, like, and, desc } from 'drizzle-orm';
 import { idSchema, createSpecializedAISchema, updateSpecializedAISchema, searchSchema } from '../utils/validation.js';
+import { z } from 'zod';
 
 export const specializedAIsRouter = router({
   list: publicProcedure
@@ -40,17 +41,19 @@ export const specializedAIsRouter = router({
         .limit(limit)
         .offset(offset);
 
-      const [countResult] = await db.select({ count: specializedAIs.id })
+      const countRows = await db.select({ count: specializedAIs.id })
         .from(specializedAIs)
         .where(where);
+
+      const total = countRows.length;
 
       return {
         items,
         pagination: {
           page,
           limit,
-          total: countResult?.count || 0,
-          totalPages: Math.ceil((countResult?.count || 0) / limit),
+          total,
+          totalPages: Math.ceil(total / limit),
         },
       };
     }),
@@ -121,7 +124,7 @@ export const specializedAIsRouter = router({
     }),
 
   listByCategory: publicProcedure
-    .input(searchSchema.extend({ category: idSchema.optional() }))
+    .input(searchSchema.extend({ category: z.string().optional() }))
     .query(async ({ input }) => {
       const { category, page = 1, limit = 20 } = input;
       const offset = (page - 1) * limit;
@@ -131,13 +134,29 @@ export const specializedAIsRouter = router({
         conditions.push(eq(specializedAIs.category, category as any));
       }
 
+      const where = and(...conditions);
+
       const items = await db.select()
         .from(specializedAIs)
-        .where(and(...conditions))
+        .where(where)
         .orderBy(desc(specializedAIs.createdAt))
         .limit(limit)
         .offset(offset);
 
-      return items;
+      const countRows = await db.select({ count: specializedAIs.id })
+        .from(specializedAIs)
+        .where(where);
+
+      const total = countRows.length;
+
+      return {
+        items,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
     }),
 });
