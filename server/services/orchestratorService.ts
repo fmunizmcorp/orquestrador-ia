@@ -616,7 +616,7 @@ Exemplo:
           prompt: item.description, // Usar descrição como prompt inicial
           assignedModelId: item.assignedAI || defaultModelId,
           status: 'pending',
-          order: breakdown.indexOf(item) + 1,
+          // order field não existe na tabela, remover
         });
       }
 
