@@ -16,7 +16,7 @@ import { chatRouter } from './routers/chat.js';
 import { promptsRouter } from './routers/prompts.js';
 import { modelsRouter } from './routers/models.js';
 import { lmstudioRouter } from './routers/lmstudio.js';
-import { trainingRouter } from './routers/training.js';
+// import { trainingRouter } from './routers/training.js'; // Movido para server/routers/trainingRouter.ts
 import { servicesRouter } from './routers/services.js';
 import { monitoringRouter } from './routers/monitoring.js';
 
@@ -53,7 +53,7 @@ export const appRouter = router({
   models: modelsRouter,
 
   // SPRINT 10 - Model Training (22 endpoints)
-  training: trainingRouter,
+  // training: trainingRouter, // Movido para server/routers/trainingRouter.ts
 
   // SPRINT 11 - External Services (35+ endpoints)
   services: servicesRouter,
