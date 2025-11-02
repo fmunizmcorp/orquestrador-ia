@@ -33,7 +33,7 @@
 ## 🔌 BACKEND - PARCIALMENTE CONSTRUÍDO
 
 ### Routers Funcionando (27/27) - ✅ 100%
-1. ✅ **providersRouter** - CRUD provedores (SEM list)
+1. ✅ **providersRouter** - CRUD provedores (✅ SPRINT 1.1 COMPLETO - list funcionando)
 2. ✅ **modelsRouter** - CRUD modelos + sync
 3. ✅ **specializedAIsRouter** - CRUD especializadas
 4. ✅ **credentialsRouter** - CRUD credenciais
