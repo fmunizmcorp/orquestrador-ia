@@ -48,3 +48,6 @@ temp/
 backups/
 *.backup
 *.bak
+
+# SSH Credentials (sensitive)
+.ssh-credentials
