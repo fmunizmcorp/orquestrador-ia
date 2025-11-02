@@ -83,17 +83,19 @@ export const promptsRouter = router({
         .limit(limit)
         .offset(offset);
 
-      const [countResult] = await db.select({ count: prompts.id })
+      const countRows = await db.select({ count: prompts.id })
         .from(prompts)
         .where(where);
+
+      const total = countRows.length;
 
       return {
         items,
         pagination: {
           page,
           limit,
-          total: countResult?.count || 0,
-          totalPages: Math.ceil((countResult?.count || 0) / limit),
+          total,
+          totalPages: Math.ceil(total / limit),
         },
       };
     }),
