@@ -20,7 +20,7 @@ const Terminal = () => {
 
   // Connect WebSocket
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:3001/ws');
+    const ws = new WebSocket(`ws://${window.location.hostname}:3001/ws`);
 
     ws.onopen = () => {
       console.log('✅ WebSocket Terminal conectado');

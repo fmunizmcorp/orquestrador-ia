@@ -17,7 +17,7 @@ interface WebSocketMessage {
 
 export const useWebSocket = (config: WebSocketConfig = {}) => {
   const {
-    url = `ws://${window.location.hostname}:3001`,
+    url = `ws://${window.location.hostname}:3001/ws`,
     reconnectInterval = 3000,
     maxReconnectAttempts = 5,
   } = config;
