@@ -100,6 +100,9 @@ class LMStudioService {
    */
   async generateCompletion(modelId: string, prompt: string, options: any = {}): Promise<string> {
     try {
+      console.log(`🚀 Enviando para LM Studio: ${LM_STUDIO_URL}/chat/completions`);
+      console.log(`📝 Modelo: ${modelId}`);
+      
       const response = await axios.post(`${LM_STUDIO_URL}/chat/completions`, {
         model: modelId,
         messages: [
@@ -113,9 +116,22 @@ class LMStudioService {
       });
 
       return response.data.choices[0]?.message?.content || '';
-    } catch (error) {
-      console.error('Erro ao gerar completion:', error);
-      throw new Error('Falha ao gerar resposta do modelo');
+    } catch (error: any) {
+      console.error('❌ Erro ao gerar completion:', error.message);
+      
+      if (error.code === 'ECONNREFUSED') {
+        throw new Error(`❌ LM Studio não está rodando em ${LM_STUDIO_URL}. Por favor, inicie o LM Studio e carregue um modelo.`);
+      }
+      
+      if (error.response?.status === 404) {
+        throw new Error(`❌ Modelo "${modelId}" não encontrado no LM Studio. Certifique-se de que o modelo está carregado.`);
+      }
+      
+      if (error.response?.status === 400) {
+        throw new Error(`❌ Requisição inválida para o modelo "${modelId}". Verifique se o modelo é compatível.`);
+      }
+      
+      throw new Error(`❌ Erro ao comunicar com LM Studio: ${error.message || 'Erro desconhecido'}`);
     }
   }
 
