@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { trpc } from '../lib/trpc';
 import { useAuth } from '../contexts/AuthContext';
+import PromptExecutionModal from '../components/PromptExecutionModal';
 
 interface PromptFormData {
   title: string;
@@ -14,6 +15,8 @@ export default function Prompts() {
   const { user } = useAuth();
   const [filter, setFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExecuteModalOpen, setIsExecuteModalOpen] = useState(false);
+  const [executingPrompt, setExecutingPrompt] = useState<any>(null);
   const [editingPrompt, setEditingPrompt] = useState<any>(null);
   const [formData, setFormData] = useState<PromptFormData>({
     title: '',
@@ -313,31 +316,46 @@ export default function Prompts() {
                 </div>
               )}
               
-              <div className="flex gap-2">
-                {prompt.userId === user?.id && (
-                  <>
-                    <button
-                      onClick={() => openModal(prompt)}
-                      className="flex-1 text-blue-600 hover:text-blue-700 text-sm font-medium border border-blue-600 rounded px-3 py-1 hover:bg-blue-50 transition-colors"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(prompt.id)}
-                      disabled={deletePromptMutation.isLoading}
-                      className="flex-1 text-red-600 hover:text-red-700 text-sm font-medium border border-red-600 rounded px-3 py-1 hover:bg-red-50 transition-colors disabled:opacity-50"
-                    >
-                      Excluir
-                    </button>
-                  </>
-                )}
+              <div className="flex flex-col gap-2">
                 <button
-                  onClick={() => handleDuplicate(prompt)}
-                  disabled={createPromptMutation.isLoading}
-                  className="flex-1 text-gray-600 hover:text-gray-700 dark:text-gray-200 text-sm font-medium border border-gray-600 rounded px-3 py-1 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  onClick={() => {
+                    setExecutingPrompt(prompt);
+                    setIsExecuteModalOpen(true);
+                  }}
+                  className="w-full text-white bg-green-600 hover:bg-green-700 text-sm font-medium rounded px-3 py-2 transition-colors flex items-center justify-center gap-2"
                 >
-                  Duplicar
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Executar Prompt
                 </button>
+                <div className="flex gap-2">
+                  {prompt.userId === user?.id && (
+                    <>
+                      <button
+                        onClick={() => openModal(prompt)}
+                        className="flex-1 text-blue-600 hover:text-blue-700 text-sm font-medium border border-blue-600 rounded px-3 py-1 hover:bg-blue-50 transition-colors"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(prompt.id)}
+                        disabled={deletePromptMutation.isLoading}
+                        className="flex-1 text-red-600 hover:text-red-700 text-sm font-medium border border-red-600 rounded px-3 py-1 hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        Excluir
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => handleDuplicate(prompt)}
+                    disabled={createPromptMutation.isLoading}
+                    className="flex-1 text-gray-600 hover:text-gray-700 dark:text-gray-200 text-sm font-medium border border-gray-600 rounded px-3 py-1 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Duplicar
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -464,6 +482,16 @@ export default function Prompts() {
           </div>
         </div>
       )}
+
+      {/* Modal de Execução */}
+      <PromptExecutionModal
+        isOpen={isExecuteModalOpen}
+        onClose={() => {
+          setIsExecuteModalOpen(false);
+          setExecutingPrompt(null);
+        }}
+        prompt={executingPrompt}
+      />
     </div>
   );
 }
