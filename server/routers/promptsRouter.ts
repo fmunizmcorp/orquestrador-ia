@@ -3,6 +3,7 @@ import { db } from '../db/index.js';
 import { prompts, users } from '../db/schema.js';
 import { eq, like, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
+import { promptExecutionService } from '../services/promptExecutionService.js';
 
 const idSchema = z.number().int().positive();
 
@@ -37,6 +38,33 @@ const searchSchema = z.object({
   isPublic: z.boolean().optional(),
   page: z.number().int().positive().default(1),
   limit: z.number().int().positive().default(20),
+});
+
+const executePromptSchema = z.object({
+  promptId: z.number().int().positive(),
+  modelId: z.number().int().positive().optional(),
+  variables: z.record(z.any()).optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().int().positive().optional(),
+});
+
+const executeDirectSchema = z.object({
+  content: z.string().min(1),
+  modelId: z.number().int().positive().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().int().positive().optional(),
+});
+
+const executeMultipleSchema = z.object({
+  promptId: z.number().int().positive(),
+  modelIds: z.array(z.number().int().positive()),
+  variables: z.record(z.any()).optional(),
+});
+
+const testPromptSchema = z.object({
+  content: z.string().min(1),
+  variables: z.record(z.any()).optional(),
+  modelId: z.number().int().positive().optional(),
 });
 
 export const promptsRouter = router({
@@ -163,5 +191,45 @@ export const promptsRouter = router({
         .where(eq(prompts.id, id));
 
       return { success: true, useCount: (prompt.useCount || 0) + 1 };
+    }),
+
+  // Execute prompt
+  execute: publicProcedure
+    .input(executePromptSchema)
+    .mutation(async ({ input }) => {
+      const result = await promptExecutionService.executePrompt(input);
+      return result;
+    }),
+
+  // Execute direct
+  executeDirect: publicProcedure
+    .input(executeDirectSchema)
+    .mutation(async ({ input }) => {
+      const result = await promptExecutionService.executeDirect(input);
+      return result;
+    }),
+
+  // Execute multiple
+  executeMultiple: publicProcedure
+    .input(executeMultipleSchema)
+    .mutation(async ({ input }) => {
+      const result = await promptExecutionService.executeMultiple(
+        input.promptId,
+        input.modelIds,
+        input.variables
+      );
+      return result;
+    }),
+
+  // Test prompt
+  testPrompt: publicProcedure
+    .input(testPromptSchema)
+    .mutation(async ({ input }) => {
+      const result = await promptExecutionService.testPrompt(
+        input.content,
+        input.variables,
+        input.modelId
+      );
+      return result;
     }),
 });
