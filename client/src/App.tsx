@@ -13,6 +13,7 @@ import Credentials from './pages/Credentials';
 import Tasks from './pages/Tasks';
 import Subtasks from './pages/Subtasks';
 import Prompts from './pages/Prompts';
+import PromptChat from './pages/PromptChat';
 import Templates from './pages/Templates';
 import Workflows from './pages/Workflows';
 import Instructions from './pages/Instructions';
@@ -51,6 +52,7 @@ function App() {
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/tasks/:id/subtasks" element={<Subtasks />} />
             <Route path="/prompts" element={<Prompts />} />
+            <Route path="/prompt-chat" element={<PromptChat />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/workflows" element={<Workflows />} />
             <Route path="/workflows/builder" element={<WorkflowBuilder />} />
