@@ -48,7 +48,8 @@ export const chatRouter = router({
       const messages = await db.select()
         .from(chatMessages)
         .where(eq(chatMessages.conversationId, id))
-        .orderBy(chatMessages.createdAt);
+        .orderBy(desc(chatMessages.createdAt))
+        .limit(50);
 
       return {
         ...conversation,

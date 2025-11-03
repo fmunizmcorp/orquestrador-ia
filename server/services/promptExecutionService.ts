@@ -8,6 +8,8 @@ import { prompts, aiModels } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { withErrorHandling } from '../middleware/errorHandler.js';
 import { lmstudioService } from './lmstudioService.js';
+import { modelLoaderService } from './modelLoaderService.js';
+import { externalAPIService } from './externalAPIService.js';
 
 export interface ExecutePromptParams {
   promptId: number;
@@ -110,18 +112,44 @@ class PromptExecutionService {
       console.log(`🚀 Executando prompt "${prompt.title}" com modelo ${model.name}`);
       console.log(`📝 Content: ${processedContent.substring(0, 100)}...`);
 
-      // 6. Executar contra IA
+      // 6. Verificar e carregar modelo
+      const provider = model.provider || 'lmstudio';
+      const isExternalAPI = ['openai', 'anthropic', 'google', 'genspark', 'mistral'].includes(provider);
+
+      if (!isExternalAPI) {
+        const status = await modelLoaderService.checkModelStatus(modelId);
+        if (!status.isLoaded) {
+          const loadResult = await modelLoaderService.loadModel(modelId);
+          if (!loadResult.success) {
+            throw new Error(`Modelo não disponível: ${loadResult.message}`);
+          }
+        }
+      }
+
+      // 7. Executar contra IA
       let output: string;
 
       try {
-        output = await lmstudioService.generateCompletion(
-          model.modelId, // LM Studio model identifier
-          processedContent,
-          {
-            temperature: params.temperature || 0.7,
-            maxTokens: params.maxTokens || 2000,
-          }
-        );
+        if (isExternalAPI) {
+          output = await externalAPIService.generateCompletion(
+            provider,
+            model.modelId,
+            processedContent,
+            {
+              temperature: params.temperature || 0.7,
+              maxTokens: params.maxTokens || 2000,
+            }
+          );
+        } else {
+          output = await lmstudioService.generateCompletion(
+            model.modelId,
+            processedContent,
+            {
+              temperature: params.temperature || 0.7,
+              maxTokens: params.maxTokens || 2000,
+            }
+          );
+        }
 
         console.log(`✅ Resposta recebida: ${output.substring(0, 100)}...`);
       } catch (error: any) {
@@ -178,18 +206,66 @@ class PromptExecutionService {
 
       console.log(`🚀 Executando prompt direto com modelo ${model.name}`);
 
-      // 3. Executar
+      // 3. Verificar status e carregar modelo se necessário
+      const provider = model.provider || 'lmstudio';
+      const isExternalAPI = ['openai', 'anthropic', 'google', 'genspark', 'mistral'].includes(provider);
+
+      if (!isExternalAPI) {
+        // Para LM Studio, verificar e tentar carregar
+        console.log(`🔍 Verificando status do modelo LM Studio...`);
+        const status = await modelLoaderService.checkModelStatus(modelId);
+        
+        if (!status.isLoaded) {
+          console.log(`⏳ Tentando carregar modelo ${model.name}...`);
+          const loadResult = await modelLoaderService.loadModel(modelId);
+          
+          if (!loadResult.success) {
+            // Tentar sugerir alternativa
+            const alternative = await modelLoaderService.suggestAlternativeModel(modelId);
+            if (alternative) {
+              console.log(`💡 Usando modelo alternativo: ${alternative.name}`);
+              const [altModel] = await db.select()
+                .from(aiModels)
+                .where(eq(aiModels.id, alternative.id))
+                .limit(1);
+              
+              if (altModel) {
+                return this.executeDirect({ ...params, modelId: alternative.id });
+              }
+            }
+            
+            throw new Error(`Modelo não disponível: ${loadResult.message}`);
+          }
+        }
+      }
+
+      // 4. Executar
       let output: string;
 
       try {
-        output = await lmstudioService.generateCompletion(
-          model.modelId,
-          params.content,
-          {
-            temperature: params.temperature || 0.7,
-            maxTokens: params.maxTokens || 2000,
-          }
-        );
+        if (isExternalAPI) {
+          // Usar API externa
+          console.log(`🌐 Executando com API externa: ${provider}`);
+          output = await externalAPIService.generateCompletion(
+            provider,
+            model.modelId,
+            params.content,
+            {
+              temperature: params.temperature || 0.7,
+              maxTokens: params.maxTokens || 2000,
+            }
+          );
+        } else {
+          // Usar LM Studio
+          output = await lmstudioService.generateCompletion(
+            model.modelId,
+            params.content,
+            {
+              temperature: params.temperature || 0.7,
+              maxTokens: params.maxTokens || 2000,
+            }
+          );
+        }
       } catch (error: any) {
         throw new Error(`Erro ao executar modelo: ${error.message}`);
       }
