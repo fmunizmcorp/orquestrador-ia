@@ -76,7 +76,7 @@ export default function Prompts() {
         title: prompt.title,
         content: prompt.content || '',
         category: prompt.category || '',
-        tags: prompt.tags || '',
+        tags: Array.isArray(prompt.tags) ? prompt.tags.join(', ') : '',
         isPublic: prompt.isPublic || false,
       });
     } else {
@@ -107,13 +107,18 @@ export default function Prompts() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Converter tags de string para array
+    const tagsArray = formData.tags 
+      ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+      : undefined;
+    
     if (editingPrompt) {
       await updatePromptMutation.mutateAsync({
         id: editingPrompt.id,
         title: formData.title,
         content: formData.content,
         category: formData.category || undefined,
-        tags: formData.tags || undefined,
+        tags: tagsArray,
         isPublic: formData.isPublic,
       });
     } else {
@@ -121,7 +126,7 @@ export default function Prompts() {
         title: formData.title,
         content: formData.content,
         category: formData.category || undefined,
-        tags: formData.tags || undefined,
+        tags: tagsArray,
         isPublic: formData.isPublic,
         userId: user?.id || 1,
       });
@@ -139,7 +144,7 @@ export default function Prompts() {
       title: `${prompt.title} (cópia)`,
       content: prompt.content,
       category: prompt.category,
-      tags: prompt.tags,
+      tags: Array.isArray(prompt.tags) ? prompt.tags : undefined,
       isPublic: false,
       userId: user?.id || 1,
     });
@@ -270,14 +275,14 @@ export default function Prompts() {
                 {prompt.content || 'Sem conteúdo'}
               </p>
               
-              {prompt.tags && (
+              {prompt.tags && Array.isArray(prompt.tags) && prompt.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-4">
-                  {prompt.tags.split(',').slice(0, 3).map((tag: string, index: number) => (
+                  {prompt.tags.slice(0, 3).map((tag: string, index: number) => (
                     <span
                       key={index}
                       className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded"
                     >
-                      {tag.trim()}
+                      {tag}
                     </span>
                   ))}
                 </div>
