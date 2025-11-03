@@ -26,34 +26,51 @@ export default function Prompts() {
 
   // Queries
   const { data: promptsData, isLoading, refetch } = trpc.prompts.list.useQuery({
-    userId: user?.id,
     isPublic: filter === 'all' ? undefined : filter === 'public',
+    page: 1,
     limit: 50,
-    offset: 0,
   });
 
   // Mutations
   const createPromptMutation = trpc.prompts.create.useMutation({
     onSuccess: () => {
+      console.log('✅ Prompt criado com sucesso!');
       refetch();
       closeModal();
+      alert('Prompt criado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('❌ Erro ao criar prompt:', error);
+      alert(`Erro ao criar prompt: ${error.message}`);
     },
   });
 
   const updatePromptMutation = trpc.prompts.update.useMutation({
     onSuccess: () => {
+      console.log('✅ Prompt atualizado com sucesso!');
       refetch();
       closeModal();
+      alert('Prompt atualizado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('❌ Erro ao atualizar prompt:', error);
+      alert(`Erro ao atualizar prompt: ${error.message}`);
     },
   });
 
   const deletePromptMutation = trpc.prompts.delete.useMutation({
     onSuccess: () => {
+      console.log('✅ Prompt deletado com sucesso!');
       refetch();
+      alert('Prompt deletado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('❌ Erro ao deletar prompt:', error);
+      alert(`Erro ao deletar prompt: ${error.message}`);
     },
   });
 
-  const prompts = promptsData?.prompts || [];
+  const prompts = promptsData?.items || [];
   
   const filteredPrompts = prompts.filter((prompt: any) => {
     const matchesSearch = prompt.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -107,29 +124,37 @@ export default function Prompts() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('📝 Enviando prompt...', formData);
+    
     // Converter tags de string para array
     const tagsArray = formData.tags 
       ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
       : undefined;
     
+    console.log('🏷️ Tags convertidas:', tagsArray);
+    
     if (editingPrompt) {
-      await updatePromptMutation.mutateAsync({
+      const payload = {
         id: editingPrompt.id,
         title: formData.title,
         content: formData.content,
         category: formData.category || undefined,
         tags: tagsArray,
         isPublic: formData.isPublic,
-      });
+      };
+      console.log('✏️ Atualizando prompt:', payload);
+      await updatePromptMutation.mutateAsync(payload);
     } else {
-      await createPromptMutation.mutateAsync({
+      const payload = {
         title: formData.title,
         content: formData.content,
         category: formData.category || undefined,
         tags: tagsArray,
         isPublic: formData.isPublic,
         userId: user?.id || 1,
-      });
+      };
+      console.log('➕ Criando prompt:', payload);
+      await createPromptMutation.mutateAsync(payload);
     }
   };
 
