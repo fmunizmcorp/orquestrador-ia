@@ -6,7 +6,7 @@
 
 import { db } from '../db/index.js';
 import { aiModels } from '../db/schema.js';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import axios from 'axios';
 
 const LM_STUDIO_URL = process.env.LM_STUDIO_URL || 'http://localhost:1234/v1';
@@ -275,7 +275,7 @@ class ModelLoaderService {
       
       // Filtrar modelos disponíveis (excluindo o que falhou e os que estão em failedModels)
       const alternatives = availableModels.filter(
-        m => m.id !== failedModelId &&
+        m => m.id !== failedModelId && 
              !this.failedModels.has(m.modelId) &&
              m.isActive
       );

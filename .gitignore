@@ -51,3 +51,5 @@ backups/
 
 # SSH Credentials (sensitive)
 .ssh-credentials
+# SSH Configuration with sensitive credentials
+.ssh-config.md
