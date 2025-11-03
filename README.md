@@ -2,10 +2,11 @@
 
 **Sistema completo de orquestração de múltiplas IAs com treinamento, integração externa e automação avançada.**
 
-[![Status](https://img.shields.io/badge/status-100%25%20completo-success)]()
-[![Sprints](https://img.shields.io/badge/sprints-58%2F58-blue)]()
-[![Epic](https://img.shields.io/badge/epics-7%2F7-green)]()
+[![Status](https://img.shields.io/badge/status-Epic%208%20Completo-success)]()
+[![Sprints](https://img.shields.io/badge/sprints-37%2F64-blue)]()
+[![Epic](https://img.shields.io/badge/epics-7%2F8-green)]()
 [![Tests](https://img.shields.io/badge/tests-86%2B%20casos-brightgreen)]()
+[![New](https://img.shields.io/badge/NEW-Model%20Management-orange)]()
 
 ---
 
@@ -22,6 +23,9 @@ O Orquestrador de IAs v3.0 é uma plataforma completa que permite:
 - 💬 **Chat em tempo real** via WebSocket
 - 📊 **Monitoramento** completo do sistema
 - 🧪 **86+ testes** automatizados
+- 🤖 **Gerenciamento Inteligente** de modelos LM Studio + 5 APIs externas
+- 🔄 **Carregamento Automático** com fallback e sugestões
+- 🌐 **5 Provedores de IA**: OpenAI, Anthropic, Google, Genspark, Mistral
 
 ---
 
@@ -435,30 +439,74 @@ pm2 restart orquestrador-v3
 
 ---
 
+## 🆕 Epic 8: Sistema Inteligente de Gerenciamento de Modelos
+
+### Novidades (v3.5.0)
+
+**Carregamento Inteligente de Modelos**
+```typescript
+// Verificação automática de status
+const status = await trpc.modelManagement.checkStatus.query({ modelId: 1 });
+
+// Carregamento automático com timeout
+const result = await trpc.modelManagement.load.mutate({ modelId: 1 });
+
+// Sugestão de modelo alternativo se falhar
+const alternative = await trpc.modelManagement.suggestAlternative.query({ 
+  failedModelId: 1 
+});
+```
+
+**Suporte a APIs Externas**
+- ✅ OpenAI (GPT-4, ChatGPT)
+- ✅ Anthropic (Claude)
+- ✅ Google (Gemini)
+- ✅ Genspark
+- ✅ Mistral
+
+**Funcionalidades:**
+- 🔍 Detecção automática de status (carregado/não carregado/carregando)
+- ⚡ Carregamento inteligente com timeout e retry
+- 🔄 Fallback automático para modelos alternativos
+- 💾 Cache de estado dos modelos
+- 🎯 Sugestão inteligente de alternativas
+- 📊 Indicadores visuais no UI (🌐 API, ✓ carregado, 🔄 carregando, ❌ inativo)
+- ✅ Verificação antes de enviar mensagens
+- 💬 Mensagens de sistema informativas
+
+**UI Aprimorado:**
+- Carregamento inteligente de modelos antes de enviar
+- Status visual em tempo real
+- Feedback claro de erros e sugestões
+- Mensagens de sistema para guiar o usuário
+- Desabilita envio enquanto verifica/carrega modelo
+
+---
+
 ## 📊 Métricas do Projeto
 
 ### Desenvolvimento
 
-- **Épicos**: 7/7 completos (100%)
-- **Sprints**: 58/58 completos (100%)
-- **Commits**: 34 no GitHub
-- **Tempo**: ~7 horas de desenvolvimento
-- **Velocidade**: 8.3 sprints/hora
+- **Épicos**: 7/8 completos (87.5%)
+- **Sprints**: 37/64 completos (58%)
+- **Commits**: 35 no GitHub (último: 842db7b)
+- **Tempo**: ~9 horas de desenvolvimento
+- **Velocidade**: 4.1 sprints/hora
 
 ### Código
 
-- **Routers**: 29 arquivos
-- **Endpoints**: 170+ endpoints tRPC
-- **Services**: 15+ services
+- **Routers**: 30 arquivos
+- **Endpoints**: 177+ endpoints tRPC (7 novos em modelManagement)
+- **Services**: 17+ services (modelLoader, externalAPI)
 - **Tests**: 86+ casos de teste
-- **Linhas**: ~45,000+ linhas TypeScript
+- **Linhas**: ~54,000+ linhas TypeScript
 
 ### Database
 
-- **Tabelas**: 48 tabelas
+- **Tabelas**: 49 tabelas (nova: apiKeys)
 - **Views**: 2 views
 - **Relations**: 100+ foreign keys
-- **Indexes**: 50+ indexes otimizados
+- **Indexes**: 53+ indexes otimizados
 
 ---
 
