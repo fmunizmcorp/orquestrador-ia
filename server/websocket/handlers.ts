@@ -129,7 +129,7 @@ export async function handleChatSend(
     const history = await db.select()
       .from(chatMessages)
       .where(eq(chatMessages.conversationId, data.conversationId || 1))
-      .orderBy(desc(chatMessages.timestamp))
+      .orderBy(desc(chatMessages.createdAt))
       .limit(10);
 
     // Inverter para ordem cronológica
@@ -222,7 +222,7 @@ export async function handleChatHistory(
     const history = await db.select()
       .from(chatMessages)
       .where(eq(chatMessages.conversationId, data.conversationId || 1))
-      .orderBy(desc(chatMessages.timestamp))
+      .orderBy(desc(chatMessages.createdAt))
       .limit(data.limit || 50);
 
     // Inverter para ordem cronológica
