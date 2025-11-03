@@ -50,6 +50,7 @@ export const aiModels = mysqlTable('aiModels', {
   providerId: int('providerId').notNull().references(() => aiProviders.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   modelId: varchar('modelId', { length: 255 }).notNull(),
+  provider: varchar('provider', { length: 50 }).default('lmstudio'), // lmstudio, openai, anthropic, google, genspark, mistral
   capabilities: json('capabilities').$type<string[]>(),
   contextWindow: int('contextWindow').default(4096),
   isLoaded: boolean('isLoaded').default(false),
@@ -65,6 +66,7 @@ export const aiModels = mysqlTable('aiModels', {
   providerIdIdx: index('idx_providerId').on(table.providerId),
   isLoadedIdx: index('idx_isLoaded').on(table.isLoaded),
   isActiveIdx: index('idx_isActive').on(table.isActive),
+  providerIdx: index('idx_provider').on(table.provider),
 }));
 
 // ==================================================
@@ -90,7 +92,24 @@ export const specializedAIs = mysqlTable('specializedAIs', {
 }));
 
 // ==================================================
-// 5. TABELA: credentials
+// 5. TABELA: apiKeys - Chaves de API para providers externos
+// ==================================================
+export const apiKeys = mysqlTable('apiKeys', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').references(() => users.id, { onDelete: 'cascade' }),
+  provider: varchar('provider', { length: 50 }).notNull(), // openai, anthropic, google, genspark, mistral
+  apiKey: text('apiKey').notNull(),
+  isActive: boolean('isActive').default(true),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  providerIdx: index('idx_provider').on(table.provider),
+  userIdIdx: index('idx_userId').on(table.userId),
+  isActiveIdx: index('idx_isActive').on(table.isActive),
+}));
+
+// ==================================================
+// 6. TABELA: credentials
 // ==================================================
 export const credentials = mysqlTable('credentials', {
   id: int('id').primaryKey().autoincrement(),
