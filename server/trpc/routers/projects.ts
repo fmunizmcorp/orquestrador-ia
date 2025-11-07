@@ -19,6 +19,7 @@ import {
 } from '../../utils/errors.js';
 import {
   paginationInputSchema,
+  optionalPaginationInputSchema,
   createPaginatedResponse,
   applyPagination,
 } from '../../utils/pagination.js';
@@ -33,9 +34,7 @@ export const projectsRouter = router({
     .input(z.object({
       teamId: z.number().optional(),
       status: z.enum(['active', 'completed', 'archived']).optional(),
-      limit: z.number().min(1).max(100).optional().default(50),
-      offset: z.number().min(0).optional().default(0),
-    }))
+    }).merge(paginationInputSchema).optional().default({ limit: 50, offset: 0 }))
     .query(async ({ input }) => {
       try {
         const conditions = [];

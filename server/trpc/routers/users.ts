@@ -20,6 +20,7 @@ import {
 } from '../../utils/errors.js';
 import {
   paginationInputSchema,
+  optionalPaginationInputSchema,
   createPaginatedResponse,
   applyPagination,
 } from '../../utils/pagination.js';
@@ -142,10 +143,7 @@ export const usersRouter = router({
    * 5. List users
    */
   list: publicProcedure
-    .input(z.object({
-      limit: z.number().min(1).max(100).optional().default(50),
-      offset: z.number().min(0).optional().default(0),
-    }))
+    .input(optionalPaginationInputSchema)
     .query(async ({ input }) => {
       try {
         // Count total users

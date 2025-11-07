@@ -11,6 +11,12 @@ export const paginationInputSchema = z.object({
   offset: z.number().min(0).optional().default(0),
 });
 
+// Pagination input schema that allows empty object
+export const optionalPaginationInputSchema = z.object({
+  limit: z.number().min(1).max(100).optional().default(50),
+  offset: z.number().min(0).optional().default(0),
+}).optional().default({ limit: 50, offset: 0 });
+
 export type PaginationInput = z.infer<typeof paginationInputSchema>;
 
 // Pagination metadata interface

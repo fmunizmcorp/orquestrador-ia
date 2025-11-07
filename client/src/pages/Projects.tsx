@@ -69,8 +69,8 @@ export default function Projects() {
     },
   });
 
-  const projects = projectsData?.projects || [];
-  const teams = teamsData?.teams || [];
+  const projects = projectsData?.data || [];
+  const teams = teamsData?.data || [];
   
   const filteredProjects = projects.filter((project: any) => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

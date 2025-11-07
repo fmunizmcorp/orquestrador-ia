@@ -44,7 +44,7 @@ export default function Teams() {
     },
   });
 
-  const teams = teamsData?.teams || [];
+  const teams = teamsData?.data || [];
   const filteredTeams = teams.filter((team: any) =>
     team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     team.description?.toLowerCase().includes(searchTerm.toLowerCase())

@@ -19,6 +19,7 @@ import {
 } from '../../utils/errors.js';
 import {
   paginationInputSchema,
+  optionalPaginationInputSchema,
   createPaginatedResponse,
   applyPagination,
 } from '../../utils/pagination.js';
@@ -34,9 +35,7 @@ export const promptsRouter = router({
       userId: z.number().optional(),
       category: z.string().optional(),
       isPublic: z.boolean().optional(),
-      limit: z.number().min(1).max(100).optional().default(50),
-      offset: z.number().min(0).optional().default(0),
-    }))
+    }).merge(paginationInputSchema).optional().default({ limit: 50, offset: 0 }))
     .query(async ({ input }) => {
       try {
         const conditions = [];

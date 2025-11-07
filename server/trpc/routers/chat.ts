@@ -22,6 +22,7 @@ import {
 } from '../../utils/errors.js';
 import {
   paginationInputSchema,
+  optionalPaginationInputSchema,
   createPaginatedResponse,
   applyPagination,
 } from '../../utils/pagination.js';
@@ -34,10 +35,8 @@ export const chatRouter = router({
    */
   listConversations: publicProcedure
     .input(z.object({
-      userId: z.number(),
-      limit: z.number().min(1).max(100).optional().default(50),
-      offset: z.number().min(0).optional().default(0),
-    }))
+      userId: z.number().optional().default(1),
+    }).merge(paginationInputSchema).optional().default({ userId: 1, limit: 50, offset: 0 }))
     .query(async ({ input }) => {
       try {
         // Count total conversations
@@ -234,10 +233,10 @@ export const chatRouter = router({
    */
   listMessages: publicProcedure
     .input(z.object({
-      conversationId: z.number(),
+      conversationId: z.number().optional().default(1),
       limit: z.number().min(1).max(200).optional().default(100),
       offset: z.number().min(0).optional().default(0),
-    }))
+    }).optional().default({ conversationId: 1, limit: 100, offset: 0 }))
     .query(async ({ input }) => {
       try {
         // Count total messages
