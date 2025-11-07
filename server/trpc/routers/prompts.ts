@@ -8,7 +8,22 @@ import { z } from 'zod';
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../../db/index.js';
 import { prompts, promptVersions } from '../../db/schema.js';
-import { eq, desc, and, like, or } from 'drizzle-orm';
+import { eq, desc, and, like, or , sql } from 'drizzle-orm';
+import pino from 'pino';
+import { env, isDevelopment } from '../../config/env.js';
+import {
+  createStandardError,
+  handleDatabaseError,
+  ErrorCodes,
+  notFoundError,
+} from '../../utils/errors.js';
+import {
+  paginationInputSchema,
+  createPaginatedResponse,
+  applyPagination,
+} from '../../utils/pagination.js';
+
+const logger = pino({ level: env.LOG_LEVEL, transport: isDevelopment ? { target: 'pino-pretty' } : undefined });
 
 export const promptsRouter = router({
   /**
@@ -23,28 +38,49 @@ export const promptsRouter = router({
       offset: z.number().min(0).optional().default(0),
     }))
     .query(async ({ input }) => {
-      const conditions = [];
+      try {
+        const conditions = [];
 
-      if (input.userId) {
-        conditions.push(eq(prompts.userId, input.userId));
+        if (input.userId) {
+          conditions.push(eq(prompts.userId, input.userId));
+        }
+        if (input.category) {
+          conditions.push(eq(prompts.category, input.category));
+        }
+        if (input.isPublic !== undefined) {
+          conditions.push(eq(prompts.isPublic, input.isPublic));
+        }
+
+        // Count total
+        const [{ count: total }] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(prompts)
+          .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+        // Get paginated results
+        const { limit, offset } = applyPagination(input);
+        const query = conditions.length > 0
+          ? db.select().from(prompts).where(and(...conditions))
+          : db.select().from(prompts);
+
+        const allPrompts = await query
+          .orderBy(desc(prompts.createdAt))
+          .limit(limit)
+          .offset(offset);
+
+        return createPaginatedResponse(allPrompts, total || 0, input);
+      } catch (error) {
+        logger.error({ error }, 'Error listing prompts');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'Prompt',
+          suggestion: 'Tente novamente ou contate o suporte',
+        });
       }
-      if (input.category) {
-        conditions.push(eq(prompts.category, input.category));
-      }
-      if (input.isPublic !== undefined) {
-        conditions.push(eq(prompts.isPublic, input.isPublic));
-      }
-
-      const query = conditions.length > 0
-        ? db.select().from(prompts).where(and(...conditions))
-        : db.select().from(prompts);
-
-      const allPrompts = await query
-        .orderBy(desc(prompts.createdAt))
-        .limit(input.limit)
-        .offset(input.offset);
-
-      return { success: true, prompts: allPrompts };
     }),
 
   /**

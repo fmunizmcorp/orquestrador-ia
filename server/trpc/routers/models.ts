@@ -8,7 +8,25 @@ import { z } from 'zod';
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../../db/index.js';
 import { aiModels, specializedAIs } from '../../db/schema.js';
-import { eq, desc, like, and } from 'drizzle-orm';
+import { eq, desc, like, and, sql } from 'drizzle-orm';
+import pino from 'pino';
+import { env, isDevelopment } from '../../config/env.js';
+import {
+  createStandardError,
+  handleDatabaseError,
+  handleGenericError,
+  ErrorCodes,
+  notFoundError,
+  forbiddenError,
+  validationError,
+} from '../../utils/errors.js';
+import {
+  paginationInputSchema,
+  createPaginatedResponse,
+  applyPagination,
+} from '../../utils/pagination.js';
+
+const logger = pino({ level: env.LOG_LEVEL, transport: isDevelopment ? { target: 'pino-pretty' } : undefined });
 
 export const modelsRouter = router({
   /**
@@ -18,17 +36,45 @@ export const modelsRouter = router({
     .input(z.object({
       isActive: z.boolean().optional(),
       limit: z.number().min(1).max(100).optional().default(50),
+      offset: z.number().min(0).optional().default(0),
     }))
     .query(async ({ input }) => {
-      const query = input.isActive !== undefined
-        ? db.select().from(aiModels).where(eq(aiModels.isActive, input.isActive))
-        : db.select().from(aiModels);
+      try {
+        // Build condition
+        const condition = input.isActive !== undefined
+          ? eq(aiModels.isActive, input.isActive)
+          : undefined;
 
-      const models = await query
-        .orderBy(desc(aiModels.createdAt))
-        .limit(input.limit);
+        // Count total
+        const [{ count: total }] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(aiModels)
+          .where(condition);
 
-      return { success: true, models };
+        // Get paginated results
+        const { limit, offset } = applyPagination(input);
+        const query = condition
+          ? db.select().from(aiModels).where(condition)
+          : db.select().from(aiModels);
+
+        const models = await query
+          .orderBy(desc(aiModels.createdAt))
+          .limit(limit)
+          .offset(offset);
+
+        return createPaginatedResponse(models, total || 0, input);
+      } catch (error) {
+        logger.error({ error }, 'Error listing models');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'AIModel',
+          suggestion: 'Tente novamente ou contate o suporte',
+        });
+      }
     }),
 
   /**
@@ -39,16 +85,30 @@ export const modelsRouter = router({
       id: z.number(),
     }))
     .query(async ({ input }) => {
-      const [model] = await db.select()
-        .from(aiModels)
-        .where(eq(aiModels.id, input.id))
-        .limit(1);
+      try {
+        const [model] = await db.select()
+          .from(aiModels)
+          .where(eq(aiModels.id, input.id))
+          .limit(1);
 
-      if (!model) {
-        throw new Error('Model not found');
+        if (!model) {
+          throw notFoundError('AIModel', input.id, 'Verifique o ID ou acesse a lista de modelos');
+        }
+
+        return { success: true, model };
+      } catch (error) {
+        logger.error({ error, modelId: input.id }, 'Error getting model');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'AIModel',
+          resourceId: input.id,
+          suggestion: 'Verifique se o modelo existe',
+        });
       }
-
-      return { success: true, model };
     }),
 
   /**
@@ -66,6 +126,7 @@ export const modelsRouter = router({
       capabilities: z.any().optional(),
     }))
     .mutation(async ({ input }) => {
+      try {
       const result: any = await db.insert(aiModels).values({
         userId: 1,
         name: input.name,
@@ -80,9 +141,36 @@ export const modelsRouter = router({
       } as any);
 
       const modelId = result[0]?.insertId || result.insertId;
+      
+      if (!modelId) {
+        throw createStandardError(
+          'INTERNAL_SERVER_ERROR',
+          ErrorCodes.INTERNAL_DATABASE_ERROR,
+          'Falha ao criar modelo',
+          {
+            context: { name: input.name, modelId: input.modelId },
+            technicalMessage: 'Failed to get insertId after model insert',
+            suggestion: 'Tente novamente',
+          }
+        );
+      }
+      
       const [model] = await db.select().from(aiModels).where(eq(aiModels.id, modelId)).limit(1);
 
       return { success: true, model };
+      } catch (error) {
+        logger.error({ error, input }, 'Error creating model');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'AIModel',
+          context: { name: input.name },
+          suggestion: 'Verifique se o modelId não está duplicado',
+        });
+      }
     }),
 
   /**
@@ -99,19 +187,37 @@ export const modelsRouter = router({
       isActive: z.boolean().optional(),
     }))
     .mutation(async ({ input }) => {
-      const { id, ...updates } = input;
+      try {
+        const { id, ...updates } = input;
 
-      if (updates.capabilities) {
-        updates.capabilities = JSON.stringify(updates.capabilities);
+        if (updates.capabilities) {
+          updates.capabilities = JSON.stringify(updates.capabilities);
+        }
+
+        await db.update(aiModels)
+          .set(updates)
+          .where(eq(aiModels.id, id));
+
+        const [updated] = await db.select().from(aiModels).where(eq(aiModels.id, id)).limit(1);
+        
+        if (!updated) {
+          throw notFoundError('AIModel', id, 'O modelo pode ter sido deletado');
+        }
+
+        return { success: true, model: updated };
+      } catch (error) {
+        logger.error({ error, modelId: input.id }, 'Error updating model');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'AIModel',
+          resourceId: input.id,
+          suggestion: 'Verifique se o modelo existe',
+        });
       }
-
-      await db.update(aiModels)
-        .set(updates)
-        .where(eq(aiModels.id, id));
-
-      const [updated] = await db.select().from(aiModels).where(eq(aiModels.id, id)).limit(1);
-
-      return { success: true, model: updated };
     }),
 
   /**
@@ -122,8 +228,28 @@ export const modelsRouter = router({
       id: z.number(),
     }))
     .mutation(async ({ input }) => {
-      await db.delete(aiModels).where(eq(aiModels.id, input.id));
-      return { success: true, message: 'Model deleted' };
+      try {
+        const [model] = await db.select().from(aiModels).where(eq(aiModels.id, input.id)).limit(1);
+        
+        if (!model) {
+          throw notFoundError('AIModel', input.id, 'O modelo já foi deletado ou não existe');
+        }
+        
+        await db.delete(aiModels).where(eq(aiModels.id, input.id));
+        return { success: true, message: 'Model deleted' };
+      } catch (error) {
+        logger.error({ error, modelId: input.id }, 'Error deleting model');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'AIModel',
+          resourceId: input.id,
+          suggestion: 'Verifique se o modelo existe',
+        });
+      }
     }),
 
   /**
@@ -135,13 +261,31 @@ export const modelsRouter = router({
       isActive: z.boolean(),
     }))
     .mutation(async ({ input }) => {
-      await db.update(aiModels)
-        .set({ isActive: input.isActive })
-        .where(eq(aiModels.id, input.id));
+      try {
+        await db.update(aiModels)
+          .set({ isActive: input.isActive })
+          .where(eq(aiModels.id, input.id));
 
-      const [updated] = await db.select().from(aiModels).where(eq(aiModels.id, input.id)).limit(1);
+        const [updated] = await db.select().from(aiModels).where(eq(aiModels.id, input.id)).limit(1);
+        
+        if (!updated) {
+          throw notFoundError('AIModel', input.id, 'O modelo pode ter sido deletado');
+        }
 
-      return { success: true, model: updated };
+        return { success: true, model: updated };
+      } catch (error) {
+        logger.error({ error, modelId: input.id }, 'Error toggling model active status');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'AIModel',
+          resourceId: input.id,
+          suggestion: 'Verifique se o modelo existe',
+        });
+      }
     }),
 
   /**
@@ -153,23 +297,36 @@ export const modelsRouter = router({
       isActive: z.boolean().optional(),
     }))
     .query(async ({ input }) => {
-      const conditions = [];
+      try {
+        const conditions = [];
 
-      if (input.category) {
-        conditions.push(eq(specializedAIs.category, input.category));
+        if (input.category) {
+          conditions.push(eq(specializedAIs.category, input.category));
+        }
+
+        if (input.isActive !== undefined) {
+          conditions.push(eq(specializedAIs.isActive, input.isActive));
+        }
+
+        const query = conditions.length > 0
+          ? db.select().from(specializedAIs).where(and(...conditions))
+          : db.select().from(specializedAIs);
+
+        const ais = await query;
+
+        return { success: true, specializedAIs: ais };
+      } catch (error) {
+        logger.error({ error }, 'Error listing specialized AIs');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'SpecializedAI',
+          suggestion: 'Tente novamente ou contate o suporte',
+        });
       }
-
-      if (input.isActive !== undefined) {
-        conditions.push(eq(specializedAIs.isActive, input.isActive));
-      }
-
-      const query = conditions.length > 0
-        ? db.select().from(specializedAIs).where(and(...conditions))
-        : db.select().from(specializedAIs);
-
-      const ais = await query;
-
-      return { success: true, specializedAIs: ais };
     }),
 
   /**
@@ -185,21 +342,49 @@ export const modelsRouter = router({
       fallbackModelIds: z.array(z.number()).optional(),
     }))
     .mutation(async ({ input }) => {
-      const result: any = await db.insert(specializedAIs).values({
-        userId: 1,
-        name: input.name,
-        description: input.description,
-        category: input.category,
-        systemPrompt: input.systemPrompt,
-        defaultModelId: input.defaultModelId,
-        fallbackModelIds: input.fallbackModelIds as any,
-        isActive: true,
-      } as any);
+      try {
+        const result: any = await db.insert(specializedAIs).values({
+          userId: 1,
+          name: input.name,
+          description: input.description,
+          category: input.category,
+          systemPrompt: input.systemPrompt,
+          defaultModelId: input.defaultModelId,
+          fallbackModelIds: input.fallbackModelIds as any,
+          isActive: true,
+        } as any);
 
-      const aiId = result[0]?.insertId || result.insertId;
-      const [ai] = await db.select().from(specializedAIs).where(eq(specializedAIs.id, aiId)).limit(1);
+        const aiId = result[0]?.insertId || result.insertId;
+        
+        if (!aiId) {
+          throw createStandardError(
+            'INTERNAL_SERVER_ERROR',
+            ErrorCodes.INTERNAL_DATABASE_ERROR,
+            'Falha ao criar IA especializada',
+            {
+              context: { name: input.name },
+              technicalMessage: 'Failed to get insertId after specialized AI insert',
+              suggestion: 'Tente novamente',
+            }
+          );
+        }
+        
+        const [ai] = await db.select().from(specializedAIs).where(eq(specializedAIs.id, aiId)).limit(1);
 
-      return { success: true, specializedAI: ai };
+        return { success: true, specializedAI: ai };
+      } catch (error) {
+        logger.error({ error, input }, 'Error creating specialized AI');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'SpecializedAI',
+          context: { name: input.name },
+          suggestion: 'Verifique se o modelo padrão existe',
+        });
+      }
     }),
 
   /**
@@ -216,15 +401,33 @@ export const modelsRouter = router({
       isActive: z.boolean().optional(),
     }))
     .mutation(async ({ input }) => {
-      const { id, ...updates } = input;
+      try {
+        const { id, ...updates } = input;
 
-      await db.update(specializedAIs)
-        .set(updates as any)
-        .where(eq(specializedAIs.id, id));
+        await db.update(specializedAIs)
+          .set(updates as any)
+          .where(eq(specializedAIs.id, id));
 
-      const [updated] = await db.select().from(specializedAIs).where(eq(specializedAIs.id, id)).limit(1);
+        const [updated] = await db.select().from(specializedAIs).where(eq(specializedAIs.id, id)).limit(1);
+        
+        if (!updated) {
+          throw notFoundError('SpecializedAI', id, 'A IA especializada pode ter sido deletada');
+        }
 
-      return { success: true, specializedAI: updated };
+        return { success: true, specializedAI: updated };
+      } catch (error) {
+        logger.error({ error, aiId: input.id }, 'Error updating specialized AI');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'SpecializedAI',
+          resourceId: input.id,
+          suggestion: 'Verifique se a IA especializada existe',
+        });
+      }
     }),
 
   /**
@@ -236,11 +439,24 @@ export const modelsRouter = router({
       limit: z.number().min(1).max(50).optional().default(20),
     }))
     .query(async ({ input }) => {
-      const results = await db.select()
-        .from(aiModels)
-        .where(like(aiModels.name, `%${input.query}%`))
-        .limit(input.limit);
+      try {
+        const results = await db.select()
+          .from(aiModels)
+          .where(like(aiModels.name, `%${input.query}%`))
+          .limit(input.limit);
 
-      return { success: true, models: results };
+        return { success: true, models: results };
+      } catch (error) {
+        logger.error({ error, query: input.query }, 'Error searching models');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'AIModel',
+          suggestion: 'Tente novamente com termos diferentes',
+        });
+      }
     }),
 });
