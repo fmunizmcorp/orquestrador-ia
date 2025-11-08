@@ -8,7 +8,22 @@ import { z } from 'zod';
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../../db/index.js';
 import { externalServices, oauthTokens, apiCredentials } from '../../db/schema.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc , sql } from 'drizzle-orm';
+import pino from 'pino';
+import { env, isDevelopment } from '../../config/env.js';
+import {
+  createStandardError,
+  handleDatabaseError,
+  ErrorCodes,
+  notFoundError,
+} from '../../utils/errors.js';
+import {
+  paginationInputSchema,
+  createPaginatedResponse,
+  applyPagination,
+} from '../../utils/pagination.js';
+
+const logger = pino({ level: env.LOG_LEVEL, transport: isDevelopment ? { target: 'pino-pretty' } : undefined });
 
 // Import service integrations
 import { githubService } from '../../services/integrations/githubService.js';

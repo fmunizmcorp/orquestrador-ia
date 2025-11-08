@@ -59,9 +59,9 @@ export default function Dashboard() {
   }, []);
 
   // Calculate stats
-  const teams = teamsData?.teams || [];
-  const projects = projectsData?.projects || [];
-  const prompts = promptsData?.prompts || [];
+  const teams = teamsData?.data || [];
+  const projects = projectsData?.data || [];
+  const prompts = promptsData?.data || [];
   const metrics = metricsData?.metrics;
 
   const activeProjects = projects.filter((p: any) => p.status === 'active').length;

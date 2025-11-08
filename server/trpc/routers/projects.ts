@@ -9,6 +9,22 @@ import { router, publicProcedure } from '../trpc.js';
 import { db } from '../../db/index.js';
 import { projects, tasks } from '../../db/schema.js';
 import { eq, desc, like, and, sql } from 'drizzle-orm';
+import pino from 'pino';
+import { env, isDevelopment } from '../../config/env.js';
+import {
+  createStandardError,
+  handleDatabaseError,
+  ErrorCodes,
+  notFoundError,
+} from '../../utils/errors.js';
+import {
+  paginationInputSchema,
+  optionalPaginationInputSchema,
+  createPaginatedResponse,
+  applyPagination,
+} from '../../utils/pagination.js';
+
+const logger = pino({ level: env.LOG_LEVEL, transport: isDevelopment ? { target: 'pino-pretty' } : undefined });
 
 export const projectsRouter = router({
   /**
@@ -18,30 +34,49 @@ export const projectsRouter = router({
     .input(z.object({
       teamId: z.number().optional(),
       status: z.enum(['active', 'completed', 'archived']).optional(),
-      limit: z.number().min(1).max(100).optional().default(50),
-      offset: z.number().min(0).optional().default(0),
-    }))
+    }).merge(paginationInputSchema).optional().default({ limit: 50, offset: 0 }))
     .query(async ({ input }) => {
-      const conditions = [];
+      try {
+        const conditions = [];
 
-      if (input.teamId) {
-        conditions.push(eq(projects.teamId, input.teamId));
+        if (input.teamId) {
+          conditions.push(eq(projects.teamId, input.teamId));
+        }
+
+        if (input.status) {
+          conditions.push(eq(projects.status, input.status));
+        }
+
+        // Count total
+        const [{ count: total }] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(projects)
+          .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+        // Get paginated results
+        const { limit, offset } = applyPagination(input);
+        const query = conditions.length > 0
+          ? db.select().from(projects).where(and(...conditions))
+          : db.select().from(projects);
+
+        const allProjects = await query
+          .orderBy(desc(projects.createdAt))
+          .limit(limit)
+          .offset(offset);
+
+        return createPaginatedResponse(allProjects, total || 0, input);
+      } catch (error) {
+        logger.error({ error }, 'Error listing projects');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'Project',
+          suggestion: 'Tente novamente ou contate o suporte',
+        });
       }
-
-      if (input.status) {
-        conditions.push(eq(projects.status, input.status));
-      }
-
-      const query = conditions.length > 0
-        ? db.select().from(projects).where(and(...conditions))
-        : db.select().from(projects);
-
-      const allProjects = await query
-        .orderBy(desc(projects.createdAt))
-        .limit(input.limit)
-        .offset(input.offset);
-
-      return { success: true, projects: allProjects };
     }),
 
   /**
@@ -89,6 +124,8 @@ export const projectsRouter = router({
       budget: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
+      logger.info({ input }, 'Creating project with input');
+      
       const result: any = await db.insert(projects).values({
         userId: 1, // TODO: Get from context
         name: input.name,
@@ -100,8 +137,18 @@ export const projectsRouter = router({
         budget: input.budget,
       } as any);
 
+      logger.info({ result }, 'Insert result received');
+      
       const projId = result[0]?.insertId || result.insertId;
+      logger.info({ projId }, 'Project ID extracted');
+      
+      if (!projId) {
+        logger.error({ result }, 'Failed to get project ID from insert result');
+        throw new Error('Failed to create project - no ID returned');
+      }
+      
       const [project] = await db.select().from(projects).where(eq(projects.id, projId)).limit(1);
+      logger.info({ project }, 'Project retrieved from database');
 
       return { success: true, project };
     }),

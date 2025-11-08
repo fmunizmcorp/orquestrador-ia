@@ -9,7 +9,22 @@ import { router, publicProcedure } from '../trpc.js';
 import { systemMonitorService } from '../../services/systemMonitorService.js';
 import { db } from '../../db/index.js';
 import { systemMetrics, apiUsage, errorLogs, auditLogs } from '../../db/schema.js';
-import { eq, desc, gte, and } from 'drizzle-orm';
+import { eq, desc, gte, and , sql } from 'drizzle-orm';
+import pino from 'pino';
+import { env, isDevelopment } from '../../config/env.js';
+import {
+  createStandardError,
+  handleDatabaseError,
+  ErrorCodes,
+  notFoundError,
+} from '../../utils/errors.js';
+import {
+  paginationInputSchema,
+  createPaginatedResponse,
+  applyPagination,
+} from '../../utils/pagination.js';
+
+const logger = pino({ level: env.LOG_LEVEL, transport: isDevelopment ? { target: 'pino-pretty' } : undefined });
 
 export const monitoringRouter = router({
   /**

@@ -9,7 +9,7 @@ import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { appRouter } from './routers/index.js';
+import { appRouter } from './trpc/router.js';
 import { createContext } from './trpc.js';
 import { testConnection } from './db/index.js';
 import { initDefaultUser } from './db/init-default-user.js';
@@ -156,7 +156,7 @@ async function start() {
     server.listen(Number(PORT), HOST, () => {
       console.log('');
       console.log('╔════════════════════════════════════════════╗');
-      console.log('║   🚀 Orquestrador de IAs V3.0             ║');
+      console.log('║   🚀 Orquestrador de IAs V3.5.1           ║');
       console.log('║   🔓 Sistema Aberto (Sem Autenticação)    ║');
       console.log('╚════════════════════════════════════════════╝');
       console.log('');

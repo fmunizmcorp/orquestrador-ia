@@ -53,7 +53,7 @@ export default function Prompts() {
     },
   });
 
-  const prompts = promptsData?.prompts || [];
+  const prompts = promptsData?.data || [];
   
   const filteredPrompts = prompts.filter((prompt: any) => {
     const matchesSearch = prompt.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

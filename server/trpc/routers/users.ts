@@ -8,8 +8,24 @@ import { z } from 'zod';
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../../db/index.js';
 import { users } from '../../db/schema.js';
-import { eq, like, or } from 'drizzle-orm';
+import { eq, like, or, sql } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import pino from 'pino';
+import { env, isDevelopment } from '../../config/env.js';
+import {
+  createStandardError,
+  handleDatabaseError,
+  ErrorCodes,
+  notFoundError,
+} from '../../utils/errors.js';
+import {
+  paginationInputSchema,
+  optionalPaginationInputSchema,
+  createPaginatedResponse,
+  applyPagination,
+} from '../../utils/pagination.js';
+
+const logger = pino({ level: env.LOG_LEVEL, transport: isDevelopment ? { target: 'pino-pretty' } : undefined });
 
 export const usersRouter = router({
   /**
@@ -127,20 +143,37 @@ export const usersRouter = router({
    * 5. List users
    */
   list: publicProcedure
-    .input(z.object({
-      limit: z.number().min(1).max(100).optional().default(50),
-      offset: z.number().min(0).optional().default(0),
-    }))
+    .input(optionalPaginationInputSchema)
     .query(async ({ input }) => {
-      const allUsers = await db.select()
-        .from(users)
-        .limit(input.limit)
-        .offset(input.offset);
+      try {
+        // Count total users
+        const [{ count: total }] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(users);
 
-      // Remove password hashes
-      const safeUsers = allUsers.map(({ passwordHash, ...user }) => user);
+        // Get paginated users
+        const { limit, offset } = applyPagination(input);
+        const allUsers = await db.select()
+          .from(users)
+          .limit(limit)
+          .offset(offset);
 
-      return { success: true, users: safeUsers };
+        // Remove password hashes
+        const safeUsers = allUsers.map(({ passwordHash, ...user }) => user);
+
+        return createPaginatedResponse(safeUsers, total || 0, input);
+      } catch (error) {
+        logger.error({ error }, 'Error listing users');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'User',
+          suggestion: 'Tente novamente ou contate o suporte',
+        });
+      }
     }),
 
   /**

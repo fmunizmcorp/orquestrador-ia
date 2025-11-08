@@ -8,25 +8,61 @@ import { z } from 'zod';
 import { router, publicProcedure } from '../trpc.js';
 import { db } from '../../db/index.js';
 import { teams, teamMembers, users } from '../../db/schema.js';
-import { eq, desc, like } from 'drizzle-orm';
+import { eq, desc, like, sql } from 'drizzle-orm';
+import pino from 'pino';
+import { env, isDevelopment } from '../../config/env.js';
+import {
+  createStandardError,
+  handleDatabaseError,
+  handleGenericError,
+  ErrorCodes,
+  notFoundError,
+  forbiddenError,
+  validationError,
+} from '../../utils/errors.js';
+import {
+  paginationInputSchema,
+  optionalPaginationInputSchema,
+  createPaginatedResponse,
+  applyPagination,
+} from '../../utils/pagination.js';
+
+const logger = pino({ level: env.LOG_LEVEL, transport: isDevelopment ? { target: 'pino-pretty' } : undefined });
 
 export const teamsRouter = router({
   /**
    * 1. List all teams
    */
   list: publicProcedure
-    .input(z.object({
-      limit: z.number().min(1).max(100).optional().default(50),
-      offset: z.number().min(0).optional().default(0),
-    }))
+    .input(optionalPaginationInputSchema)
     .query(async ({ input }) => {
-      const allTeams = await db.select()
-        .from(teams)
-        .orderBy(desc(teams.createdAt))
-        .limit(input.limit)
-        .offset(input.offset);
+      try {
+        // Count total teams
+        const [{ count: total }] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(teams);
 
-      return { success: true, teams: allTeams };
+        // Get paginated teams
+        const { limit, offset } = applyPagination(input);
+        const allTeams = await db.select()
+          .from(teams)
+          .orderBy(desc(teams.createdAt))
+          .limit(limit)
+          .offset(offset);
+
+        return createPaginatedResponse(allTeams, total || 0, input);
+      } catch (error) {
+        logger.error({ error }, 'Error listing teams');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'Team',
+          suggestion: 'Tente novamente ou contate o suporte',
+        });
+      }
     }),
 
   /**
@@ -37,27 +73,41 @@ export const teamsRouter = router({
       id: z.number(),
     }))
     .query(async ({ input }) => {
-      const [team] = await db.select()
-        .from(teams)
-        .where(eq(teams.id, input.id))
-        .limit(1);
+      try {
+        const [team] = await db.select()
+          .from(teams)
+          .where(eq(teams.id, input.id))
+          .limit(1);
 
-      if (!team) {
-        throw new Error('Team not found');
+        if (!team) {
+          throw notFoundError('Team', input.id, 'Verifique o ID ou acesse a lista de equipes');
+        }
+
+        // Get members
+        const members = await db.select()
+          .from(teamMembers)
+          .where(eq(teamMembers.teamId, input.id));
+
+        return {
+          success: true,
+          team: {
+            ...team,
+            memberCount: members.length,
+          },
+        };
+      } catch (error) {
+        logger.error({ error, teamId: input.id }, 'Error getting team by ID');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'Team',
+          resourceId: input.id,
+          suggestion: 'Verifique se a equipe existe',
+        });
       }
-
-      // Get members
-      const members = await db.select()
-        .from(teamMembers)
-        .where(eq(teamMembers.teamId, input.id));
-
-      return {
-        success: true,
-        team: {
-          ...team,
-          memberCount: members.length,
-        },
-      };
     }),
 
   /**
@@ -70,23 +120,73 @@ export const teamsRouter = router({
       ownerId: z.number(),
     }))
     .mutation(async ({ input }) => {
-      const result: any = await db.insert(teams).values({
-        name: input.name,
-        description: input.description,
-        ownerId: input.ownerId,
-      });
+      try {
+        logger.info({ input }, 'Creating team with input');
+        
+        const result: any = await db.insert(teams).values({
+          name: input.name,
+          description: input.description,
+          ownerId: input.ownerId,
+        });
 
-      const teamId = result[0]?.insertId || result.insertId;
-      const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+        logger.info({ result }, 'Insert result received');
+        
+        const teamId = result[0]?.insertId || result.insertId;
+        logger.info({ teamId }, 'Team ID extracted');
+        
+        if (!teamId) {
+          logger.error({ result }, 'Failed to get team ID from insert result');
+          throw createStandardError(
+            'INTERNAL_SERVER_ERROR',
+            ErrorCodes.INTERNAL_DATABASE_ERROR,
+            'Falha ao criar equipe no banco de dados',
+            {
+              context: { name: input.name, ownerId: input.ownerId },
+              technicalMessage: 'Failed to get insertId after team insert',
+              suggestion: 'Tente novamente ou contate o suporte',
+            }
+          );
+        }
+        
+        const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+        logger.info({ team }, 'Team retrieved from database');
+        
+        if (!team) {
+          throw createStandardError(
+            'INTERNAL_SERVER_ERROR',
+            ErrorCodes.INTERNAL_DATABASE_ERROR,
+            'Equipe criada mas não encontrada',
+            {
+              context: { teamId },
+              technicalMessage: 'Team inserted but not found in select',
+              suggestion: 'Contate o suporte',
+            }
+          );
+        }
 
-      // Add owner as first member
-      await db.insert(teamMembers).values({
-        teamId: team.id,
-        userId: input.ownerId,
-        role: 'owner',
-      });
+        // Add owner as first member
+        logger.info({ teamId: team.id, userId: input.ownerId }, 'Adding owner as team member');
+        await db.insert(teamMembers).values({
+          teamId: team.id,
+          userId: input.ownerId,
+          role: 'owner',
+        });
 
-      return { success: true, team };
+        logger.info({ teamId: team.id }, 'Team created successfully');
+        return { success: true, team };
+      } catch (error) {
+        logger.error({ error, input }, 'Error creating team');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'Team',
+          context: { name: input.name },
+          suggestion: 'Verifique se o nome não está duplicado',
+        });
+      }
     }),
 
   /**
@@ -99,15 +199,33 @@ export const teamsRouter = router({
       description: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const { id, ...updates } = input;
+      try {
+        const { id, ...updates } = input;
 
-      await db.update(teams)
-        .set(updates)
-        .where(eq(teams.id, id));
+        await db.update(teams)
+          .set(updates)
+          .where(eq(teams.id, id));
 
-      const [updated] = await db.select().from(teams).where(eq(teams.id, id)).limit(1);
+        const [updated] = await db.select().from(teams).where(eq(teams.id, id)).limit(1);
+        
+        if (!updated) {
+          throw notFoundError('Team', id, 'A equipe pode ter sido deletada');
+        }
 
-      return { success: true, team: updated };
+        return { success: true, team: updated };
+      } catch (error) {
+        logger.error({ error, teamId: input.id }, 'Error updating team');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'Team',
+          resourceId: input.id,
+          suggestion: 'Verifique se a equipe existe',
+        });
+      }
     }),
 
   /**
@@ -118,8 +236,29 @@ export const teamsRouter = router({
       id: z.number(),
     }))
     .mutation(async ({ input }) => {
-      await db.delete(teams).where(eq(teams.id, input.id));
-      return { success: true, message: 'Team deleted' };
+      try {
+        // Verify team exists before deletion
+        const [team] = await db.select().from(teams).where(eq(teams.id, input.id)).limit(1);
+        
+        if (!team) {
+          throw notFoundError('Team', input.id, 'A equipe já foi deletada ou não existe');
+        }
+        
+        await db.delete(teams).where(eq(teams.id, input.id));
+        return { success: true, message: 'Team deleted' };
+      } catch (error) {
+        logger.error({ error, teamId: input.id }, 'Error deleting team');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'Team',
+          resourceId: input.id,
+          suggestion: 'Verifique se a equipe existe',
+        });
+      }
     }),
 
   /**
@@ -130,31 +269,52 @@ export const teamsRouter = router({
       teamId: z.number(),
     }))
     .query(async ({ input }) => {
-      const members = await db.select()
-        .from(teamMembers)
-        .where(eq(teamMembers.teamId, input.teamId));
+      try {
+        // Verify team exists
+        const [team] = await db.select().from(teams).where(eq(teams.id, input.teamId)).limit(1);
+        
+        if (!team) {
+          throw notFoundError('Team', input.teamId, 'Verifique o ID da equipe');
+        }
+        
+        const members = await db.select()
+          .from(teamMembers)
+          .where(eq(teamMembers.teamId, input.teamId));
 
-      // Get user details for each member
-      const membersWithDetails = await Promise.all(
-        members.map(async (member) => {
-          const [user] = await db.select()
-            .from(users)
-            .where(eq(users.id, member.userId))
-            .limit(1);
+        // Get user details for each member
+        const membersWithDetails = await Promise.all(
+          members.map(async (member) => {
+            const [user] = await db.select()
+              .from(users)
+              .where(eq(users.id, member.userId))
+              .limit(1);
 
-          return {
-            ...member,
-            user: user ? {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              username: user.username,
-            } : null,
-          };
-        })
-      );
+            return {
+              ...member,
+              user: user ? {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                username: user.username,
+              } : null,
+            };
+          })
+        );
 
-      return { success: true, members: membersWithDetails };
+        return { success: true, members: membersWithDetails };
+      } catch (error) {
+        logger.error({ error, teamId: input.teamId }, 'Error getting team members');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'Team',
+          resourceId: input.teamId,
+          suggestion: 'Verifique se a equipe existe',
+        });
+      }
     }),
 
   /**
@@ -167,16 +327,58 @@ export const teamsRouter = router({
       role: z.enum(['owner', 'admin', 'member', 'viewer']).optional().default('member'),
     }))
     .mutation(async ({ input }) => {
-      const result: any = await db.insert(teamMembers).values({
-        teamId: input.teamId,
-        userId: input.userId,
-        role: input.role,
-      });
+      try {
+        // Verify team exists
+        const [team] = await db.select().from(teams).where(eq(teams.id, input.teamId)).limit(1);
+        
+        if (!team) {
+          throw notFoundError('Team', input.teamId, 'Verifique o ID da equipe');
+        }
+        
+        // Verify user exists
+        const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+        
+        if (!user) {
+          throw notFoundError('User', input.userId, 'Verifique o ID do usuário');
+        }
+        
+        const result: any = await db.insert(teamMembers).values({
+          teamId: input.teamId,
+          userId: input.userId,
+          role: input.role,
+        });
 
-      const memberId = result[0]?.insertId || result.insertId;
-      const [member] = await db.select().from(teamMembers).where(eq(teamMembers.id, memberId)).limit(1);
+        const memberId = result[0]?.insertId || result.insertId;
+        
+        if (!memberId) {
+          throw createStandardError(
+            'INTERNAL_SERVER_ERROR',
+            ErrorCodes.INTERNAL_DATABASE_ERROR,
+            'Falha ao adicionar membro na equipe',
+            {
+              context: { teamId: input.teamId, userId: input.userId },
+              technicalMessage: 'Failed to get insertId after team member insert',
+              suggestion: 'Tente novamente ou contate o suporte',
+            }
+          );
+        }
+        
+        const [member] = await db.select().from(teamMembers).where(eq(teamMembers.id, memberId)).limit(1);
 
-      return { success: true, member };
+        return { success: true, member };
+      } catch (error) {
+        logger.error({ error, input }, 'Error adding team member');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'TeamMember',
+          context: { teamId: input.teamId, userId: input.userId },
+          suggestion: 'Verifique se o usuário já não é membro da equipe',
+        });
+      }
     }),
 
   /**
@@ -188,13 +390,31 @@ export const teamsRouter = router({
       role: z.enum(['owner', 'admin', 'member', 'viewer']),
     }))
     .mutation(async ({ input }) => {
-      await db.update(teamMembers)
-        .set({ role: input.role })
-        .where(eq(teamMembers.id, input.memberId));
+      try {
+        await db.update(teamMembers)
+          .set({ role: input.role })
+          .where(eq(teamMembers.id, input.memberId));
 
-      const [updated] = await db.select().from(teamMembers).where(eq(teamMembers.id, input.memberId)).limit(1);
+        const [updated] = await db.select().from(teamMembers).where(eq(teamMembers.id, input.memberId)).limit(1);
+        
+        if (!updated) {
+          throw notFoundError('TeamMember', input.memberId, 'O membro pode ter sido removido');
+        }
 
-      return { success: true, member: updated };
+        return { success: true, member: updated };
+      } catch (error) {
+        logger.error({ error, memberId: input.memberId }, 'Error updating member role');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'TeamMember',
+          resourceId: input.memberId,
+          suggestion: 'Verifique se o membro existe',
+        });
+      }
     }),
 
   /**
@@ -205,7 +425,28 @@ export const teamsRouter = router({
       memberId: z.number(),
     }))
     .mutation(async ({ input }) => {
-      await db.delete(teamMembers).where(eq(teamMembers.id, input.memberId));
-      return { success: true, message: 'Member removed' };
+      try {
+        // Verify member exists
+        const [member] = await db.select().from(teamMembers).where(eq(teamMembers.id, input.memberId)).limit(1);
+        
+        if (!member) {
+          throw notFoundError('TeamMember', input.memberId, 'O membro já foi removido ou não existe');
+        }
+        
+        await db.delete(teamMembers).where(eq(teamMembers.id, input.memberId));
+        return { success: true, message: 'Member removed' };
+      } catch (error) {
+        logger.error({ error, memberId: input.memberId }, 'Error removing team member');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'TeamMember',
+          resourceId: input.memberId,
+          suggestion: 'Verifique se o membro existe',
+        });
+      }
     }),
 });

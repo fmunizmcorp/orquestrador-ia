@@ -4,7 +4,7 @@
  * 180+ endpoints across 14 routers
  */
 
-import { router } from './trpc.js';
+import { router } from '../trpc.js';
 
 // Import all sub-routers
 import { authRouter } from './routers/auth.js';

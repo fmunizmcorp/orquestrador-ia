@@ -29,7 +29,10 @@ const Chat = () => {
 
   // Conectar WebSocket
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:3001/ws');
+    // Use dynamic WebSocket URL based on current location
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       console.log('✅ WebSocket conectado');
