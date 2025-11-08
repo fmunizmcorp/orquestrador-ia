@@ -136,7 +136,7 @@ export async function handleChatSend(
     const contextMessages = history.reverse();
 
     // 3. Construir prompt com contexto
-    let prompt = 'Você é um assistente do Orquestrador de IAs V3.0.\n\n';
+    let prompt = 'Você é um assistente do Orquestrador de IAs V3.5.1.\n\n';
     prompt += 'Contexto da conversa:\n';
     
     contextMessages.forEach(msg => {

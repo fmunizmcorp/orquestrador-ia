@@ -156,7 +156,7 @@ async function start() {
     server.listen(Number(PORT), HOST, () => {
       console.log('');
       console.log('╔════════════════════════════════════════════╗');
-      console.log('║   🚀 Orquestrador de IAs V3.0             ║');
+      console.log('║   🚀 Orquestrador de IAs V3.5.1           ║');
       console.log('║   🔓 Sistema Aberto (Sem Autenticação)    ║');
       console.log('╚════════════════════════════════════════════╝');
       console.log('');
