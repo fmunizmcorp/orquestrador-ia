@@ -16,6 +16,7 @@ import { initDefaultUser } from './db/init-default-user.js';
 import { systemMonitorService } from './services/systemMonitorService.js';
 import { handleMessage, connectionManager, broadcastTaskUpdate } from './websocket/handlers.js';
 import { setBroadcastCallback } from './services/orchestratorService.js';
+import restApiRouter from './routes/rest-api.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,6 +40,9 @@ app.use((req, res, next) => {
   
   next();
 });
+
+// REST API Routes (for compatibility)
+app.use('/api', restApiRouter);
 
 // tRPC
 app.use(
