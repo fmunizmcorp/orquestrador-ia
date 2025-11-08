@@ -124,6 +124,8 @@ export const projectsRouter = router({
       budget: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
+      logger.info({ input }, 'Creating project with input');
+      
       const result: any = await db.insert(projects).values({
         userId: 1, // TODO: Get from context
         name: input.name,
@@ -135,8 +137,18 @@ export const projectsRouter = router({
         budget: input.budget,
       } as any);
 
+      logger.info({ result }, 'Insert result received');
+      
       const projId = result[0]?.insertId || result.insertId;
+      logger.info({ projId }, 'Project ID extracted');
+      
+      if (!projId) {
+        logger.error({ result }, 'Failed to get project ID from insert result');
+        throw new Error('Failed to create project - no ID returned');
+      }
+      
       const [project] = await db.select().from(projects).where(eq(projects.id, projId)).limit(1);
+      logger.info({ project }, 'Project retrieved from database');
 
       return { success: true, project };
     }),

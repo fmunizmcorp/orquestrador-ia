@@ -28,6 +28,11 @@ export default function Teams() {
     onSuccess: () => {
       refetch();
       closeModal();
+      alert('✅ Equipe criada com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao criar equipe:', error);
+      alert('❌ Erro ao criar equipe: ' + error.message);
     },
   });
 
@@ -35,12 +40,22 @@ export default function Teams() {
     onSuccess: () => {
       refetch();
       closeModal();
+      alert('✅ Equipe atualizada com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao atualizar equipe:', error);
+      alert('❌ Erro ao atualizar equipe: ' + error.message);
     },
   });
 
   const deleteTeamMutation = trpc.teams.delete.useMutation({
     onSuccess: () => {
       refetch();
+      alert('✅ Equipe excluída com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao excluir equipe:', error);
+      alert('❌ Erro ao excluir equipe: ' + error.message);
     },
   });
 
@@ -89,7 +104,7 @@ export default function Teams() {
       await createTeamMutation.mutateAsync({
         name: formData.name,
         description: formData.description,
-        createdBy: user?.id || 1,
+        ownerId: user?.id || 1,
       });
     }
   };

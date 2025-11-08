@@ -53,6 +53,11 @@ export default function Projects() {
     onSuccess: () => {
       refetch();
       closeModal();
+      alert('✅ Projeto criado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao criar projeto:', error);
+      alert('❌ Erro ao criar projeto: ' + error.message);
     },
   });
 
@@ -60,12 +65,22 @@ export default function Projects() {
     onSuccess: () => {
       refetch();
       closeModal();
+      alert('✅ Projeto atualizado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao atualizar projeto:', error);
+      alert('❌ Erro ao atualizar projeto: ' + error.message);
     },
   });
 
   const deleteProjectMutation = trpc.projects.delete.useMutation({
     onSuccess: () => {
       refetch();
+      alert('✅ Projeto excluído com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao excluir projeto:', error);
+      alert('❌ Erro ao excluir projeto: ' + error.message);
     },
   });
 
@@ -124,9 +139,7 @@ export default function Projects() {
       await createProjectMutation.mutateAsync({
         name: formData.name,
         description: formData.description,
-        status: formData.status,
         teamId: formData.teamId,
-        createdBy: user?.id || 1,
       });
     }
   };

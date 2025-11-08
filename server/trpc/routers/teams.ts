@@ -121,15 +121,21 @@ export const teamsRouter = router({
     }))
     .mutation(async ({ input }) => {
       try {
+        logger.info({ input }, 'Creating team with input');
+        
         const result: any = await db.insert(teams).values({
           name: input.name,
           description: input.description,
           ownerId: input.ownerId,
         });
 
+        logger.info({ result }, 'Insert result received');
+        
         const teamId = result[0]?.insertId || result.insertId;
+        logger.info({ teamId }, 'Team ID extracted');
         
         if (!teamId) {
+          logger.error({ result }, 'Failed to get team ID from insert result');
           throw createStandardError(
             'INTERNAL_SERVER_ERROR',
             ErrorCodes.INTERNAL_DATABASE_ERROR,
@@ -143,6 +149,7 @@ export const teamsRouter = router({
         }
         
         const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+        logger.info({ team }, 'Team retrieved from database');
         
         if (!team) {
           throw createStandardError(
@@ -158,12 +165,14 @@ export const teamsRouter = router({
         }
 
         // Add owner as first member
+        logger.info({ teamId: team.id, userId: input.ownerId }, 'Adding owner as team member');
         await db.insert(teamMembers).values({
           teamId: team.id,
           userId: input.ownerId,
           role: 'owner',
         });
 
+        logger.info({ teamId: team.id }, 'Team created successfully');
         return { success: true, team };
       } catch (error) {
         logger.error({ error, input }, 'Error creating team');
