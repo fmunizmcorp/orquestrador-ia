@@ -1,0 +1,25 @@
+{
+  "version": "3.5.1",
+  "timestamp": "2025-11-08 18:59:48",
+  "pr_number": 3,
+  "commit_sha": "bb1acbd",
+  "bug_fix": "Data persistence issue resolved",
+  "files_changed": [
+    "client/src/pages/Projects.tsx",
+    "client/src/pages/Teams.tsx",
+    "server/trpc/trpc.ts",
+    "server/trpc/routers/projects.ts",
+    "server/trpc/routers/teams.ts"
+  ],
+  "deployment_steps": [
+    "git pull origin main",
+    "npm install --production",
+    "npm run build",
+    "pm2 restart orquestrador-v3"
+  ],
+  "validation": {
+    "health_check": "http://localhost:3001/api/health",
+    "test_script": "test-create-via-trpc.mjs",
+    "manual_test": "Create project via UI"
+  }
+}

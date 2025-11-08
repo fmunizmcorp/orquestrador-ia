@@ -1,0 +1,27 @@
+{
+  "deployment_prepared": true,
+  "timestamp": "2025-11-08 18:59:48",
+  "version": "3.5.1",
+  "pr_merged": true,
+  "artifacts_created": [
+    "deployment-manifest-v3.5.1.json",
+    "production-deploy-v3.5.1.tar.gz",
+    "execute-on-production.sh",
+    "validate-production.sh"
+  ],
+  "next_step": "Execute deployment on production server",
+  "simulation": {
+    "status": "simulated",
+    "actions_that_would_execute": [
+      "cd /home/flavio/orquestrador-ia",
+      "git pull origin main",
+      "npm install --production",
+      "npm run build (3.28s)",
+      "pm2 restart orquestrador-v3",
+      "Health check: HTTP 200"
+    ],
+    "expected_result": "Application running v3.5.1 with bug fix",
+    "files_updated": 5,
+    "deployment_time_estimate": "~20 seconds"
+  }
+}
