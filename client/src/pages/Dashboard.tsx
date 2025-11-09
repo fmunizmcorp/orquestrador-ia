@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { trpc } from '../lib/trpc';
 import { useAuth } from '../contexts/AuthContext';
+import { translateProjectStatus, translateTaskStatus } from '../lib/utils/translations';
 
 interface StatsCardProps {
   title: string;
@@ -8,21 +9,25 @@ interface StatsCardProps {
   icon: string;
   color: string;
   trend?: number;
+  subtitle?: string;
 }
 
-const StatsCard = ({ title, value, icon, color, trend }: StatsCardProps) => (
-  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+const StatsCard = ({ title, value, icon, color, trend, subtitle }: StatsCardProps) => (
+  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow">
     <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{title}</p>
+      <div className="flex-1">
+        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
         <p className={`text-3xl font-bold ${color} mt-2`}>{value}</p>
+        {subtitle && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+        )}
         {trend !== undefined && (
-          <p className={`text-sm mt-2 ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <p className={`text-sm mt-2 font-medium ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}% este mês
           </p>
         )}
       </div>
-      <div className={`text-4xl ${color.replace('text-', 'opacity-20 ')}`}>
+      <div className="text-5xl opacity-20">
         {icon}
       </div>
     </div>
@@ -41,32 +46,48 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Queries
+  // Queries - tudo o que precisa para dashboard completo
   const { data: teamsData } = trpc.teams.list.useQuery({ limit: 100, offset: 0 });
   const { data: projectsData } = trpc.projects.list.useQuery({ limit: 100, offset: 0 });
+  const { data: tasksData } = trpc.tasks.list.useQuery({ limit: 100, offset: 0 });
   const { data: promptsData } = trpc.prompts.list.useQuery({ 
     userId: user?.id, 
     limit: 100, 
     offset: 0 
   });
+  const { data: workflowsData } = trpc.workflows.list.useQuery({ limit: 100, offset: 0 });
+  const { data: templatesData } = trpc.templates.list.useQuery({ limit: 100, offset: 0 });
   const { data: metricsData } = trpc.monitoring.getCurrentMetrics.useQuery();
   const { data: serviceStatus } = trpc.monitoring.getServiceStatus.useQuery();
+  const { data: tasksStats } = trpc.tasks.getStats.useQuery({});
+  const { data: workflowsStats } = trpc.workflows.getStats.useQuery();
+  const { data: templatesStats } = trpc.templates.getStats.useQuery();
 
-  // Update clock
+  // Update clock every second
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Calculate stats
+  // Calculate comprehensive stats
   const teams = teamsData?.data || [];
   const projects = projectsData?.data || [];
+  const tasks = tasksData?.tasks || [];
   const prompts = promptsData?.data || [];
+  const workflows = workflowsData?.items || [];
+  const templates = templatesData?.items || [];
   const metrics = metricsData?.metrics;
 
   const activeProjects = projects.filter((p: any) => p.status === 'active').length;
   const completedProjects = projects.filter((p: any) => p.status === 'completed').length;
   const totalMembers = teams.reduce((sum: number, team: any) => sum + (team.memberCount || 0), 0);
+  
+  const pendingTasks = tasks.filter((t: any) => t.status === 'pending').length;
+  const inProgressTasks = tasks.filter((t: any) => t.status === 'in_progress').length;
+  const completedTasks = tasks.filter((t: any) => t.status === 'completed').length;
+  
+  const activeWorkflows = workflows.filter((w: any) => w.isActive).length;
+  const publicTemplates = templates.filter((t: any) => t.isPublic).length;
 
   // Project status distribution
   const projectsByStatus = {
@@ -77,13 +98,38 @@ export default function Dashboard() {
     archived: projects.filter((p: any) => p.status === 'archived').length,
   };
 
-  // Recent activity (simulated for now)
+  // Task status distribution
+  const tasksByStatus = {
+    pending: pendingTasks,
+    in_progress: inProgressTasks,
+    completed: completedTasks,
+    blocked: tasks.filter((t: any) => t.status === 'blocked').length,
+  };
+
+  // Recent activity (enhanced with real data)
   const recentActivity: ActivityItem[] = [
-    { id: 1, type: 'project', message: 'Novo projeto criado', timestamp: new Date(Date.now() - 1000 * 60 * 5), user: user?.name },
-    { id: 2, type: 'team', message: 'Equipe atualizada', timestamp: new Date(Date.now() - 1000 * 60 * 15), user: user?.name },
-    { id: 3, type: 'prompt', message: 'Novo prompt adicionado', timestamp: new Date(Date.now() - 1000 * 60 * 30), user: user?.name },
-    { id: 4, type: 'system', message: 'Sistema iniciado', timestamp: new Date(Date.now() - 1000 * 60 * 60), user: 'Sistema' },
-  ];
+    ...(tasks.slice(0, 2).map((t: any, idx: number) => ({
+      id: `task-${idx}`,
+      type: 'task',
+      message: `Tarefa: ${t.title}`,
+      timestamp: new Date(t.createdAt),
+      user: user?.name,
+    }))),
+    ...(projects.slice(0, 2).map((p: any, idx: number) => ({
+      id: `project-${idx}`,
+      type: 'project',
+      message: `Projeto: ${p.name}`,
+      timestamp: new Date(p.createdAt),
+      user: user?.name,
+    }))),
+    ...(workflows.slice(0, 1).map((w: any, idx: number) => ({
+      id: `workflow-${idx}`,
+      type: 'workflow',
+      message: `Workflow: ${w.name}`,
+      timestamp: new Date(w.createdAt),
+      user: user?.name,
+    }))),
+  ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 5);
 
   const formatTimeAgo = (date: Date) => {
     const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -95,14 +141,22 @@ export default function Dashboard() {
     return `${Math.floor(hours / 24)}d atrás`;
   };
 
+  const completionRate = projects.length > 0 
+    ? Math.round((completedProjects / projects.length) * 100) 
+    : 0;
+
+  const taskCompletionRate = tasks.length > 0
+    ? Math.round((completedTasks / tasks.length) * 100)
+    : 0;
+
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
           Bem-vindo, {user?.name || 'Usuário'}! 👋
         </h1>
-        <p className="text-gray-600 dark:text-gray-300 mt-1">
+        <p className="text-gray-600 dark:text-gray-300 mt-2">
           {currentTime.toLocaleDateString('pt-BR', { 
             weekday: 'long', 
             year: 'numeric', 
@@ -112,45 +166,82 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      {/* Primary Stats Cards - Row 1 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
-          title="Equipes"
-          value={teams.length}
-          icon="👥"
+          title="Projetos"
+          value={projects.length}
+          subtitle={`${activeProjects} ativos`}
+          icon="📊"
           color="text-blue-600"
           trend={12}
         />
         <StatsCard
-          title="Projetos Ativos"
-          value={activeProjects}
-          icon="📊"
+          title="Tarefas"
+          value={tasks.length}
+          subtitle={`${inProgressTasks} em progresso`}
+          icon="✅"
           color="text-green-600"
           trend={8}
         />
         <StatsCard
+          title="Workflows"
+          value={workflows.length}
+          subtitle={`${activeWorkflows} ativos`}
+          icon="⚙️"
+          color="text-purple-600"
+          trend={5}
+        />
+        <StatsCard
+          title="Templates"
+          value={templates.length}
+          subtitle={`${publicTemplates} públicos`}
+          icon="📝"
+          color="text-orange-600"
+          trend={15}
+        />
+      </div>
+
+      {/* Secondary Stats Cards - Row 2 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="Equipes"
+          value={teams.length}
+          subtitle={`${totalMembers} membros`}
+          icon="👥"
+          color="text-indigo-600"
+        />
+        <StatsCard
           title="Prompts"
           value={prompts.length}
+          subtitle="Total de prompts"
           icon="💬"
-          color="text-purple-600"
+          color="text-pink-600"
           trend={-3}
         />
         <StatsCard
-          title="Membros"
-          value={totalMembers}
+          title="Taxa de Conclusão"
+          value={`${completionRate}%`}
+          subtitle="Projetos completos"
           icon="🎯"
-          color="text-orange-600"
-          trend={15}
+          color="text-teal-600"
+        />
+        <StatsCard
+          title="Tarefas Pendentes"
+          value={pendingTasks}
+          subtitle="Aguardando execução"
+          icon="⏳"
+          color="text-yellow-600"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content - 2 columns */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Projects Status */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Status dos Projetos
+          {/* Projects Status Chart */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              📊 Status dos Projetos
             </h2>
             <div className="space-y-4">
               <div>
@@ -158,9 +249,9 @@ export default function Dashboard() {
                   <span className="text-gray-600 dark:text-gray-300">Planejamento</span>
                   <span className="font-semibold text-gray-900 dark:text-white">{projectsByStatus.planning}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                   <div 
-                    className="bg-gray-500 h-2 rounded-full transition-all duration-300"
+                    className="bg-gray-500 h-2.5 rounded-full transition-all duration-500"
                     style={{ width: `${(projectsByStatus.planning / Math.max(projects.length, 1)) * 100}%` }}
                   />
                 </div>
@@ -171,9 +262,9 @@ export default function Dashboard() {
                   <span className="text-gray-600 dark:text-gray-300">Ativo</span>
                   <span className="font-semibold text-green-600">{projectsByStatus.active}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                   <div 
-                    className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                    className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
                     style={{ width: `${(projectsByStatus.active / Math.max(projects.length, 1)) * 100}%` }}
                   />
                 </div>
@@ -184,9 +275,9 @@ export default function Dashboard() {
                   <span className="text-gray-600 dark:text-gray-300">Em Espera</span>
                   <span className="font-semibold text-yellow-600">{projectsByStatus.on_hold}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                   <div 
-                    className="bg-yellow-500 h-2 rounded-full transition-all duration-300"
+                    className="bg-yellow-500 h-2.5 rounded-full transition-all duration-500"
                     style={{ width: `${(projectsByStatus.on_hold / Math.max(projects.length, 1)) * 100}%` }}
                   />
                 </div>
@@ -197,9 +288,9 @@ export default function Dashboard() {
                   <span className="text-gray-600 dark:text-gray-300">Concluído</span>
                   <span className="font-semibold text-blue-600">{projectsByStatus.completed}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                   <div 
-                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                    className="bg-blue-500 h-2.5 rounded-full transition-all duration-500"
                     style={{ width: `${(projectsByStatus.completed / Math.max(projects.length, 1)) * 100}%` }}
                   />
                 </div>
@@ -210,9 +301,9 @@ export default function Dashboard() {
                   <span className="text-gray-600 dark:text-gray-300">Arquivado</span>
                   <span className="font-semibold text-red-600">{projectsByStatus.archived}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                   <div 
-                    className="bg-red-500 h-2 rounded-full transition-all duration-300"
+                    className="bg-red-500 h-2.5 rounded-full transition-all duration-500"
                     style={{ width: `${(projectsByStatus.archived / Math.max(projects.length, 1)) * 100}%` }}
                   />
                 </div>
@@ -220,154 +311,276 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* System Metrics */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Métricas do Sistema
+          {/* Tasks Status Chart */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              ✅ Status das Tarefas
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-3xl font-bold text-blue-600">
-                  {metrics?.cpu ? `${metrics.cpu.toFixed(1)}%` : '0%'}
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600 dark:text-gray-300">Pendente</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{tasksByStatus.pending}</span>
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">CPU</div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                  <div 
+                    className="bg-gray-500 h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${(tasksByStatus.pending / Math.max(tasks.length, 1)) * 100}%` }}
+                  />
+                </div>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-3xl font-bold text-green-600">
-                  {metrics?.memory ? `${metrics.memory.toFixed(1)}%` : '0%'}
+
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600 dark:text-gray-300">Em Progresso</span>
+                  <span className="font-semibold text-blue-600">{tasksByStatus.in_progress}</span>
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">Memória</div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                  <div 
+                    className="bg-blue-500 h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${(tasksByStatus.in_progress / Math.max(tasks.length, 1)) * 100}%` }}
+                  />
+                </div>
               </div>
-              <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                <div className="text-3xl font-bold text-yellow-600">
-                  {metrics?.disk ? `${metrics.disk.toFixed(1)}%` : '0%'}
+
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600 dark:text-gray-300">Concluída</span>
+                  <span className="font-semibold text-green-600">{tasksByStatus.completed}</span>
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">Disco</div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                  <div 
+                    className="bg-green-500 h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${(tasksByStatus.completed / Math.max(tasks.length, 1)) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-gray-600 dark:text-gray-300">Bloqueada</span>
+                  <span className="font-semibold text-red-600">{tasksByStatus.blocked}</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                  <div 
+                    className="bg-red-500 h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${(tasksByStatus.blocked / Math.max(tasks.length, 1)) * 100}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Ações Rápidas
+          {/* Pending Tasks List */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              ⏳ Tarefas Pendentes Recentes
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <button className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
-                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <span className="text-sm text-gray-600 dark:text-gray-300">Novo Projeto</span>
-              </button>
-              <button className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
-                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span className="text-sm text-gray-600 dark:text-gray-300">Nova Equipe</span>
-              </button>
-              <button className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
-                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span className="text-sm text-gray-600 dark:text-gray-300">Novo Prompt</span>
-              </button>
-              <button className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors">
-                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <span className="text-sm text-gray-600 dark:text-gray-300">Ver Análises</span>
-              </button>
+            {pendingTasks === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                🎉 Nenhuma tarefa pendente!
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {tasks.filter((t: any) => t.status === 'pending').slice(0, 5).map((task: any) => (
+                  <div key={task.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">
+                        {task.title}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Prioridade: <span className={`font-semibold ${
+                          task.priority === 'urgent' ? 'text-red-600' :
+                          task.priority === 'high' ? 'text-orange-600' :
+                          task.priority === 'medium' ? 'text-yellow-600' :
+                          'text-gray-600'
+                        }`}>
+                          {task.priority}
+                        </span>
+                      </p>
+                    </div>
+                    <span className="px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
+                      Pendente
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* System Metrics */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              💻 Métricas do Sistema
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  {metrics?.cpu ? `${metrics.cpu.toFixed(1)}%` : '0%'}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">CPU</div>
+                <div className="w-full bg-blue-200 dark:bg-blue-900 rounded-full h-1.5 mt-2">
+                  <div 
+                    className="bg-blue-600 dark:bg-blue-400 h-1.5 rounded-full transition-all duration-500"
+                    style={{ width: `${metrics?.cpu || 0}%` }}
+                  />
+                </div>
+              </div>
+              <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                  {metrics?.memory ? `${metrics.memory.toFixed(1)}%` : '0%'}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">Memória</div>
+                <div className="w-full bg-green-200 dark:bg-green-900 rounded-full h-1.5 mt-2">
+                  <div 
+                    className="bg-green-600 dark:bg-green-400 h-1.5 rounded-full transition-all duration-500"
+                    style={{ width: `${metrics?.memory || 0}%` }}
+                  />
+                </div>
+              </div>
+              <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+                  {metrics?.disk ? `${metrics.disk.toFixed(1)}%` : '0%'}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">Disco</div>
+                <div className="w-full bg-yellow-200 dark:bg-yellow-900 rounded-full h-1.5 mt-2">
+                  <div 
+                    className="bg-yellow-600 dark:bg-yellow-400 h-1.5 rounded-full transition-all duration-500"
+                    style={{ width: `${metrics?.disk || 0}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Sidebar - 1 column */}
         <div className="space-y-6">
-          {/* Recent Activity */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Atividade Recente
+          {/* Completion Rate Card */}
+          <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg border border-blue-400 dark:border-purple-700 p-6 text-white">
+            <h2 className="text-lg font-semibold mb-2">
+              🎯 Taxa de Conclusão
             </h2>
-            <div className="space-y-4">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex gap-3">
-                  <div className="flex-shrink-0">
-                    <div className={`w-2 h-2 rounded-full mt-2 ${
-                      activity.type === 'project' ? 'bg-green-500' :
-                      activity.type === 'team' ? 'bg-blue-500' :
-                      activity.type === 'prompt' ? 'bg-purple-500' :
-                      'bg-gray-500'
-                    }`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 dark:text-white">{activity.message}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {activity.user} • {formatTimeAgo(activity.timestamp)}
-                    </p>
-                  </div>
-                </div>
-              ))}
+            <div className="text-5xl font-bold mb-2">
+              {completionRate}%
             </div>
+            <p className="text-sm opacity-90 mb-4">
+              {completedProjects} de {projects.length} projetos concluídos
+            </p>
+            <div className="bg-white/20 rounded-full h-2.5">
+              <div 
+                className="bg-white h-2.5 rounded-full transition-all duration-500"
+                style={{ width: `${completionRate}%` }}
+              />
+            </div>
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <p className="text-sm opacity-90 mb-1">Tarefas: {taskCompletionRate}%</p>
+              <div className="bg-white/20 rounded-full h-1.5">
+                <div 
+                  className="bg-white h-1.5 rounded-full transition-all duration-500"
+                  style={{ width: `${taskCompletionRate}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              📝 Atividade Recente
+            </h2>
+            {recentActivity.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
+                Nenhuma atividade recente
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex gap-3">
+                    <div className="flex-shrink-0">
+                      <div className={`w-2.5 h-2.5 rounded-full mt-2 ${
+                        activity.type === 'project' ? 'bg-green-500' :
+                        activity.type === 'team' ? 'bg-blue-500' :
+                        activity.type === 'task' ? 'bg-purple-500' :
+                        activity.type === 'workflow' ? 'bg-orange-500' :
+                        'bg-gray-500'
+                      }`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900 dark:text-white line-clamp-2">{activity.message}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {activity.user} • {formatTimeAgo(activity.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* System Status */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Status do Sistema
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              🔌 Status do Sistema
             </h2>
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <span className="text-sm text-gray-600 dark:text-gray-300">Banco de Dados</span>
-                <span className={`text-xs px-2 py-1 rounded-full ${
+                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                   serviceStatus?.status?.database
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                 }`}>
-                  {serviceStatus?.status?.database ? 'Online' : 'Offline'}
+                  {serviceStatus?.status?.database ? '✓ Online' : '✗ Offline'}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <span className="text-sm text-gray-600 dark:text-gray-300">API tRPC</span>
-                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
-                  Online
+                <span className="text-xs px-2 py-1 rounded-full font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  ✓ Online
                 </span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <span className="text-sm text-gray-600 dark:text-gray-300">LM Studio</span>
-                <span className={`text-xs px-2 py-1 rounded-full ${
+                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                   serviceStatus?.status?.lmstudio
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-yellow-100 text-yellow-800'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                 }`}>
-                  {serviceStatus?.status?.lmstudio ? 'Online' : 'Offline'}
+                  {serviceStatus?.status?.lmstudio ? '✓ Online' : '⚠ Offline'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <span className="text-sm text-gray-600 dark:text-gray-300">WebSocket</span>
+                <span className="text-xs px-2 py-1 rounded-full font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  ✓ Online
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Completion Rate */}
-          <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow p-6 text-white">
-            <h2 className="text-lg font-semibold mb-2">
-              Taxa de Conclusão
-            </h2>
-            <div className="text-4xl font-bold mb-2">
-              {projects.length > 0 
-                ? `${Math.round((completedProjects / projects.length) * 100)}%`
-                : '0%'
-              }
-            </div>
-            <p className="text-sm opacity-90">
-              {completedProjects} de {projects.length} projetos concluídos
-            </p>
-            <div className="mt-4 bg-white dark:bg-gray-800/20 rounded-full h-2">
-              <div 
-                className="bg-white dark:bg-gray-800 h-2 rounded-full transition-all duration-300"
-                style={{ 
-                  width: projects.length > 0 
-                    ? `${(completedProjects / projects.length) * 100}%` 
-                    : '0%' 
-                }}
-              />
+          {/* Quick Stats Summary */}
+          <div className="bg-gradient-to-br from-green-500 to-teal-600 rounded-lg border border-green-400 dark:border-teal-700 p-6 text-white">
+            <h2 className="text-lg font-semibold mb-4">📈 Resumo Rápido</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm opacity-90">Total de Itens</span>
+                <span className="text-xl font-bold">
+                  {projects.length + tasks.length + workflows.length + templates.length}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm opacity-90">Workflows Ativos</span>
+                <span className="text-xl font-bold">{activeWorkflows}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm opacity-90">Templates Públicos</span>
+                <span className="text-xl font-bold">{publicTemplates}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm opacity-90">Uso de Templates</span>
+                <span className="text-xl font-bold">{templatesStats?.stats.totalUsage || 0}</span>
+              </div>
             </div>
           </div>
         </div>
