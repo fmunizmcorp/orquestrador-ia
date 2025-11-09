@@ -1,7 +1,7 @@
 /**
  * Users tRPC Router
  * User management endpoints
- * 8 endpoints
+ * 14 endpoints
  */
 
 import { z } from 'zod';
@@ -251,5 +251,218 @@ export const usersRouter = router({
       await db.delete(users).where(eq(users.id, input.userId));
 
       return { success: true, message: 'Account deleted successfully' };
+    }),
+
+  /**
+   * 9. Get user statistics
+   */
+  getStatistics: publicProcedure
+    .input(z.object({
+      userId: z.number(),
+    }))
+    .query(async ({ input }) => {
+      // Import necessary tables
+      const { tasks, projects, chatConversations, aiTemplates, aiWorkflows } = await import('../../db/schema.js');
+
+      // Count user's tasks
+      const [tasksCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(tasks)
+        .where(eq(tasks.userId, input.userId));
+
+      // Count completed tasks
+      const [completedTasksCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(tasks)
+        .where(sql`${tasks.userId} = ${input.userId} AND ${tasks.status} = 'completed'`);
+
+      // Count user's projects
+      const [projectsCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(projects)
+        .where(eq(projects.userId, input.userId));
+
+      // Count user's conversations
+      const [conversationsCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(chatConversations)
+        .where(eq(chatConversations.userId, input.userId));
+
+      // Count user's templates
+      const [templatesCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(aiTemplates)
+        .where(eq(aiTemplates.userId, input.userId));
+
+      // Count user's workflows
+      const [workflowsCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(aiWorkflows)
+        .where(eq(aiWorkflows.userId, input.userId));
+
+      return {
+        success: true,
+        statistics: {
+          totalTasks: tasksCount?.count || 0,
+          completedTasks: completedTasksCount?.count || 0,
+          totalProjects: projectsCount?.count || 0,
+          totalConversations: conversationsCount?.count || 0,
+          totalTemplates: templatesCount?.count || 0,
+          totalWorkflows: workflowsCount?.count || 0,
+        },
+      };
+    }),
+
+  /**
+   * 10. Get user activity (recent actions)
+   */
+  getActivity: publicProcedure
+    .input(z.object({
+      userId: z.number(),
+      limit: z.number().min(1).max(100).optional().default(20),
+    }))
+    .query(async ({ input }) => {
+      const { auditLogs } = await import('../../db/schema.js');
+
+      const activities = await db
+        .select()
+        .from(auditLogs)
+        .where(eq(auditLogs.userId, input.userId))
+        .orderBy(sql`${auditLogs.timestamp} DESC`)
+        .limit(input.limit);
+
+      return {
+        success: true,
+        activities,
+      };
+    }),
+
+  /**
+   * 11. Upload avatar (returns URL)
+   */
+  uploadAvatar: publicProcedure
+    .input(z.object({
+      userId: z.number(),
+      avatarData: z.string(), // base64 encoded image
+    }))
+    .mutation(async ({ input }) => {
+      // Em produção, fazer upload real para storage
+      // Por ora, simulamos retornando uma URL
+      const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${input.userId}`;
+
+      await db.update(users)
+        .set({ avatarUrl })
+        .where(eq(users.id, input.userId));
+
+      return {
+        success: true,
+        avatarUrl,
+      };
+    }),
+
+  /**
+   * 12. Get user sessions (active devices)
+   */
+  getSessions: publicProcedure
+    .input(z.object({
+      userId: z.number(),
+    }))
+    .query(async ({ input }) => {
+      // Simular sessões ativas
+      // Em produção, buscar de uma tabela de sessões real
+      const sessions = [
+        {
+          id: 1,
+          deviceName: 'Chrome - Windows',
+          location: 'São Paulo, Brasil',
+          ipAddress: '192.168.1.1',
+          lastActive: new Date().toISOString(),
+          isCurrent: true,
+        },
+        {
+          id: 2,
+          deviceName: 'Safari - iPhone',
+          location: 'São Paulo, Brasil',
+          ipAddress: '192.168.1.2',
+          lastActive: new Date(Date.now() - 3600000).toISOString(),
+          isCurrent: false,
+        },
+      ];
+
+      return {
+        success: true,
+        sessions,
+      };
+    }),
+
+  /**
+   * 13. Revoke session
+   */
+  revokeSession: publicProcedure
+    .input(z.object({
+      userId: z.number(),
+      sessionId: z.number(),
+    }))
+    .mutation(async ({ input }) => {
+      // Em produção, deletar sessão do banco
+      // Por ora, simulamos
+      return {
+        success: true,
+        message: 'Session revoked successfully',
+      };
+    }),
+
+  /**
+   * 14. Export user data
+   */
+  exportData: publicProcedure
+    .input(z.object({
+      userId: z.number(),
+    }))
+    .query(async ({ input }) => {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, input.userId))
+        .limit(1);
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const { passwordHash, ...safeUser } = user;
+
+      // Import tables
+      const { tasks, projects, chatConversations } = await import('../../db/schema.js');
+
+      // Get user's tasks
+      const userTasks = await db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.userId, input.userId))
+        .limit(1000);
+
+      // Get user's projects
+      const userProjects = await db
+        .select()
+        .from(projects)
+        .where(eq(projects.userId, input.userId))
+        .limit(1000);
+
+      // Get user's conversations
+      const userConversations = await db
+        .select()
+        .from(chatConversations)
+        .where(eq(chatConversations.userId, input.userId))
+        .limit(1000);
+
+      return {
+        success: true,
+        exportDate: new Date().toISOString(),
+        user: safeUser,
+        tasks: userTasks,
+        projects: userProjects,
+        conversations: userConversations,
+      };
     }),
 });
