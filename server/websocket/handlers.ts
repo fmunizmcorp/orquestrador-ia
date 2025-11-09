@@ -105,7 +105,6 @@ export async function handleChatSend(
       conversationId: data.conversationId || 1,
       role: 'user',
       content: data.message,
-      timestamp: new Date(),
     });
 
     const messageId = result[0]?.insertId || result.insertId;
@@ -121,7 +120,7 @@ export async function handleChatSend(
         id: userMessage.id,
         role: 'user',
         content: userMessage.content,
-        timestamp: userMessage.timestamp.toISOString(),
+        timestamp: userMessage.createdAt.toISOString(),
       },
     }));
 
@@ -129,7 +128,7 @@ export async function handleChatSend(
     const history = await db.select()
       .from(chatMessages)
       .where(eq(chatMessages.conversationId, data.conversationId || 1))
-      .orderBy(desc(chatMessages.timestamp))
+      .orderBy(desc(chatMessages.createdAt))
       .limit(10);
 
     // Inverter para ordem cronológica
@@ -182,7 +181,6 @@ export async function handleChatSend(
       conversationId: data.conversationId || 1,
       role: 'assistant',
       content: fullResponse || 'Desculpe, não consegui gerar uma resposta.',
-      timestamp: new Date(),
     });
 
     const assistantMessageId = result2[0]?.insertId || result2.insertId;
@@ -198,7 +196,7 @@ export async function handleChatSend(
         id: assistantMessage.id,
         role: 'assistant',
         content: assistantMessage.content,
-        timestamp: assistantMessage.timestamp.toISOString(),
+        timestamp: assistantMessage.createdAt.toISOString(),
       },
     }));
 
@@ -222,7 +220,7 @@ export async function handleChatHistory(
     const history = await db.select()
       .from(chatMessages)
       .where(eq(chatMessages.conversationId, data.conversationId || 1))
-      .orderBy(desc(chatMessages.timestamp))
+      .orderBy(desc(chatMessages.createdAt))
       .limit(data.limit || 50);
 
     // Inverter para ordem cronológica
@@ -230,7 +228,7 @@ export async function handleChatHistory(
       id: msg.id,
       role: msg.role,
       content: msg.content,
-      timestamp: msg.timestamp.toISOString(),
+      timestamp: msg.createdAt.toISOString(),
     }));
 
     ws.send(JSON.stringify({
