@@ -21,6 +21,7 @@ import { servicesRouter } from './routers/services.js';
 import { monitoringRouter } from './routers/monitoring.js';
 import { workflowsRouter } from './routers/workflows.js';
 import { templatesRouter } from './routers/templates.js';
+import { knowledgebaseRouter } from './routers/knowledgebase.js';
 
 /**
  * Main application router
@@ -68,6 +69,9 @@ export const appRouter = router({
 
   // SPRINT 14 - Template Management (14 endpoints)
   templates: templatesRouter,
+
+  // SPRINT 15 - Knowledge Base (16 endpoints)
+  knowledgebase: knowledgebaseRouter,
 });
 
 /**
@@ -77,25 +81,26 @@ export type AppRouter = typeof appRouter;
 
 /**
  * ✅ Router Statistics - COMPLETE
- * - Total Routers: 14
- * - Total Endpoints: 200
- * - Coverage: Sprints 4, 5, 7, 8, 9, 10, 11, 12, 13, 14
+ * - Total Routers: 15
+ * - Total Endpoints: 216
+ * - Coverage: Sprints 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15
  * 
  * Endpoints by Router:
- * 1. auth         - 5 endpoints   (login, register, verify, refresh, logout)
- * 2. users        - 8 endpoints   (profile, update, search, preferences)
- * 3. teams        - 9 endpoints   (CRUD, members management)
- * 4. projects     - 10 endpoints  (CRUD, stats, archive, duplicate)
- * 5. tasks        - 16 endpoints  (CRUD, subtasks, dependencies, orchestration)
- * 6. chat         - 15 endpoints  (conversations, messages, attachments, reactions)
- * 7. prompts      - 12 endpoints  (CRUD, versions, search, revert)
- * 8. models       - 10 endpoints  (CRUD, specialized AIs)
- * 9. lmstudio     - 12 endpoints  (list, load, generate, benchmark, compare)
- * 10. training    - 22 endpoints  (datasets, jobs, evaluation, metrics)
- * 11. services    - 35 endpoints  (GitHub, Gmail, Drive, Sheets, OAuth, credentials)
- * 12. monitoring  - 14 endpoints  (metrics, health, logs, alerts)
- * 13. workflows   - 18 endpoints  (CRUD, execute, validate, templates, import/export)
- * 14. templates   - 14 endpoints  (CRUD, use, validate, import/export, popular)
+ * 1. auth          - 5 endpoints   (login, register, verify, refresh, logout)
+ * 2. users         - 8 endpoints   (profile, update, search, preferences)
+ * 3. teams         - 9 endpoints   (CRUD, members management)
+ * 4. projects      - 10 endpoints  (CRUD, stats, archive, duplicate)
+ * 5. tasks         - 16 endpoints  (CRUD, subtasks, dependencies, orchestration)
+ * 6. chat          - 15 endpoints  (conversations, messages, attachments, reactions)
+ * 7. prompts       - 12 endpoints  (CRUD, versions, search, revert)
+ * 8. models        - 10 endpoints  (CRUD, specialized AIs)
+ * 9. lmstudio      - 12 endpoints  (list, load, generate, benchmark, compare)
+ * 10. training     - 22 endpoints  (datasets, jobs, evaluation, metrics)
+ * 11. services     - 35 endpoints  (GitHub, Gmail, Drive, Sheets, OAuth, credentials)
+ * 12. monitoring   - 14 endpoints  (metrics, health, logs, alerts)
+ * 13. workflows    - 18 endpoints  (CRUD, execute, validate, templates, import/export)
+ * 14. templates    - 14 endpoints  (CRUD, use, validate, import/export, popular)
+ * 15. knowledgebase - 16 endpoints (CRUD, search, sources, tags, similar, import/export)
  * 
- * TOTAL: 200 ENDPOINTS ✅
+ * TOTAL: 216 ENDPOINTS ✅
  */
