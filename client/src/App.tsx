@@ -26,6 +26,7 @@ import Monitoring from './pages/Monitoring';
 import Settings from './pages/Settings';
 import Terminal from './pages/Terminal';
 import ModelTraining from './pages/ModelTraining';
+import LMStudio from './pages/LMStudio';
 import { Analytics } from './pages/Analytics';
 import { WorkflowBuilder } from './pages/WorkflowBuilder';
 
@@ -65,6 +66,7 @@ function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/terminal" element={<Terminal />} />
             <Route path="/model-training" element={<ModelTraining />} />
+            <Route path="/lmstudio" element={<LMStudio />} />
             <Route path="/analytics" element={<Analytics />} />
           </Route>
         </Routes>
