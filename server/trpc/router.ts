@@ -22,6 +22,7 @@ import { monitoringRouter } from './routers/monitoring.js';
 import { workflowsRouter } from './routers/workflows.js';
 import { templatesRouter } from './routers/templates.js';
 import { knowledgebaseRouter } from './routers/knowledgebase.js';
+import { settingsRouter } from './routers/settings.js';
 
 /**
  * Main application router
@@ -72,6 +73,9 @@ export const appRouter = router({
 
   // SPRINT 15 - Knowledge Base (16 endpoints)
   knowledgebase: knowledgebaseRouter,
+
+  // SPRINT 16 - System Settings (25 endpoints)
+  settings: settingsRouter,
 });
 
 /**
@@ -81,9 +85,9 @@ export type AppRouter = typeof appRouter;
 
 /**
  * ✅ Router Statistics - COMPLETE
- * - Total Routers: 15
- * - Total Endpoints: 216
- * - Coverage: Sprints 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15
+ * - Total Routers: 16
+ * - Total Endpoints: 241
+ * - Coverage: Sprints 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
  * 
  * Endpoints by Router:
  * 1. auth          - 5 endpoints   (login, register, verify, refresh, logout)
@@ -101,6 +105,7 @@ export type AppRouter = typeof appRouter;
  * 13. workflows    - 18 endpoints  (CRUD, execute, validate, templates, import/export)
  * 14. templates    - 14 endpoints  (CRUD, use, validate, import/export, popular)
  * 15. knowledgebase - 16 endpoints (CRUD, search, sources, tags, similar, import/export)
+ * 16. settings     - 25 endpoints  (system config, notifications, security, providers, backups)
  * 
- * TOTAL: 216 ENDPOINTS ✅
+ * TOTAL: 241 ENDPOINTS ✅
  */

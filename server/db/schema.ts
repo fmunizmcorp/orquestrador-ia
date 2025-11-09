@@ -1057,6 +1057,98 @@ export const promptVersionsRelations = relations(promptVersions, ({ one }) => ({
 }));
 
 // ==================================================
+// TABELAS DE CONFIGURAÇÕES DO SISTEMA
+// ==================================================
+
+export const systemSettings = mysqlTable('systemSettings', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').references(() => users.id, { onDelete: 'cascade' }),
+  settingKey: varchar('settingKey', { length: 100 }).notNull(),
+  settingValue: json('settingValue').notNull(),
+  settingType: mysqlEnum('settingType', ['system', 'user', 'ai_provider', 'notification', 'security', 'integration']).default('user'),
+  description: text('description'),
+  isPublic: boolean('isPublic').default(false),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  settingKeyIdx: index('idx_settingKey').on(table.settingKey),
+  settingTypeIdx: index('idx_settingType').on(table.settingType),
+  userKeyIdx: uniqueIndex('idx_user_key').on(table.userId, table.settingKey),
+}));
+
+export const notificationPreferences = mysqlTable('notificationPreferences', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  channel: mysqlEnum('channel', ['email', 'push', 'slack', 'discord', 'telegram']).notNull(),
+  eventType: varchar('eventType', { length: 100 }).notNull(),
+  isEnabled: boolean('isEnabled').default(true),
+  config: json('config'),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  userIdIdx: index('idx_userId').on(table.userId),
+  channelIdx: index('idx_channel').on(table.channel),
+  eventTypeIdx: index('idx_eventType').on(table.eventType),
+  userChannelEventIdx: uniqueIndex('idx_user_channel_event').on(table.userId, table.channel, table.eventType),
+}));
+
+export const securitySettings = mysqlTable('securitySettings', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  twoFactorEnabled: boolean('twoFactorEnabled').default(false),
+  twoFactorSecret: text('twoFactorSecret'),
+  backupCodes: json('backupCodes').$type<string[]>(),
+  sessionTimeout: int('sessionTimeout').default(3600),
+  ipWhitelist: json('ipWhitelist').$type<string[]>(),
+  loginNotifications: boolean('loginNotifications').default(true),
+  suspiciousActivityAlerts: boolean('suspiciousActivityAlerts').default(true),
+  createdAt: timestamp('createdAt').defaultNow(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow(),
+}, (table) => ({
+  userIdIdx: uniqueIndex('idx_userId').on(table.userId),
+}));
+
+export const systemBackups = mysqlTable('systemBackups', {
+  id: int('id').primaryKey().autoincrement(),
+  backupType: mysqlEnum('backupType', ['full', 'incremental', 'differential', 'database', 'files']).notNull(),
+  status: mysqlEnum('status', ['pending', 'in_progress', 'completed', 'failed']).default('pending'),
+  filePath: varchar('filePath', { length: 1000 }),
+  fileSize: bigint('fileSize', { mode: 'number' }),
+  duration: int('duration'),
+  errorMessage: text('errorMessage'),
+  metadata: json('metadata'),
+  createdAt: timestamp('createdAt').defaultNow(),
+  completedAt: timestamp('completedAt'),
+}, (table) => ({
+  backupTypeIdx: index('idx_backupType').on(table.backupType),
+  statusIdx: index('idx_status').on(table.status),
+  createdAtIdx: index('idx_createdAt').on(table.createdAt),
+}));
+
+// Relations para Settings
+export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
+  user: one(users, {
+    fields: [systemSettings.userId],
+    references: [users.id],
+  }),
+}));
+
+export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [notificationPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
+export const securitySettingsRelations = relations(securitySettings, ({ one }) => ({
+  user: one(users, {
+    fields: [securitySettings.userId],
+    references: [users.id],
+  }),
+}));
+
+// ==================================================
 // ALIASES FOR ROUTER COMPATIBILITY
 // ==================================================
 
