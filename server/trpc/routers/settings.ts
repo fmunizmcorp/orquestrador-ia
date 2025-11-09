@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { router, publicProcedure } from '../trpc';
-import { db } from '../../db';
+import { router, publicProcedure } from '../trpc.js';
+import { db } from '../../db/index.js';
 import {
   systemSettings,
   notificationPreferences,
@@ -10,7 +10,7 @@ import {
   aiProviders,
   externalServices,
   apiCredentials,
-} from '../../db/schema';
+} from '../../db/schema.js';
 import { eq, and, desc, count, sql, like, or } from 'drizzle-orm';
 
 // ==================================================

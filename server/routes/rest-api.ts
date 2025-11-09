@@ -4,7 +4,7 @@
 
 import { Router, Request, Response } from 'express';
 import { db } from '../db/index.js';
-import { projects, teams, prompts, tasks } from '../db/schema.js';
+import { projects, teams, prompts, tasks, aiModels } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 
 const router = Router();
@@ -154,6 +154,17 @@ router.post('/tasks', async (req: Request, res: Response) => {
     
     console.log('✅ REST: Task created', id);
     res.status(201).json(successResponse(task, 'Task created'));
+  } catch (error) {
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// GET /api/models
+router.get('/models', async (req: Request, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 50;
+    const allModels = await db.select().from(aiModels).where(eq(aiModels.isActive, true)).limit(limit);
+    res.json(successResponse(allModels));
   } catch (error) {
     res.status(500).json(errorResponse(error));
   }
