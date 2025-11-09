@@ -19,6 +19,7 @@ import { lmstudioRouter } from './routers/lmstudio.js';
 import { trainingRouter } from './routers/training.js';
 import { servicesRouter } from './routers/services.js';
 import { monitoringRouter } from './routers/monitoring.js';
+import { workflowsRouter } from './routers/workflows.js';
 
 /**
  * Main application router
@@ -60,6 +61,9 @@ export const appRouter = router({
 
   // SPRINT 13 - System Monitoring (14 endpoints)
   monitoring: monitoringRouter,
+
+  // SPRINT 12 - Workflow Management (18 endpoints)
+  workflows: workflowsRouter,
 });
 
 /**
@@ -69,9 +73,9 @@ export type AppRouter = typeof appRouter;
 
 /**
  * ✅ Router Statistics - COMPLETE
- * - Total Routers: 12
- * - Total Endpoints: 168+
- * - Coverage: Sprints 4, 5, 7, 8, 9, 10, 11, 13
+ * - Total Routers: 13
+ * - Total Endpoints: 186+
+ * - Coverage: Sprints 4, 5, 7, 8, 9, 10, 11, 12, 13
  * 
  * Endpoints by Router:
  * 1. auth         - 5 endpoints   (login, register, verify, refresh, logout)
@@ -86,6 +90,7 @@ export type AppRouter = typeof appRouter;
  * 10. training    - 22 endpoints  (datasets, jobs, evaluation, metrics)
  * 11. services    - 35 endpoints  (GitHub, Gmail, Drive, Sheets, OAuth, credentials)
  * 12. monitoring  - 14 endpoints  (metrics, health, logs, alerts)
+ * 13. workflows   - 18 endpoints  (CRUD, execute, validate, templates, import/export)
  * 
- * TOTAL: 168 ENDPOINTS ✅
+ * TOTAL: 186 ENDPOINTS ✅
  */
