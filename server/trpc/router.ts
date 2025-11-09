@@ -20,6 +20,7 @@ import { trainingRouter } from './routers/training.js';
 import { servicesRouter } from './routers/services.js';
 import { monitoringRouter } from './routers/monitoring.js';
 import { workflowsRouter } from './routers/workflows.js';
+import { templatesRouter } from './routers/templates.js';
 
 /**
  * Main application router
@@ -64,6 +65,9 @@ export const appRouter = router({
 
   // SPRINT 12 - Workflow Management (18 endpoints)
   workflows: workflowsRouter,
+
+  // SPRINT 14 - Template Management (14 endpoints)
+  templates: templatesRouter,
 });
 
 /**
@@ -73,9 +77,9 @@ export type AppRouter = typeof appRouter;
 
 /**
  * ✅ Router Statistics - COMPLETE
- * - Total Routers: 13
- * - Total Endpoints: 186+
- * - Coverage: Sprints 4, 5, 7, 8, 9, 10, 11, 12, 13
+ * - Total Routers: 14
+ * - Total Endpoints: 200
+ * - Coverage: Sprints 4, 5, 7, 8, 9, 10, 11, 12, 13, 14
  * 
  * Endpoints by Router:
  * 1. auth         - 5 endpoints   (login, register, verify, refresh, logout)
@@ -91,6 +95,7 @@ export type AppRouter = typeof appRouter;
  * 11. services    - 35 endpoints  (GitHub, Gmail, Drive, Sheets, OAuth, credentials)
  * 12. monitoring  - 14 endpoints  (metrics, health, logs, alerts)
  * 13. workflows   - 18 endpoints  (CRUD, execute, validate, templates, import/export)
+ * 14. templates   - 14 endpoints  (CRUD, use, validate, import/export, popular)
  * 
- * TOTAL: 186 ENDPOINTS ✅
+ * TOTAL: 200 ENDPOINTS ✅
  */
