@@ -157,7 +157,7 @@ const Layout = () => {
                 </button>
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                v3.4.0 - Sistema de Orquestração
+                v3.5.2 - Sistema de Orquestração
               </div>
             </div>
           ) : (
