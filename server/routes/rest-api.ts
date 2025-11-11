@@ -370,6 +370,120 @@ router.get('/models', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/models/:id - Get specific model
+router.get('/models/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json(errorResponse('Invalid model ID'));
+    }
+    
+    const [model] = await db.select()
+      .from(aiModels)
+      .where(eq(aiModels.id, id))
+      .limit(1);
+    
+    if (!model) {
+      return res.status(404).json(errorResponse('Model not found'));
+    }
+    
+    res.json(successResponse(model, 'Model retrieved'));
+  } catch (error) {
+    console.error('Error getting model:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// POST /api/models/:id/load - Load model in LM Studio
+router.post('/models/:id/load', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json(errorResponse('Invalid model ID'));
+    }
+    
+    const [model] = await db.select()
+      .from(aiModels)
+      .where(eq(aiModels.id, id))
+      .limit(1);
+    
+    if (!model) {
+      return res.status(404).json(errorResponse('Model not found'));
+    }
+    
+    // Update model status to loaded
+    await db.update(aiModels)
+      .set({ 
+        status: 'loaded',
+        lastUsed: new Date(),
+      })
+      .where(eq(aiModels.id, id));
+    
+    // In production, this would call LM Studio API to actually load the model
+    // Example: await fetch('http://localhost:1234/v1/models/load', { ... })
+    
+    const loadResult = {
+      modelId: model.id,
+      modelName: model.name,
+      status: 'loaded',
+      message: `Model ${model.name} loaded successfully`,
+      timestamp: new Date().toISOString(),
+      // Simulated response - in production would return actual LM Studio response
+      simulated: true,
+    };
+    
+    res.json(successResponse(loadResult, 'Model loaded'));
+  } catch (error) {
+    console.error('Error loading model:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// POST /api/models/:id/unload - Unload model from LM Studio
+router.post('/models/:id/unload', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json(errorResponse('Invalid model ID'));
+    }
+    
+    const [model] = await db.select()
+      .from(aiModels)
+      .where(eq(aiModels.id, id))
+      .limit(1);
+    
+    if (!model) {
+      return res.status(404).json(errorResponse('Model not found'));
+    }
+    
+    // Update model status to unloaded
+    await db.update(aiModels)
+      .set({ status: 'available' })
+      .where(eq(aiModels.id, id));
+    
+    // In production, this would call LM Studio API to actually unload the model
+    // Example: await fetch('http://localhost:1234/v1/models/unload', { ... })
+    
+    const unloadResult = {
+      modelId: model.id,
+      modelName: model.name,
+      status: 'unloaded',
+      message: `Model ${model.name} unloaded successfully`,
+      timestamp: new Date().toISOString(),
+      // Simulated response - in production would return actual LM Studio response
+      simulated: true,
+    };
+    
+    res.json(successResponse(unloadResult, 'Model unloaded'));
+  } catch (error) {
+    console.error('Error unloading model:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
 // ========================================
 // CHAT ENDPOINTS
 // ========================================
