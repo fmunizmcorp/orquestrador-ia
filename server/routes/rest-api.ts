@@ -442,6 +442,36 @@ router.get('/chat/:id', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/chat/:id/messages - List conversation messages
+router.get('/chat/:id/messages', async (req: Request, res: Response) => {
+  try {
+    const conversationId = parseInt(req.params.id);
+    const limit = parseInt(req.query.limit as string) || 100;
+    
+    // Check if conversation exists
+    const [conversation] = await db.select()
+      .from(conversations)
+      .where(eq(conversations.id, conversationId))
+      .limit(1);
+    
+    if (!conversation) {
+      return res.status(404).json(errorResponse('Conversation not found'));
+    }
+    
+    // Get messages
+    const conversationMessages = await db.select()
+      .from(messages)
+      .where(eq(messages.conversationId, conversationId))
+      .orderBy(asc(messages.createdAt))
+      .limit(limit);
+    
+    res.json(successResponse(conversationMessages, 'Messages retrieved'));
+  } catch (error) {
+    console.error('Error getting messages:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
 // POST /api/chat/:id/messages - Send message
 router.post('/chat/:id/messages', async (req: Request, res: Response) => {
   try {
