@@ -6,6 +6,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../db/index.js';
 import { projects, teams, prompts, tasks, aiModels, conversations, messages, aiWorkflows } from '../db/schema.js';
 import { eq, desc, asc, and, sql } from 'drizzle-orm';
+import { lmStudio } from '../lib/lm-studio.js';
 
 const router = Router();
 
@@ -596,6 +597,17 @@ router.post('/chat/:id/messages', async (req: Request, res: Response) => {
       return res.status(400).json(errorResponse('Content is required'));
     }
     
+    // Get conversation for system prompt
+    const [conversation] = await db.select()
+      .from(conversations)
+      .where(eq(conversations.id, conversationId))
+      .limit(1);
+    
+    if (!conversation) {
+      return res.status(404).json(errorResponse('Conversation not found'));
+    }
+    
+    // Save user message
     const result: any = await db.insert(messages).values({
       conversationId,
       content,
@@ -603,17 +615,73 @@ router.post('/chat/:id/messages', async (req: Request, res: Response) => {
     });
     
     const msgId = result[0]?.insertId || result.insertId;
-    const [message] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
+    const [userMessage] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
+    
+    // Generate AI response if user message
+    let aiResponse = null;
+    if (role === 'user') {
+      try {
+        // Check if LM Studio is available
+        const isLMStudioAvailable = await lmStudio.isAvailable();
+        
+        let aiContent: string;
+        
+        if (isLMStudioAvailable) {
+          // Get conversation history for context
+          const history = await db.select()
+            .from(messages)
+            .where(eq(messages.conversationId, conversationId))
+            .orderBy(asc(messages.createdAt))
+            .limit(10);
+          
+          // Build messages array for LM Studio
+          const lmMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
+          
+          if (conversation.systemPrompt) {
+            lmMessages.push({ role: 'system', content: conversation.systemPrompt });
+          }
+          
+          history.forEach(msg => {
+            if (msg.role === 'user' || msg.role === 'assistant') {
+              lmMessages.push({ role: msg.role, content: msg.content });
+            }
+          });
+          
+          // Call LM Studio
+          aiContent = await lmStudio.chatCompletion({ messages: lmMessages });
+        } else {
+          // Fallback to simulated response
+          aiContent = `[LM Studio não disponível] Resposta simulada para: "${content.substring(0, 50)}..."`;
+        }
+        
+        // Save AI response
+        const aiResult: any = await db.insert(messages).values({
+          conversationId,
+          content: aiContent,
+          role: 'assistant',
+        });
+        
+        const aiMsgId = aiResult[0]?.insertId || aiResult.insertId;
+        [aiResponse] = await db.select().from(messages).where(eq(messages.id, aiMsgId)).limit(1);
+        
+      } catch (aiError) {
+        console.error('Error generating AI response:', aiError);
+        // Continue without AI response - user message is still saved
+      }
+    }
     
     // Update conversation lastMessageAt
     await db.update(conversations)
       .set({ 
         lastMessageAt: new Date(),
-        messageCount: sql`${conversations.messageCount} + 1`,
+        messageCount: sql`${conversations.messageCount} + ${aiResponse ? 2 : 1}`,
       })
       .where(eq(conversations.id, conversationId));
     
-    res.json(successResponse(message, 'Message sent'));
+    res.json(successResponse({ 
+      userMessage, 
+      aiResponse,
+    }, 'Message sent'));
   } catch (error) {
     console.error('Error sending message:', error);
     res.status(500).json(errorResponse(error));
@@ -755,27 +823,70 @@ router.post('/workflows/:id/execute', async (req: Request, res: Response) => {
       return res.status(400).json(errorResponse('Workflow is not active'));
     }
     
-    // Simulate execution
+    // Execute workflow with real AI calls
     const steps = (workflow.steps as any[]) || [];
-    const executionSteps = steps.map(step => ({
-      stepId: step.id,
-      status: 'completed',
-      startedAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
-      result: {
+    const isLMStudioAvailable = await lmStudio.isAvailable();
+    
+    const executionSteps = [];
+    
+    for (const step of steps) {
+      const startTime = new Date().toISOString();
+      let stepStatus = 'completed';
+      let stepResult: any = {
         message: `Step ${step.name} executed successfully`,
         type: step.type,
-      },
-    }));
+      };
+      
+      // If step requires AI execution
+      if (step.type === 'ai_prompt' || step.type === 'ai_chat' || step.type === 'llm') {
+        try {
+          if (isLMStudioAvailable && step.prompt) {
+            // Execute with real LM Studio
+            const aiOutput = await lmStudio.complete(step.prompt, step.systemPrompt);
+            stepResult = {
+              ...stepResult,
+              aiOutput,
+              message: `AI step executed successfully`,
+            };
+          } else {
+            // Fallback
+            stepResult = {
+              ...stepResult,
+              message: `Step ${step.name} executed (LM Studio not available)`,
+              simulated: true,
+            };
+          }
+        } catch (stepError: any) {
+          console.error(`Error in workflow step ${step.id}:`, stepError);
+          stepStatus = 'error';
+          stepResult = {
+            ...stepResult,
+            error: stepError.message,
+            message: `Step ${step.name} failed`,
+          };
+        }
+      }
+      
+      executionSteps.push({
+        stepId: step.id,
+        status: stepStatus,
+        startedAt: startTime,
+        completedAt: new Date().toISOString(),
+        result: stepResult,
+      });
+    }
+    
+    const allStepsCompleted = executionSteps.every(s => s.status === 'completed');
     
     const execution = {
       workflowId: workflow.id,
       workflowName: workflow.name,
-      status: 'completed',
+      status: allStepsCompleted ? 'completed' : 'partial',
       startedAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
       steps: executionSteps,
       context,
+      lmStudioAvailable: isLMStudioAvailable,
     };
     
     res.json(successResponse(execution, 'Workflow executed'));
@@ -814,16 +925,37 @@ router.post('/prompts/execute', async (req: Request, res: Response) => {
       processedContent = processedContent.replace(regex, String(value));
     });
     
-    // Simulate AI response (in real implementation, call LM Studio)
+    // Execute prompt with LM Studio
+    let output: string;
+    let status: string;
+    
+    try {
+      const isLMStudioAvailable = await lmStudio.isAvailable();
+      
+      if (isLMStudioAvailable) {
+        // Call LM Studio with processed prompt
+        output = await lmStudio.complete(processedContent);
+        status = 'completed';
+      } else {
+        // Fallback to simulated response
+        output = `[LM Studio não disponível] Prompt executado: "${prompt.title}"`;
+        status = 'simulated';
+      }
+    } catch (aiError: any) {
+      console.error('Error calling LM Studio:', aiError);
+      output = `[Erro na execução] ${aiError.message}`;
+      status = 'error';
+    }
+    
     const execution = {
       promptId: prompt.id,
       promptTitle: prompt.title,
       modelId,
       input: processedContent,
-      output: `[Simulated response for prompt: "${prompt.title}". In production, this would call LM Studio API.]`,
+      output,
       variables,
       executedAt: new Date().toISOString(),
-      status: 'completed',
+      status,
     };
     
     // Increment use count
