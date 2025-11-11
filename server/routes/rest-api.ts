@@ -205,8 +205,21 @@ router.put('/projects/:id', async (req: Request, res: Response) => {
     if (name !== undefined) updateData.name = name.trim();
     if (description !== undefined) updateData.description = description;
     if (teamId !== undefined) updateData.teamId = teamId;
-    if (status !== undefined) updateData.status = status;
-    if (progress !== undefined) updateData.progress = progress;
+    if (status !== undefined) {
+      updateData.status = status;
+      // Auto-fill completedAt when status changes to 'completed'
+      if (status === 'completed' || status === 'done') {
+        updateData.completedAt = new Date();
+      }
+    }
+    if (progress !== undefined) {
+      updateData.progress = progress;
+      // Auto-complete if progress reaches 100%
+      if (progress >= 100 && !updateData.status) {
+        updateData.status = 'completed';
+        updateData.completedAt = new Date();
+      }
+    }
     
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json(errorResponse({ message: 'No fields to update' }, 400));
@@ -360,7 +373,13 @@ router.put('/tasks/:id', async (req: Request, res: Response) => {
     if (title !== undefined) updateData.title = title.trim();
     if (description !== undefined) updateData.description = description;
     if (projectId !== undefined) updateData.projectId = projectId;
-    if (status !== undefined) updateData.status = status;
+    if (status !== undefined) {
+      updateData.status = status;
+      // Auto-fill completedAt when status changes to 'completed'
+      if (status === 'completed' || status === 'done') {
+        updateData.completedAt = new Date();
+      }
+    }
     if (priority !== undefined) updateData.priority = priority;
     
     if (Object.keys(updateData).length === 0) {
@@ -368,6 +387,38 @@ router.put('/tasks/:id', async (req: Request, res: Response) => {
     }
     
     await db.update(tasks).set(updateData).where(eq(tasks.id, id));
+    
+    // Auto-update project progress if task has projectId
+    if (projectId !== undefined && projectId) {
+      try {
+        // Get all tasks for this project
+        const projectTasks = await db.select()
+          .from(tasks)
+          .where(eq(tasks.projectId, projectId));
+        
+        if (projectTasks.length > 0) {
+          const completedTasks = projectTasks.filter(t => 
+            t.status === 'completed' || t.status === 'done'
+          ).length;
+          
+          const calculatedProgress = Math.round((completedTasks / projectTasks.length) * 100);
+          
+          // Update project progress
+          await db.update(projects)
+            .set({ 
+              progress: calculatedProgress,
+              ...(calculatedProgress >= 100 ? { 
+                status: 'completed', 
+                completedAt: new Date() 
+              } : {})
+            })
+            .where(eq(projects.id, projectId));
+        }
+      } catch (progressError) {
+        console.error('Error updating project progress:', progressError);
+        // Don't fail task update if progress calculation fails
+      }
+    }
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
     
     if (!task) return res.status(404).json(errorResponse({ message: 'Task not found' }, 404));
@@ -932,15 +983,27 @@ router.post('/workflows/:id/execute', async (req: Request, res: Response) => {
     }
     
     const allStepsCompleted = executionSteps.every(s => s.status === 'completed');
+    const endTime = new Date();
+    
+    // Preserve metadata from workflow
+    const preservedMetadata = {
+      workflowDescription: workflow.description,
+      workflowCreatedAt: workflow.createdAt,
+      workflowUpdatedAt: workflow.updatedAt,
+      totalSteps: steps.length,
+      completedSteps: executionSteps.filter(s => s.status === 'completed').length,
+      errorSteps: executionSteps.filter(s => s.status === 'error').length,
+    };
     
     const execution = {
       workflowId: workflow.id,
       workflowName: workflow.name,
       status: allStepsCompleted ? 'completed' : 'partial',
       startedAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
+      completedAt: endTime.toISOString(),
       steps: executionSteps,
       context,
+      metadata: preservedMetadata,
       lmStudioAvailable: isLMStudioAvailable,
     };
     
