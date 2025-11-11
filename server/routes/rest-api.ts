@@ -4,8 +4,8 @@
 
 import { Router, Request, Response } from 'express';
 import { db } from '../db/index.js';
-import { projects, teams, prompts, tasks, aiModels } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { projects, teams, prompts, tasks, aiModels, conversations, messages, aiWorkflows } from '../db/schema.js';
+import { eq, desc, asc, and, sql } from 'drizzle-orm';
 
 const router = Router();
 
@@ -366,6 +366,330 @@ router.get('/models', async (req: Request, res: Response) => {
     const allModels = await db.select().from(aiModels).where(eq(aiModels.isActive, true)).limit(limit);
     res.json(successResponse(allModels));
   } catch (error) {
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// ========================================
+// CHAT ENDPOINTS
+// ========================================
+
+// GET /api/chat - List conversations
+router.get('/chat', async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.query.userId as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    
+    const userConversations = await db.select()
+      .from(conversations)
+      .where(eq(conversations.userId, userId))
+      .orderBy(desc(conversations.lastMessageAt))
+      .limit(limit);
+    
+    res.json(successResponse(userConversations, 'Conversations retrieved'));
+  } catch (error) {
+    console.error('Error listing conversations:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// POST /api/chat - Create conversation
+router.post('/chat', async (req: Request, res: Response) => {
+  try {
+    const { userId = 1, title = 'Nova Conversa', modelId = 1, systemPrompt = '' } = req.body;
+    
+    const result: any = await db.insert(conversations).values({
+      userId,
+      title,
+      modelId,
+      systemPrompt,
+    });
+    
+    const convId = result[0]?.insertId || result.insertId;
+    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, convId)).limit(1);
+    
+    res.json(successResponse(conversation, 'Conversation created'));
+  } catch (error) {
+    console.error('Error creating conversation:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// GET /api/chat/:id - Get conversation with messages
+router.get('/chat/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const [conversation] = await db.select()
+      .from(conversations)
+      .where(eq(conversations.id, id))
+      .limit(1);
+    
+    if (!conversation) {
+      return res.status(404).json(errorResponse('Conversation not found'));
+    }
+    
+    const conversationMessages = await db.select()
+      .from(messages)
+      .where(eq(messages.conversationId, id))
+      .orderBy(asc(messages.createdAt))
+      .limit(100);
+    
+    res.json(successResponse({ conversation, messages: conversationMessages }));
+  } catch (error) {
+    console.error('Error getting conversation:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// POST /api/chat/:id/messages - Send message
+router.post('/chat/:id/messages', async (req: Request, res: Response) => {
+  try {
+    const conversationId = parseInt(req.params.id);
+    const { content, role = 'user' } = req.body;
+    
+    if (!content) {
+      return res.status(400).json(errorResponse('Content is required'));
+    }
+    
+    const result: any = await db.insert(messages).values({
+      conversationId,
+      content,
+      role,
+    });
+    
+    const msgId = result[0]?.insertId || result.insertId;
+    const [message] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
+    
+    // Update conversation lastMessageAt
+    await db.update(conversations)
+      .set({ 
+        lastMessageAt: new Date(),
+        messageCount: sql`${conversations.messageCount} + 1`,
+      })
+      .where(eq(conversations.id, conversationId));
+    
+    res.json(successResponse(message, 'Message sent'));
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// ========================================
+// WORKFLOWS ENDPOINTS
+// ========================================
+
+// GET /api/workflows - List workflows
+router.get('/workflows', async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.query.userId as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const isActive = req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined;
+    
+    const conditions = [eq(aiWorkflows.userId, userId)];
+    if (isActive !== undefined) {
+      conditions.push(eq(aiWorkflows.isActive, isActive));
+    }
+    
+    const workflows = await db.select()
+      .from(aiWorkflows)
+      .where(and(...conditions))
+      .orderBy(desc(aiWorkflows.createdAt))
+      .limit(limit);
+    
+    res.json(successResponse(workflows, 'Workflows retrieved'));
+  } catch (error) {
+    console.error('Error listing workflows:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// POST /api/workflows - Create workflow
+router.post('/workflows', async (req: Request, res: Response) => {
+  try {
+    const { userId = 1, name, description = '', steps = [], isActive = true } = req.body;
+    
+    if (!name) {
+      return res.status(400).json(errorResponse('Name is required'));
+    }
+    
+    const result: any = await db.insert(aiWorkflows).values({
+      userId,
+      name,
+      description,
+      steps: steps as any,
+      isActive,
+    });
+    
+    const workflowId = result[0]?.insertId || result.insertId;
+    const [workflow] = await db.select().from(aiWorkflows).where(eq(aiWorkflows.id, workflowId)).limit(1);
+    
+    res.json(successResponse(workflow, 'Workflow created'));
+  } catch (error) {
+    console.error('Error creating workflow:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// GET /api/workflows/:id - Get workflow
+router.get('/workflows/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const [workflow] = await db.select()
+      .from(aiWorkflows)
+      .where(eq(aiWorkflows.id, id))
+      .limit(1);
+    
+    if (!workflow) {
+      return res.status(404).json(errorResponse('Workflow not found'));
+    }
+    
+    res.json(successResponse(workflow));
+  } catch (error) {
+    console.error('Error getting workflow:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// PUT /api/workflows/:id - Update workflow
+router.put('/workflows/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { name, description, steps, isActive } = req.body;
+    
+    const updateData: any = { updatedAt: new Date() };
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (steps !== undefined) updateData.steps = steps;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    
+    await db.update(aiWorkflows)
+      .set(updateData)
+      .where(eq(aiWorkflows.id, id));
+    
+    const [workflow] = await db.select().from(aiWorkflows).where(eq(aiWorkflows.id, id)).limit(1);
+    
+    res.json(successResponse(workflow, 'Workflow updated'));
+  } catch (error) {
+    console.error('Error updating workflow:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// DELETE /api/workflows/:id - Delete workflow
+router.delete('/workflows/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    await db.delete(aiWorkflows).where(eq(aiWorkflows.id, id));
+    
+    res.json(successResponse({ id }, 'Workflow deleted'));
+  } catch (error) {
+    console.error('Error deleting workflow:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// POST /api/workflows/:id/execute - Execute workflow
+router.post('/workflows/:id/execute', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { context = {} } = req.body;
+    
+    const [workflow] = await db.select()
+      .from(aiWorkflows)
+      .where(eq(aiWorkflows.id, id))
+      .limit(1);
+    
+    if (!workflow) {
+      return res.status(404).json(errorResponse('Workflow not found'));
+    }
+    
+    if (!workflow.isActive) {
+      return res.status(400).json(errorResponse('Workflow is not active'));
+    }
+    
+    // Simulate execution
+    const steps = (workflow.steps as any[]) || [];
+    const executionSteps = steps.map(step => ({
+      stepId: step.id,
+      status: 'completed',
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      result: {
+        message: `Step ${step.name} executed successfully`,
+        type: step.type,
+      },
+    }));
+    
+    const execution = {
+      workflowId: workflow.id,
+      workflowName: workflow.name,
+      status: 'completed',
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      steps: executionSteps,
+      context,
+    };
+    
+    res.json(successResponse(execution, 'Workflow executed'));
+  } catch (error) {
+    console.error('Error executing workflow:', error);
+    res.status(500).json(errorResponse(error));
+  }
+});
+
+// ========================================
+// PROMPTS EXECUTION ENDPOINT
+// ========================================
+
+// POST /api/prompts/execute - Execute prompt
+router.post('/prompts/execute', async (req: Request, res: Response) => {
+  try {
+    const { promptId, variables = {}, modelId = 1 } = req.body;
+    
+    if (!promptId) {
+      return res.status(400).json(errorResponse('promptId is required'));
+    }
+    
+    const [prompt] = await db.select()
+      .from(prompts)
+      .where(eq(prompts.id, promptId))
+      .limit(1);
+    
+    if (!prompt) {
+      return res.status(404).json(errorResponse('Prompt not found'));
+    }
+    
+    // Replace variables in prompt content
+    let processedContent = prompt.content || '';
+    Object.entries(variables).forEach(([key, value]) => {
+      const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+      processedContent = processedContent.replace(regex, String(value));
+    });
+    
+    // Simulate AI response (in real implementation, call LM Studio)
+    const execution = {
+      promptId: prompt.id,
+      promptTitle: prompt.title,
+      modelId,
+      input: processedContent,
+      output: `[Simulated response for prompt: "${prompt.title}". In production, this would call LM Studio API.]`,
+      variables,
+      executedAt: new Date().toISOString(),
+      status: 'completed',
+    };
+    
+    // Increment use count
+    await db.update(prompts)
+      .set({ useCount: sql`${prompts.useCount} + 1` })
+      .where(eq(prompts.id, promptId));
+    
+    res.json(successResponse(execution, 'Prompt executed'));
+  } catch (error) {
+    console.error('Error executing prompt:', error);
     res.status(500).json(errorResponse(error));
   }
 });
