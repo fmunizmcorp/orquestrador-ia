@@ -14,8 +14,33 @@ function successResponse(data: any, message?: string) {
   return { success: true, message: message || 'OK', data };
 }
 
-function errorResponse(error: any, status: number = 500) {
-  return { success: false, error: error.message || String(error), status };
+function errorResponse(error: any, status?: number) {
+  // Extract error message
+  let message = typeof error === 'string' ? error : (error.message || String(error));
+  
+  // Never expose database errors
+  if (message.includes('Data truncated') || 
+      message.includes('Duplicate entry') ||
+      message.includes('foreign key constraint') ||
+      message.includes('ER_')) {
+    message = 'Database operation failed';
+  }
+  
+  // Auto-detect status code if not provided
+  if (!status) {
+    if (message.toLowerCase().includes('not found') || 
+        message.toLowerCase().includes('doesn\'t exist')) {
+      status = 404;
+    } else if (message.toLowerCase().includes('required') || 
+               message.toLowerCase().includes('invalid') ||
+               message.toLowerCase().includes('must be')) {
+      status = 400;
+    } else {
+      status = 500;
+    }
+  }
+  
+  return { success: false, error: message, status };
 }
 
 // GET /api/projects
@@ -25,7 +50,8 @@ router.get('/projects', async (req: Request, res: Response) => {
     const allProjects = await db.select().from(projects).where(eq(projects.isActive, true)).limit(limit);
     res.json(successResponse(allProjects));
   } catch (error) {
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -52,7 +78,8 @@ router.post('/projects', async (req: Request, res: Response) => {
     res.status(201).json(successResponse(project, 'Project created'));
   } catch (error) {
     console.error('Error creating project:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -63,7 +90,8 @@ router.get('/teams', async (req: Request, res: Response) => {
     const allTeams = await db.select().from(teams).limit(limit);
     res.json(successResponse(allTeams));
   } catch (error) {
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -85,7 +113,8 @@ router.post('/teams', async (req: Request, res: Response) => {
     console.log('✅ REST: Team created', id);
     res.status(201).json(successResponse(team, 'Team created'));
   } catch (error) {
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -96,7 +125,8 @@ router.get('/prompts', async (req: Request, res: Response) => {
     const allPrompts = await db.select().from(prompts).limit(limit);
     res.json(successResponse(allPrompts));
   } catch (error) {
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -120,7 +150,8 @@ router.post('/prompts', async (req: Request, res: Response) => {
     console.log('✅ REST: Prompt created', id);
     res.status(201).json(successResponse(prompt, 'Prompt created'));
   } catch (error) {
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -131,7 +162,8 @@ router.get('/tasks', async (req: Request, res: Response) => {
     const allTasks = await db.select().from(tasks).limit(limit);
     res.json(successResponse(allTasks));
   } catch (error) {
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -156,7 +188,8 @@ router.post('/tasks', async (req: Request, res: Response) => {
     console.log('✅ REST: Task created', id);
     res.status(201).json(successResponse(task, 'Task created'));
   } catch (error) {
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -188,7 +221,8 @@ router.put('/projects/:id', async (req: Request, res: Response) => {
     res.json(successResponse(project, 'Project updated'));
   } catch (error) {
     console.error('Error updating project:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -207,7 +241,8 @@ router.delete('/projects/:id', async (req: Request, res: Response) => {
     res.json(successResponse({ id }, 'Project deleted'));
   } catch (error) {
     console.error('Error deleting project:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -236,7 +271,8 @@ router.put('/teams/:id', async (req: Request, res: Response) => {
     res.json(successResponse(team, 'Team updated'));
   } catch (error) {
     console.error('Error updating team:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -255,7 +291,8 @@ router.delete('/teams/:id', async (req: Request, res: Response) => {
     res.json(successResponse({ id }, 'Team deleted'));
   } catch (error) {
     console.error('Error deleting team:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -286,7 +323,8 @@ router.put('/prompts/:id', async (req: Request, res: Response) => {
     res.json(successResponse(prompt, 'Prompt updated'));
   } catch (error) {
     console.error('Error updating prompt:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -305,7 +343,8 @@ router.delete('/prompts/:id', async (req: Request, res: Response) => {
     res.json(successResponse({ id }, 'Prompt deleted'));
   } catch (error) {
     console.error('Error deleting prompt:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -337,7 +376,8 @@ router.put('/tasks/:id', async (req: Request, res: Response) => {
     res.json(successResponse(task, 'Task updated'));
   } catch (error) {
     console.error('Error updating task:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -356,7 +396,8 @@ router.delete('/tasks/:id', async (req: Request, res: Response) => {
     res.json(successResponse({ id }, 'Task deleted'));
   } catch (error) {
     console.error('Error deleting task:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -367,7 +408,8 @@ router.get('/models', async (req: Request, res: Response) => {
     const allModels = await db.select().from(aiModels).where(eq(aiModels.isActive, true)).limit(limit);
     res.json(successResponse(allModels));
   } catch (error) {
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -392,7 +434,8 @@ router.get('/models/:id', async (req: Request, res: Response) => {
     res.json(successResponse(model, 'Model retrieved'));
   } catch (error) {
     console.error('Error getting model:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -438,7 +481,8 @@ router.post('/models/:id/load', async (req: Request, res: Response) => {
     res.json(successResponse(loadResult, 'Model loaded'));
   } catch (error) {
     console.error('Error loading model:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -481,7 +525,8 @@ router.post('/models/:id/unload', async (req: Request, res: Response) => {
     res.json(successResponse(unloadResult, 'Model unloaded'));
   } catch (error) {
     console.error('Error unloading model:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -504,7 +549,8 @@ router.get('/chat', async (req: Request, res: Response) => {
     res.json(successResponse(userConversations, 'Conversations retrieved'));
   } catch (error) {
     console.error('Error listing conversations:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -526,7 +572,8 @@ router.post('/chat', async (req: Request, res: Response) => {
     res.json(successResponse(conversation, 'Conversation created'));
   } catch (error) {
     console.error('Error creating conversation:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -553,7 +600,8 @@ router.get('/chat/:id', async (req: Request, res: Response) => {
     res.json(successResponse({ conversation, messages: conversationMessages }));
   } catch (error) {
     console.error('Error getting conversation:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -583,7 +631,8 @@ router.get('/chat/:id/messages', async (req: Request, res: Response) => {
     res.json(successResponse(conversationMessages, 'Messages retrieved'));
   } catch (error) {
     console.error('Error getting messages:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -684,7 +733,8 @@ router.post('/chat/:id/messages', async (req: Request, res: Response) => {
     }, 'Message sent'));
   } catch (error) {
     console.error('Error sending message:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -713,7 +763,8 @@ router.get('/workflows', async (req: Request, res: Response) => {
     res.json(successResponse(workflows, 'Workflows retrieved'));
   } catch (error) {
     console.error('Error listing workflows:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -740,7 +791,8 @@ router.post('/workflows', async (req: Request, res: Response) => {
     res.json(successResponse(workflow, 'Workflow created'));
   } catch (error) {
     console.error('Error creating workflow:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -761,7 +813,8 @@ router.get('/workflows/:id', async (req: Request, res: Response) => {
     res.json(successResponse(workflow));
   } catch (error) {
     console.error('Error getting workflow:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -786,7 +839,8 @@ router.put('/workflows/:id', async (req: Request, res: Response) => {
     res.json(successResponse(workflow, 'Workflow updated'));
   } catch (error) {
     console.error('Error updating workflow:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -800,7 +854,8 @@ router.delete('/workflows/:id', async (req: Request, res: Response) => {
     res.json(successResponse({ id }, 'Workflow deleted'));
   } catch (error) {
     console.error('Error deleting workflow:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -892,7 +947,8 @@ router.post('/workflows/:id/execute', async (req: Request, res: Response) => {
     res.json(successResponse(execution, 'Workflow executed'));
   } catch (error) {
     console.error('Error executing workflow:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
@@ -966,7 +1022,8 @@ router.post('/prompts/execute', async (req: Request, res: Response) => {
     res.json(successResponse(execution, 'Prompt executed'));
   } catch (error) {
     console.error('Error executing prompt:', error);
-    res.status(500).json(errorResponse(error));
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 
