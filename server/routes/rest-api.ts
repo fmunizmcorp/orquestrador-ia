@@ -208,7 +208,7 @@ router.put('/projects/:id', async (req: Request, res: Response) => {
     if (status !== undefined) {
       updateData.status = status;
       // Auto-fill completedAt when status changes to 'completed'
-      if (status === 'completed' || status === 'done') {
+      if (status === 'completed') {
         updateData.completedAt = new Date();
       }
     }
@@ -376,7 +376,7 @@ router.put('/tasks/:id', async (req: Request, res: Response) => {
     if (status !== undefined) {
       updateData.status = status;
       // Auto-fill completedAt when status changes to 'completed'
-      if (status === 'completed' || status === 'done') {
+      if (status === 'completed') {
         updateData.completedAt = new Date();
       }
     }
@@ -398,7 +398,7 @@ router.put('/tasks/:id', async (req: Request, res: Response) => {
         
         if (projectTasks.length > 0) {
           const completedTasks = projectTasks.filter(t => 
-            t.status === 'completed' || t.status === 'done'
+            t.status === 'completed'
           ).length;
           
           const calculatedProgress = Math.round((completedTasks / projectTasks.length) * 100);
@@ -511,8 +511,8 @@ router.post('/models/:id/load', async (req: Request, res: Response) => {
     // Update model status to loaded
     await db.update(aiModels)
       .set({ 
-        status: 'loaded',
-        lastUsed: new Date(),
+        isLoaded: true,
+        updatedAt: new Date(),
       })
       .where(eq(aiModels.id, id));
     
@@ -557,7 +557,7 @@ router.post('/models/:id/unload', async (req: Request, res: Response) => {
     
     // Update model status to unloaded
     await db.update(aiModels)
-      .set({ status: 'available' })
+      .set({ isLoaded: false, updatedAt: new Date() })
       .where(eq(aiModels.id, id));
     
     // In production, this would call LM Studio API to actually unload the model
