@@ -1048,7 +1048,7 @@ router.post('/workflows/:id/execute', async (req: Request, res: Response) => {
 // POST /api/prompts/execute - Execute prompt
 router.post('/prompts/execute', async (req: Request, res: Response) => {
   try {
-    const { promptId, variables = {}, modelId = 1 } = req.body;
+    const { promptId, variables = {}, modelId = 1, metadata = {} } = req.body;
     
     if (!promptId) {
       return res.status(400).json(errorResponse('promptId is required'));
@@ -1092,6 +1092,16 @@ router.post('/prompts/execute', async (req: Request, res: Response) => {
       status = 'error';
     }
     
+    // Preserve and enrich metadata
+    const enrichedMetadata = {
+      ...metadata, // User-provided metadata
+      promptCategory: prompt.category,
+      promptIsPublic: prompt.isPublic,
+      promptUseCount: (prompt.useCount || 0) + 1, // Will be incremented
+      executionTimestamp: new Date().toISOString(),
+      lmStudioAvailable: status !== 'simulated',
+    };
+    
     const execution = {
       promptId: prompt.id,
       promptTitle: prompt.title,
@@ -1099,6 +1109,7 @@ router.post('/prompts/execute', async (req: Request, res: Response) => {
       input: processedContent,
       output,
       variables,
+      metadata: enrichedMetadata,
       executedAt: new Date().toISOString(),
       status,
     };
