@@ -48,7 +48,7 @@ export class LMStudioClient {
   }
   
   /**
-   * Check if LM Studio server is available
+   * Check if LM Studio server is available AND has models loaded
    */
   async isAvailable(): Promise<boolean> {
     try {
@@ -60,7 +60,24 @@ export class LMStudioClient {
       });
       
       clearTimeout(timeoutId);
-      return response.ok;
+      
+      if (!response.ok) {
+        return false;
+      }
+      
+      // Check if any models are actually loaded
+      try {
+        const data = await response.json();
+        // If data has 'data' array, check if it has models
+        if (data && Array.isArray(data.data)) {
+          return data.data.length > 0;
+        }
+        // If response is ok but structure is different, assume available
+        return true;
+      } catch (parseError) {
+        // If can't parse JSON, but response is ok, assume available
+        return true;
+      }
     } catch (error) {
       return false;
     }
@@ -93,6 +110,12 @@ export class LMStudioClient {
       
       if (!response.ok) {
         const errorText = await response.text();
+        
+        // Check for specific "No models loaded" error
+        if (response.status === 404 && errorText.includes('No models loaded')) {
+          throw new Error('LM Studio: No models loaded. Please load a model first using LM Studio UI or CLI command: lms load <model-name>');
+        }
+        
         throw new Error(`LM Studio API error: ${response.status} - ${errorText}`);
       }
       
