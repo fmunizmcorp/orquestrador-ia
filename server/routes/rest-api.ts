@@ -32,15 +32,16 @@ async function recalculateProjectProgress(projectId: number): Promise<void> {
       
       const calculatedProgress = Math.round((completedTasks / projectTasks.length) * 100);
       
+      // Build update object based on progress
+      const updateData: any = { progress: calculatedProgress };
+      
+      if (calculatedProgress >= 100) {
+        updateData.status = 'completed';
+      }
+      
       // Update project progress and auto-complete if 100%
       await db.update(projects)
-        .set({ 
-          progress: calculatedProgress,
-          ...(calculatedProgress >= 100 ? { 
-            status: 'completed', 
-            completedAt: new Date() 
-          } : {})
-        })
+        .set(updateData)
         .where(eq(projects.id, projectId));
       
       console.log(`📊 Progress recalculated for project ${projectId}: ${calculatedProgress}% (${completedTasks}/${projectTasks.length} tasks)`);
@@ -285,17 +286,12 @@ router.put('/projects/:id', async (req: Request, res: Response) => {
     if (teamId !== undefined) updateData.teamId = teamId;
     if (status !== undefined) {
       updateData.status = status;
-      // Auto-fill completedAt when status changes to 'completed'
-      if (status === 'completed') {
-        updateData.completedAt = new Date();
-      }
     }
     if (progress !== undefined) {
       updateData.progress = progress;
       // Auto-complete if progress reaches 100%
       if (progress >= 100 && !updateData.status) {
         updateData.status = 'completed';
-        updateData.completedAt = new Date();
       }
     }
     
