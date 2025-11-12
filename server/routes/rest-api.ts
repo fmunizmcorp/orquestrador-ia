@@ -14,6 +14,50 @@ function successResponse(data: any, message?: string) {
   return { success: true, message: message || 'OK', data };
 }
 
+/**
+ * Recalculate and update project progress based on completed tasks
+ * @param projectId - Project ID to recalculate
+ */
+async function recalculateProjectProgress(projectId: number): Promise<void> {
+  try {
+    // Get all tasks for this project
+    const projectTasks = await db.select()
+      .from(tasks)
+      .where(eq(tasks.projectId, projectId));
+    
+    if (projectTasks.length > 0) {
+      const completedTasks = projectTasks.filter(t => 
+        t.status === 'completed'
+      ).length;
+      
+      const calculatedProgress = Math.round((completedTasks / projectTasks.length) * 100);
+      
+      // Update project progress and auto-complete if 100%
+      await db.update(projects)
+        .set({ 
+          progress: calculatedProgress,
+          ...(calculatedProgress >= 100 ? { 
+            status: 'completed', 
+            completedAt: new Date() 
+          } : {})
+        })
+        .where(eq(projects.id, projectId));
+      
+      console.log(`📊 Progress recalculated for project ${projectId}: ${calculatedProgress}% (${completedTasks}/${projectTasks.length} tasks)`);
+    } else {
+      // No tasks = 0% progress
+      await db.update(projects)
+        .set({ progress: 0 })
+        .where(eq(projects.id, projectId));
+      
+      console.log(`📊 Progress reset to 0% for project ${projectId} (no tasks)`);
+    }
+  } catch (error) {
+    console.error(`❌ Error recalculating progress for project ${projectId}:`, error);
+    // Don't throw - allow operation to continue
+  }
+}
+
 function errorResponse(error: any, status?: number) {
   // Extract error message
   let message = typeof error === 'string' ? error : (error.message || String(error));
@@ -91,6 +135,9 @@ router.get('/projects/:id', async (req: Request, res: Response) => {
     if (isNaN(id)) {
       return res.status(400).json(errorResponse('Invalid project ID'));
     }
+    
+    // Recalculate progress before retrieving (ensures fresh data)
+    await recalculateProjectProgress(id);
     
     const [project] = await db.select()
       .from(projects)
@@ -210,6 +257,11 @@ router.post('/tasks', async (req: Request, res: Response) => {
     
     const id = result[0]?.insertId || result.insertId;
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+    
+    // Recalculate project progress if task belongs to a project
+    if (projectId) {
+      await recalculateProjectProgress(projectId);
+    }
     
     console.log('✅ REST: Task created', id);
     res.status(201).json(successResponse(task, 'Task created'));
@@ -414,40 +466,14 @@ router.put('/tasks/:id', async (req: Request, res: Response) => {
     
     await db.update(tasks).set(updateData).where(eq(tasks.id, id));
     
-    // Auto-update project progress if task has projectId
-    if (projectId !== undefined && projectId) {
-      try {
-        // Get all tasks for this project
-        const projectTasks = await db.select()
-          .from(tasks)
-          .where(eq(tasks.projectId, projectId));
-        
-        if (projectTasks.length > 0) {
-          const completedTasks = projectTasks.filter(t => 
-            t.status === 'completed'
-          ).length;
-          
-          const calculatedProgress = Math.round((completedTasks / projectTasks.length) * 100);
-          
-          // Update project progress
-          await db.update(projects)
-            .set({ 
-              progress: calculatedProgress,
-              ...(calculatedProgress >= 100 ? { 
-                status: 'completed', 
-                completedAt: new Date() 
-              } : {})
-            })
-            .where(eq(projects.id, projectId));
-        }
-      } catch (progressError) {
-        console.error('Error updating project progress:', progressError);
-        // Don't fail task update if progress calculation fails
-      }
-    }
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
     
     if (!task) return res.status(404).json(errorResponse({ message: 'Task not found' }, 404));
+    
+    // Recalculate project progress if task belongs to a project (use task's projectId from DB)
+    if (task.projectId) {
+      await recalculateProjectProgress(task.projectId);
+    }
     
     console.log('✅ REST: Task updated', id);
     res.json(successResponse(task, 'Task updated'));
@@ -467,7 +493,15 @@ router.delete('/tasks/:id', async (req: Request, res: Response) => {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
     if (!task) return res.status(404).json(errorResponse({ message: 'Task not found' }, 404));
     
+    // Store projectId before deletion for progress recalculation
+    const taskProjectId = task.projectId;
+    
     await db.delete(tasks).where(eq(tasks.id, id));
+    
+    // Recalculate project progress after deletion if task belonged to a project
+    if (taskProjectId) {
+      await recalculateProjectProgress(taskProjectId);
+    }
     
     console.log('✅ REST: Task deleted', id);
     res.json(successResponse({ id }, 'Task deleted'));
