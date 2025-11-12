@@ -416,7 +416,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                  {metrics?.cpu ? `${metrics.cpu.toFixed(1)}%` : '0%'}
+                  {typeof metrics?.cpu === 'number' ? `${metrics.cpu.toFixed(1)}%` : '0.0%'}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">CPU</div>
                 <div className="w-full bg-blue-200 dark:bg-blue-900 rounded-full h-1.5 mt-2">
@@ -428,7 +428,7 @@ export default function Dashboard() {
               </div>
               <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                 <div className="text-3xl font-bold text-green-600 dark:text-green-400">
-                  {metrics?.memory ? `${metrics.memory.toFixed(1)}%` : '0%'}
+                  {typeof metrics?.memory === 'number' ? `${metrics.memory.toFixed(1)}%` : '0.0%'}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">Memória</div>
                 <div className="w-full bg-green-200 dark:bg-green-900 rounded-full h-1.5 mt-2">
@@ -440,7 +440,7 @@ export default function Dashboard() {
               </div>
               <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                 <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
-                  {metrics?.disk ? `${metrics.disk.toFixed(1)}%` : '0%'}
+                  {typeof metrics?.disk === 'number' ? `${metrics.disk.toFixed(1)}%` : '0.0%'}
                 </div>
                 <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">Disco</div>
                 <div className="w-full bg-yellow-200 dark:bg-yellow-900 rounded-full h-1.5 mt-2">

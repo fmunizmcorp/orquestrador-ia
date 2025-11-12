@@ -516,7 +516,7 @@ export const AnalyticsDashboard: React.FC = () => {
             <div className="flex justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-300">Uso Atual</span>
               <span className="font-bold text-gray-900 dark:text-white">
-                {metrics?.metrics?.cpu?.toFixed(1) || 0}%
+                {(metrics?.metrics?.cpu ?? 0).toFixed(1)}%
               </span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
@@ -547,7 +547,7 @@ export const AnalyticsDashboard: React.FC = () => {
             <div className="flex justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-300">Uso Atual</span>
               <span className="font-bold text-gray-900 dark:text-white">
-                {metrics?.metrics?.memory?.toFixed(1) || 0}%
+                {(metrics?.metrics?.memory ?? 0).toFixed(1)}%
               </span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
@@ -578,7 +578,7 @@ export const AnalyticsDashboard: React.FC = () => {
             <div className="flex justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-300">Uso Atual</span>
               <span className="font-bold text-gray-900 dark:text-white">
-                {metrics?.metrics?.disk?.toFixed(1) || 0}%
+                {(metrics?.metrics?.disk ?? 0).toFixed(1)}%
               </span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">

@@ -1157,4 +1157,37 @@ router.post('/prompts/execute', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/system/metrics - System metrics (CPU, Memory, Disk)
+router.get('/system/metrics', async (req: Request, res: Response) => {
+  try {
+    const os = await import('os');
+    
+    // CPU Usage calculation (average load as percentage)
+    const cpuUsage = os.loadavg()[0] / os.cpus().length * 100;
+    
+    // Memory Usage calculation
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const memoryUsage = ((totalMem - freeMem) / totalMem) * 100;
+    
+    // Disk usage (approximate - requires more complex calculation)
+    // For now, return a placeholder value
+    const diskUsage = 0;
+    
+    const metrics = {
+      cpu: parseFloat(cpuUsage.toFixed(1)),
+      memory: parseFloat(memoryUsage.toFixed(1)),
+      disk: diskUsage,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('✅ REST: System metrics retrieved', metrics);
+    res.json(successResponse(metrics, 'System metrics retrieved'));
+  } catch (error) {
+    console.error('Error getting system metrics:', error);
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
+  }
+});
+
 export default router;

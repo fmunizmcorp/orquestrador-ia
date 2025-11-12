@@ -35,7 +35,7 @@ export default function Monitoring() {
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-300">CPU</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {metrics?.cpu ? `${metrics.cpu.toFixed(1)}%` : '0%'}
+                    {typeof metrics?.cpu === 'number' ? `${metrics.cpu.toFixed(1)}%` : '0.0%'}
                   </p>
                 </div>
                 <div className="bg-blue-100 rounded-full p-3">
@@ -56,7 +56,7 @@ export default function Monitoring() {
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Memória</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {metrics?.memory ? `${metrics.memory.toFixed(1)}%` : '0%'}
+                    {typeof metrics?.memory === 'number' ? `${metrics.memory.toFixed(1)}%` : '0.0%'}
                   </p>
                 </div>
                 <div className="bg-green-100 rounded-full p-3">
@@ -77,7 +77,7 @@ export default function Monitoring() {
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Disco</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {metrics?.disk ? `${metrics.disk.toFixed(1)}%` : '0%'}
+                    {typeof metrics?.disk === 'number' ? `${metrics.disk.toFixed(1)}%` : '0.0%'}
                   </p>
                 </div>
                 <div className="bg-yellow-100 rounded-full p-3">

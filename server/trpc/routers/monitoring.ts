@@ -34,12 +34,30 @@ export const monitoringRouter = router({
     .query(async () => {
       try {
         console.log('[DEBUG] Getting metrics from systemMonitorService...');
-        const metrics = await systemMonitorService.getMetrics();
-        console.log('[DEBUG] Metrics received:', typeof metrics, Object.keys(metrics || {}));
+        const fullMetrics = await systemMonitorService.getMetrics();
+        console.log('[DEBUG] Metrics received:', typeof fullMetrics, Object.keys(fullMetrics || {}));
+        
+        // Map to simplified format expected by frontend
+        const metrics = {
+          cpu: fullMetrics.cpu.usage,
+          memory: fullMetrics.memory.usagePercent,
+          disk: fullMetrics.disk.usagePercent,
+          metrics: fullMetrics, // Keep full metrics for AnalyticsDashboard
+        };
+        
         return { success: true, metrics };
       } catch (error) {
         console.error('[ERROR] Failed to get metrics:', error);
-        throw error;
+        // Return safe defaults on error to prevent crashes
+        return {
+          success: false,
+          metrics: {
+            cpu: 0,
+            memory: 0,
+            disk: 0,
+            metrics: null,
+          },
+        };
       }
     }),
 
