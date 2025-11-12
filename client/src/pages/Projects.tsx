@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { trpc } from '../lib/trpc';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/Toast';
 
 interface ProjectFormData {
   name: string;
@@ -27,6 +28,7 @@ const statusLabels = {
 
 export default function Projects() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
   const [formData, setFormData] = useState<ProjectFormData>({
@@ -53,11 +55,21 @@ export default function Projects() {
     onSuccess: () => {
       refetch();
       closeModal();
-      alert('✅ Projeto criado com sucesso!');
+      showToast({
+        type: 'success',
+        title: 'Projeto criado!',
+        message: 'O projeto foi criado com sucesso.',
+        duration: 5000,
+      });
     },
     onError: (error) => {
       console.error('Erro ao criar projeto:', error);
-      alert('❌ Erro ao criar projeto: ' + error.message);
+      showToast({
+        type: 'error',
+        title: 'Erro ao criar projeto',
+        message: error.message || 'Ocorreu um erro inesperado.',
+        duration: 7000,
+      });
     },
   });
 
@@ -65,22 +77,42 @@ export default function Projects() {
     onSuccess: () => {
       refetch();
       closeModal();
-      alert('✅ Projeto atualizado com sucesso!');
+      showToast({
+        type: 'success',
+        title: 'Projeto atualizado!',
+        message: 'As alterações foram salvas com sucesso.',
+        duration: 5000,
+      });
     },
     onError: (error) => {
       console.error('Erro ao atualizar projeto:', error);
-      alert('❌ Erro ao atualizar projeto: ' + error.message);
+      showToast({
+        type: 'error',
+        title: 'Erro ao atualizar projeto',
+        message: error.message || 'Ocorreu um erro inesperado.',
+        duration: 7000,
+      });
     },
   });
 
   const deleteProjectMutation = trpc.projects.delete.useMutation({
     onSuccess: () => {
       refetch();
-      alert('✅ Projeto excluído com sucesso!');
+      showToast({
+        type: 'success',
+        title: 'Projeto excluído!',
+        message: 'O projeto foi removido com sucesso.',
+        duration: 5000,
+      });
     },
     onError: (error) => {
       console.error('Erro ao excluir projeto:', error);
-      alert('❌ Erro ao excluir projeto: ' + error.message);
+      showToast({
+        type: 'error',
+        title: 'Erro ao excluir projeto',
+        message: error.message || 'Ocorreu um erro inesperado.',
+        duration: 7000,
+      });
     },
   });
 

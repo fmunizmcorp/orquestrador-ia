@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { trpc } from '../lib/trpc';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/Toast';
 
 interface PromptFormData {
   title: string;
@@ -12,6 +13,7 @@ interface PromptFormData {
 
 export default function Prompts() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [filter, setFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState<any>(null);
@@ -37,6 +39,21 @@ export default function Prompts() {
     onSuccess: () => {
       refetch();
       closeModal();
+      showToast({
+        type: 'success',
+        title: 'Prompt criado!',
+        message: 'O prompt foi criado com sucesso.',
+        duration: 5000,
+      });
+    },
+    onError: (error) => {
+      console.error('Erro ao criar prompt:', error);
+      showToast({
+        type: 'error',
+        title: 'Erro ao criar prompt',
+        message: error.message || 'Ocorreu um erro inesperado.',
+        duration: 7000,
+      });
     },
   });
 
@@ -44,12 +61,42 @@ export default function Prompts() {
     onSuccess: () => {
       refetch();
       closeModal();
+      showToast({
+        type: 'success',
+        title: 'Prompt atualizado!',
+        message: 'As alterações foram salvas com sucesso.',
+        duration: 5000,
+      });
+    },
+    onError: (error) => {
+      console.error('Erro ao atualizar prompt:', error);
+      showToast({
+        type: 'error',
+        title: 'Erro ao atualizar prompt',
+        message: error.message || 'Ocorreu um erro inesperado.',
+        duration: 7000,
+      });
     },
   });
 
   const deletePromptMutation = trpc.prompts.delete.useMutation({
     onSuccess: () => {
       refetch();
+      showToast({
+        type: 'success',
+        title: 'Prompt excluído!',
+        message: 'O prompt foi removido com sucesso.',
+        duration: 5000,
+      });
+    },
+    onError: (error) => {
+      console.error('Erro ao excluir prompt:', error);
+      showToast({
+        type: 'error',
+        title: 'Erro ao excluir prompt',
+        message: error.message || 'Ocorreu um erro inesperado.',
+        duration: 7000,
+      });
     },
   });
 

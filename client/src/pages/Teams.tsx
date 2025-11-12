@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { trpc } from '../lib/trpc';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/Toast';
 
 interface TeamFormData {
   name: string;
@@ -9,6 +10,7 @@ interface TeamFormData {
 
 export default function Teams() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<any>(null);
   const [formData, setFormData] = useState<TeamFormData>({
@@ -28,11 +30,21 @@ export default function Teams() {
     onSuccess: () => {
       refetch();
       closeModal();
-      alert('✅ Equipe criada com sucesso!');
+      showToast({
+        type: 'success',
+        title: 'Equipe criada!',
+        message: 'A equipe foi criada com sucesso.',
+        duration: 5000,
+      });
     },
     onError: (error) => {
       console.error('Erro ao criar equipe:', error);
-      alert('❌ Erro ao criar equipe: ' + error.message);
+      showToast({
+        type: 'error',
+        title: 'Erro ao criar equipe',
+        message: error.message || 'Ocorreu um erro inesperado.',
+        duration: 7000,
+      });
     },
   });
 
@@ -40,22 +52,42 @@ export default function Teams() {
     onSuccess: () => {
       refetch();
       closeModal();
-      alert('✅ Equipe atualizada com sucesso!');
+      showToast({
+        type: 'success',
+        title: 'Equipe atualizada!',
+        message: 'As alterações foram salvas com sucesso.',
+        duration: 5000,
+      });
     },
     onError: (error) => {
       console.error('Erro ao atualizar equipe:', error);
-      alert('❌ Erro ao atualizar equipe: ' + error.message);
+      showToast({
+        type: 'error',
+        title: 'Erro ao atualizar equipe',
+        message: error.message || 'Ocorreu um erro inesperado.',
+        duration: 7000,
+      });
     },
   });
 
   const deleteTeamMutation = trpc.teams.delete.useMutation({
     onSuccess: () => {
       refetch();
-      alert('✅ Equipe excluída com sucesso!');
+      showToast({
+        type: 'success',
+        title: 'Equipe excluída!',
+        message: 'A equipe foi removida com sucesso.',
+        duration: 5000,
+      });
     },
     onError: (error) => {
       console.error('Erro ao excluir equipe:', error);
-      alert('❌ Erro ao excluir equipe: ' + error.message);
+      showToast({
+        type: 'error',
+        title: 'Erro ao excluir equipe',
+        message: error.message || 'Ocorreu um erro inesperado.',
+        duration: 7000,
+      });
     },
   });
 

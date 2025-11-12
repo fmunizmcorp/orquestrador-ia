@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './components/Toast';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
@@ -33,8 +34,9 @@ import { WorkflowBuilder } from './pages/WorkflowBuilder';
 function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <Routes>
+      <ToastProvider>
+        <AuthProvider>
+          <Routes>
           {/* Redirecionar login e register para dashboard */}
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/register" element={<Navigate to="/" replace />} />
@@ -69,8 +71,9 @@ function App() {
             <Route path="/lmstudio" element={<LMStudio />} />
             <Route path="/analytics" element={<Analytics />} />
           </Route>
-        </Routes>
-      </AuthProvider>
+          </Routes>
+        </AuthProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }
