@@ -317,12 +317,12 @@ export default function Prompts() {
                 {prompt.content || 'Sem conteúdo'}
               </p>
               
-              {prompt.tags && (
+              {prompt.tags && typeof prompt.tags === 'string' && (
                 <div className="flex flex-wrap gap-1 mb-4">
-                  {prompt.tags.split(',').slice(0, 3).map((tag: string, index: number) => (
+                  {prompt.tags.split(',').filter(Boolean).slice(0, 3).map((tag: string, index: number) => (
                     <span
                       key={index}
-                      className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded"
+                      className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded"
                     >
                       {tag.trim()}
                     </span>

@@ -412,8 +412,8 @@ const Models = () => {
   // ==================================================
 
   const filteredModels = selectedProvider
-    ? modelsData?.items.filter((m: any) => m.providerId === selectedProvider)
-    : modelsData?.items || [];
+    ? modelsData?.data?.filter((m: any) => m.providerId === selectedProvider)
+    : modelsData?.data || [];
 
   // ==================================================
   // TABS
@@ -1170,7 +1170,7 @@ const Models = () => {
                     className="input w-full"
                   >
                     <option value="">Nenhum</option>
-                    {modelsData?.items.map((model: any) => (
+                    {modelsData?.data?.map((model: any) => (
                       <option key={model.id} value={model.id}>
                         {model.name}
                       </option>
