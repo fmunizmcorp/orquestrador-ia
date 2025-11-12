@@ -83,6 +83,32 @@ router.post('/projects', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/projects/:id - Get specific project
+router.get('/projects/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json(errorResponse('Invalid project ID'));
+    }
+    
+    const [project] = await db.select()
+      .from(projects)
+      .where(eq(projects.id, id))
+      .limit(1);
+    
+    if (!project) {
+      return res.status(404).json(errorResponse('Project not found'));
+    }
+    
+    res.json(successResponse(project, 'Project retrieved'));
+  } catch (error) {
+    console.error('Error getting project:', error);
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
+  }
+});
+
 // GET /api/teams
 router.get('/teams', async (req: Request, res: Response) => {
   try {
