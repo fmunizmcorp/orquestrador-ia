@@ -88,10 +88,37 @@ class SystemMonitorService {
   private alerts = new Map<string, Alert>();
   private alertIdCounter = 0;
 
+  // Cache de métricas (Sprint 11 - Rodada 23)
+  private metricsCache: SystemMetrics | null = null;
+  private cacheTimestamp: number = 0;
+  private readonly CACHE_TTL = 5000; // 5 segundos
+
   /**
-   * Coleta métricas completas do sistema
+   * Coleta métricas completas do sistema (com cache)
    */
   async getMetrics(): Promise<SystemMetrics> {
+    // Return cached metrics if still valid
+    const now = Date.now();
+    if (this.metricsCache && (now - this.cacheTimestamp) < this.CACHE_TTL) {
+      console.log(`[SystemMonitor] Returning cached metrics (age: ${now - this.cacheTimestamp}ms)`);
+      return this.metricsCache;
+    }
+
+    // Collect fresh metrics
+    const metrics = await this.collectMetrics();
+    
+    // Update cache
+    this.metricsCache = metrics;
+    this.cacheTimestamp = Date.now();
+    
+    console.log('[SystemMonitor] Metrics collected and cached');
+    return metrics;
+  }
+
+  /**
+   * Coleta métricas do sistema (sem cache - método privado)
+   */
+  private async collectMetrics(): Promise<SystemMetrics> {
     try {
       const [
         cpuData,
