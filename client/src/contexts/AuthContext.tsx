@@ -31,7 +31,11 @@ const DEFAULT_USER: User = {
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Sistema sem autenticação - sempre retorna usuário padrão
+  // ⚠️ SISTEMA SEM AUTENTICAÇÃO ⚠️
+  // Este sistema é para uso individual em ambiente fechado
+  // NÃO há login, registro ou restrição de áreas
+  // Usuário sempre autenticado como admin com acesso total
+  
   const [user] = useState<User>(DEFAULT_USER);
   const [token] = useState<string>('no-auth-token');
   const [isLoading, setIsLoading] = useState(false);
@@ -44,17 +48,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Funções vazias (não fazem nada, pois não há autenticação)
   const login = async (email: string, password: string) => {
     // Sistema sem autenticação - não faz nada
-    console.log('Sistema configurado sem autenticação');
+    console.log('⚠️ Sistema configurado SEM autenticação - Acesso direto permitido');
   };
 
   const register = async (name: string, email: string, password: string, username?: string) => {
     // Sistema sem autenticação - não faz nada
-    console.log('Sistema configurado sem autenticação');
+    console.log('⚠️ Sistema configurado SEM autenticação - Registro não necessário');
   };
 
   const logout = () => {
     // Sistema sem autenticação - não faz nada
-    console.log('Sistema configurado sem autenticação');
+    console.log('⚠️ Sistema configurado SEM autenticação - Logout não necessário');
   };
 
   const value: AuthContextType = {
