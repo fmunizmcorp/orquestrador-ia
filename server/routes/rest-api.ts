@@ -1237,23 +1237,42 @@ router.post('/workflows/:id/execute', async (req: Request, res: Response) => {
 // PROMPTS EXECUTION ENDPOINT
 // ========================================
 
-// POST /api/prompts/execute - Execute prompt
+// POST /api/prompts/execute - Execute prompt with REAL LM Studio integration
 router.post('/prompts/execute', async (req: Request, res: Response) => {
   try {
     const { promptId, variables = {}, modelId = 1, metadata = {} } = req.body;
+    
+    console.log(`📝 [PROMPT EXECUTE] Starting execution - promptId: ${promptId}, modelId: ${modelId}`);
     
     if (!promptId) {
       return res.status(400).json(errorResponse('promptId is required'));
     }
     
+    // Get prompt from database
     const [prompt] = await db.select()
       .from(prompts)
       .where(eq(prompts.id, promptId))
       .limit(1);
     
     if (!prompt) {
+      console.error(`❌ [PROMPT EXECUTE] Prompt not found: ${promptId}`);
       return res.status(404).json(errorResponse('Prompt not found'));
     }
+    
+    console.log(`✅ [PROMPT EXECUTE] Prompt found: "${prompt.title}"`);
+    
+    // Get model from database to get the actual LM Studio model ID
+    const [model] = await db.select()
+      .from(aiModels)
+      .where(eq(aiModels.id, modelId))
+      .limit(1);
+    
+    if (!model) {
+      console.error(`❌ [PROMPT EXECUTE] Model not found in database: ${modelId}`);
+      return res.status(404).json(errorResponse('Model not found'));
+    }
+    
+    console.log(`✅ [PROMPT EXECUTE] Model found: ${model.name} (modelId: ${model.modelId})`);
     
     // Replace variables in prompt content
     let processedContent = prompt.content || '';
@@ -1262,26 +1281,79 @@ router.post('/prompts/execute', async (req: Request, res: Response) => {
       processedContent = processedContent.replace(regex, String(value));
     });
     
+    console.log(`📝 [PROMPT EXECUTE] Processed content length: ${processedContent.length} chars`);
+    
     // Execute prompt with LM Studio
     let output: string;
     let status: string;
+    let lmStudioModelUsed: string | null = null;
+    let simulated: boolean = false;
     
     try {
+      // Check if LM Studio is available
       const isLMStudioAvailable = await lmStudio.isAvailable();
+      console.log(`🔍 [PROMPT EXECUTE] LM Studio available: ${isLMStudioAvailable}`);
       
       if (isLMStudioAvailable) {
-        // Call LM Studio with processed prompt
-        output = await lmStudio.complete(processedContent);
+        // Get loaded models from LM Studio to verify which one to use
+        const lmResponse = await fetch('http://localhost:1234/v1/models', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(5000),
+        });
+        
+        if (!lmResponse.ok) {
+          throw new Error(`LM Studio API returned ${lmResponse.status}`);
+        }
+        
+        const lmData = await lmResponse.json();
+        const loadedModels = lmData.data || [];
+        
+        console.log(`🔍 [PROMPT EXECUTE] Found ${loadedModels.length} loaded models in LM Studio`);
+        
+        if (loadedModels.length === 0) {
+          throw new Error('LM Studio: No models loaded. Please load a model first using LM Studio UI or CLI command: lms load <model-name>');
+        }
+        
+        // Try to find the model specified in database
+        let targetModel = loadedModels.find((m: any) => 
+          m.id === model.modelId || 
+          m.id.includes(model.modelId || '') ||
+          (model.modelId && m.id.toLowerCase().includes(model.modelId.toLowerCase()))
+        );
+        
+        // Fallback: use first available model if specified model not found
+        if (!targetModel) {
+          console.warn(`⚠️  [PROMPT EXECUTE] Model '${model.modelId}' not found in loaded models, using first available: ${loadedModels[0].id}`);
+          targetModel = loadedModels[0];
+        }
+        
+        lmStudioModelUsed = targetModel.id;
+        console.log(`🎯 [PROMPT EXECUTE] Using LM Studio model: ${lmStudioModelUsed}`);
+        
+        // Call LM Studio with processed prompt and correct modelId
+        console.log(`🚀 [PROMPT EXECUTE] Calling LM Studio API...`);
+        const startTime = Date.now();
+        
+        output = await lmStudio.complete(processedContent, undefined, lmStudioModelUsed || undefined);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ [PROMPT EXECUTE] LM Studio responded in ${duration}ms - output length: ${output.length} chars`);
+        
         status = 'completed';
+        simulated = false;
       } else {
         // Fallback to simulated response
+        console.warn(`⚠️  [PROMPT EXECUTE] LM Studio not available, using simulated response`);
         output = `[LM Studio não disponível] Prompt executado: "${prompt.title}"`;
         status = 'simulated';
+        simulated = true;
       }
     } catch (aiError: any) {
-      console.error('Error calling LM Studio:', aiError);
+      console.error(`❌ [PROMPT EXECUTE] Error calling LM Studio:`, aiError.message);
       output = `[Erro na execução] ${aiError.message}`;
       status = 'error';
+      simulated = false;
     }
     
     // Preserve and enrich metadata
@@ -1292,18 +1364,26 @@ router.post('/prompts/execute', async (req: Request, res: Response) => {
       promptUseCount: (prompt.useCount || 0) + 1, // Will be incremented
       executionTimestamp: new Date().toISOString(),
       lmStudioAvailable: status !== 'simulated',
+      lmStudioModelUsed: lmStudioModelUsed,
+      requestedModelId: model.id,
+      requestedModelName: model.name,
+      requestedLMStudioModelId: model.modelId,
     };
     
     const execution = {
       promptId: prompt.id,
       promptTitle: prompt.title,
       modelId,
+      modelName: model.name,
+      lmStudioModelId: model.modelId,
+      lmStudioModelUsed: lmStudioModelUsed,
       input: processedContent,
       output,
       variables,
       metadata: enrichedMetadata,
       executedAt: new Date().toISOString(),
       status,
+      simulated,
     };
     
     // Increment use count
@@ -1311,9 +1391,11 @@ router.post('/prompts/execute', async (req: Request, res: Response) => {
       .set({ useCount: sql`${prompts.useCount} + 1` })
       .where(eq(prompts.id, promptId));
     
+    console.log(`🎉 [PROMPT EXECUTE] Execution completed successfully - status: ${status}, simulated: ${simulated}`);
+    
     res.json(successResponse(execution, 'Prompt executed'));
   } catch (error) {
-    console.error('Error executing prompt:', error);
+    console.error('❌ [PROMPT EXECUTE] Fatal error:', error);
     const err = errorResponse(error);
     res.status(err.status).json(err);
   }

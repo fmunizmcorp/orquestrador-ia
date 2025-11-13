@@ -136,8 +136,11 @@ export class LMStudioClient {
   
   /**
    * Generate simple completion (for backward compatibility)
+   * @param prompt - The user prompt
+   * @param systemPrompt - Optional system prompt
+   * @param modelId - Optional model ID to use (if not provided, will use first available model)
    */
-  async complete(prompt: string, systemPrompt?: string): Promise<string> {
+  async complete(prompt: string, systemPrompt?: string, modelId?: string): Promise<string> {
     const messages: LMStudioMessage[] = [];
     
     if (systemPrompt) {
@@ -146,7 +149,27 @@ export class LMStudioClient {
     
     messages.push({ role: 'user', content: prompt });
     
-    return this.chatCompletion({ messages });
+    // If no modelId provided, try to get first available model
+    let actualModelId = modelId;
+    if (!actualModelId) {
+      try {
+        const modelsResponse = await fetch(`${this.baseUrl}/v1/models`, {
+          signal: AbortSignal.timeout(2000),
+        });
+        
+        if (modelsResponse.ok) {
+          const modelsData = await modelsResponse.json();
+          if (modelsData && Array.isArray(modelsData.data) && modelsData.data.length > 0) {
+            actualModelId = modelsData.data[0].id;
+            console.log(`🔄 No modelId provided, using first available model: ${actualModelId}`);
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️  Failed to fetch available models, using default model name');
+      }
+    }
+    
+    return this.chatCompletion({ messages, model: actualModelId });
   }
 }
 
