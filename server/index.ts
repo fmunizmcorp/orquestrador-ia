@@ -14,6 +14,7 @@ import { createContext } from './trpc.js';
 import { testConnection } from './db/index.js';
 import { initDefaultUser } from './db/init-default-user.js';
 import { systemMonitorService } from './services/systemMonitorService.js';
+import restApiRouter from './routes/rest-api.js';
 import { handleMessage, connectionManager, broadcastTaskUpdate } from './websocket/handlers.js';
 import { setBroadcastCallback } from './services/orchestratorService.js';
 
@@ -79,6 +80,9 @@ if (process.env.NODE_ENV === 'production') {
   console.log('📁 Resolved client path:', clientPath);
   
   app.use(express.static(clientPath));
+
+// REST API
+app.use('/api', restApiRouter);
   
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api') && !req.path.startsWith('/ws')) {
