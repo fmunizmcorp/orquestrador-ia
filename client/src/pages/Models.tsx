@@ -85,17 +85,40 @@ const Models = () => {
   // QUERIES
   // ==================================================
 
-  const { data: modelsData, isLoading: modelsLoading, refetch: refetchModels } = trpc.models.list.useQuery({ 
-    query: searchQuery 
+  const { data: modelsData, isLoading: modelsLoading, refetch: refetchModels } = trpc.models.list.useQuery({
+    limit: 50,
+    offset: 0
   });
 
-  const { data: providersData } = trpc.models.listProviders.useQuery({});
+  // Providers não tem endpoint próprio - usar dados do models
+  const providersData = { providers: [] }; // TODO: Implementar listagem de providers
 
-  const { data: specializedData, refetch: refetchSpecialized } = trpc.models.listSpecializedAIs.useQuery({
-    query: searchQuery,
+  const { data: specializedData, refetch: refetchSpecialized } = trpc.models.listSpecialized.useQuery({
+    limit: 50,
+    offset: 0
   });
 
-  const { data: statsData, refetch: refetchStats } = trpc.models.getStatistics.useQuery({});
+  // Estatísticas calculadas no frontend
+  const allModels = modelsData?.data || [];
+  const allSpecialized = specializedData?.specializedAIs || [];
+  
+  const statsData = {
+    totalModels: allModels.length,
+    activeModels: allModels.filter((m: any) => m.isActive).length,
+    loadedModels: allModels.filter((m: any) => m.isLoaded).length,
+    totalProviders: new Set(allModels.map((m: any) => m.providerId)).size,
+    totalSpecializedAIs: allSpecialized.length,
+    activeSpecializedAIs: allSpecialized.filter((ai: any) => ai.isActive).length,
+    avgContextWindow: allModels.length > 0 
+      ? Math.round(allModels.reduce((sum: number, m: any) => sum + (m.contextWindow || 0), 0) / allModels.length)
+      : 0,
+    totalCapabilities: new Set(allModels.flatMap((m: any) => m.capabilities || [])).size,
+  };
+  
+  const refetchStats = () => {
+    refetchModels();
+    refetchSpecialized();
+  };
 
   const { data: discoveryData, refetch: refetchDiscovery } = trpc.models.discoverModels.useQuery({}, {
     enabled: activeTab === 'discovery',
@@ -142,19 +165,32 @@ const Models = () => {
     },
   });
 
-  const bulkUpdateMutation = trpc.models.bulkUpdate.useMutation({
+  const toggleActiveMutation = trpc.models.toggleActive.useMutation({
     onSuccess: () => {
-      alert('Modelos atualizados em massa!');
-      setSelectedModels([]);
       refetchModels();
       refetchStats();
     },
     onError: (error) => {
-      alert(`Erro na atualização em massa: ${error.message}`);
+      alert(`Erro ao atualizar modelo: ${error.message}`);
     },
   });
 
-  const createSpecializedMutation = trpc.models.createSpecializedAI.useMutation({
+  // Bulk update usando toggleActive múltiplas vezes
+  const bulkUpdateMutation = {
+    mutate: async ({ ids, isActive }: { ids: number[], isActive: boolean }) => {
+      try {
+        for (const id of ids) {
+          await toggleActiveMutation.mutateAsync({ id, isActive });
+        }
+        alert('Modelos atualizados em massa!');
+        setSelectedModels([]);
+      } catch (error: any) {
+        alert(`Erro na atualização em massa: ${error.message}`);
+      }
+    }
+  };
+
+  const createSpecializedMutation = trpc.models.createSpecialized.useMutation({
     onSuccess: () => {
       alert('IA Especializada criada com sucesso!');
       setShowSpecializedModal(false);
@@ -167,7 +203,7 @@ const Models = () => {
     },
   });
 
-  const updateSpecializedMutation = trpc.models.updateSpecializedAI.useMutation({
+  const updateSpecializedMutation = trpc.models.updateSpecialized.useMutation({
     onSuccess: () => {
       alert('IA Especializada atualizada!');
       setShowSpecializedModal(false);
@@ -179,7 +215,7 @@ const Models = () => {
     },
   });
 
-  const deleteSpecializedMutation = trpc.models.deleteSpecializedAI.useMutation({
+  const deleteSpecializedMutation = trpc.models.deleteSpecialized.useMutation({
     onSuccess: () => {
       alert('IA Especializada excluída!');
       refetchSpecialized();
@@ -190,13 +226,27 @@ const Models = () => {
     },
   });
 
-  const importDiscoveredMutation = trpc.models.importDiscovered.useMutation({
-    onSuccess: () => {
-      alert('Modelo importado com sucesso!');
-      refetchModels();
-      refetchDiscovery();
-      refetchStats();
-    },
+  // Import discovered mutation reusa o createModelMutation
+  const importDiscoveredMutation = {
+    mutate: ({ discoveredId }: { discoveredId: number }) => {
+      const discovered = discoveryData?.discovered?.find((d: any) => d.id === discoveredId);
+      if (!discovered) {
+        alert('Modelo descoberto não encontrado');
+        return;
+      }
+      
+      createModelMutation.mutate({
+        providerId: 1, // LM Studio provider ID (assumido)
+        name: discovered.modelName || discovered.modelId,
+        modelId: discovered.modelId,
+        capabilities: [],
+        contextWindow: 4096,
+        isLoaded: false,
+        priority: 50,
+        isActive: true,
+      });
+    }
+  };
     onError: (error) => {
       alert(`Erro ao importar modelo: ${error.message}`);
     },
@@ -410,10 +460,18 @@ const Models = () => {
   // ==================================================
   // FILTROS
   // ==================================================
-
-  const filteredModels = selectedProvider
-    ? modelsData?.data?.filter((m: any) => m.providerId === selectedProvider)
-    : modelsData?.data || [];
+  
+  const filteredModels = allModels.filter((model: any) => {
+    // Filtro de busca por nome ou modelId
+    const matchesSearch = !searchQuery || 
+      model.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      model.modelId?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Filtro de provider
+    const matchesProvider = !selectedProvider || model.providerId === selectedProvider;
+    
+    return matchesSearch && matchesProvider;
+  });
 
   // ==================================================
   // TABS

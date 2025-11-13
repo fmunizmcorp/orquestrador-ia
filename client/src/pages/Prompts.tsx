@@ -119,11 +119,16 @@ export default function Prompts() {
   const openModal = (prompt?: any) => {
     if (prompt) {
       setEditingPrompt(prompt);
+      // Normalizar tags: converter array para string com vírgulas
+      const tagsString = Array.isArray(prompt.tags) 
+        ? prompt.tags.join(', ')
+        : (prompt.tags || '');
+      
       setFormData({
         title: prompt.title,
         content: prompt.content || '',
         category: prompt.category || '',
-        tags: prompt.tags || '',
+        tags: tagsString,
         isPublic: prompt.isPublic || false,
       });
     } else {
@@ -317,16 +322,25 @@ export default function Prompts() {
                 {prompt.content || 'Sem conteúdo'}
               </p>
               
-              {prompt.tags && typeof prompt.tags === 'string' && (
+              {prompt.tags && (
                 <div className="flex flex-wrap gap-1 mb-4">
-                  {prompt.tags.split(',').filter(Boolean).slice(0, 3).map((tag: string, index: number) => (
-                    <span
-                      key={index}
-                      className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded"
-                    >
-                      {tag.trim()}
-                    </span>
-                  ))}
+                  {(() => {
+                    // Normalizar tags: pode ser string ou array
+                    const tagsArray = typeof prompt.tags === 'string' 
+                      ? prompt.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+                      : Array.isArray(prompt.tags) 
+                      ? prompt.tags 
+                      : [];
+                    
+                    return tagsArray.slice(0, 3).map((tag: string, index: number) => (
+                      <span
+                        key={index}
+                        className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded"
+                      >
+                        {tag}
+                      </span>
+                    ));
+                  })()}
                 </div>
               )}
               

@@ -118,18 +118,23 @@ export const promptsRouter = router({
       description: z.string().optional(),
       content: z.string().min(1),
       category: z.string().optional(),
-      tags: z.array(z.string()).optional(),
+      tags: z.union([z.string(), z.array(z.string())]).optional(),
       variables: z.array(z.string()).optional(),
       isPublic: z.boolean().optional().default(false),
     }))
     .mutation(async ({ input }) => {
+      // Normalizar tags: sempre converter para array
+      const tagsArray = typeof input.tags === 'string' 
+        ? input.tags.split(',').map(t => t.trim()).filter(Boolean)
+        : input.tags || [];
+
       const result: any = await db.insert(prompts).values({
         userId: input.userId,
         title: input.title,
         description: input.description,
         content: input.content,
         category: input.category,
-        tags: input.tags as any,
+        tags: tagsArray as any,
         variables: input.variables as any,
         isPublic: input.isPublic,
         currentVersion: 1,
@@ -160,7 +165,7 @@ export const promptsRouter = router({
       description: z.string().optional(),
       content: z.string().optional(),
       category: z.string().optional(),
-      tags: z.array(z.string()).optional(),
+      tags: z.union([z.string(), z.array(z.string())]).optional(),
       variables: z.array(z.string()).optional(),
       isPublic: z.boolean().optional(),
       changelog: z.string().optional(),
@@ -191,9 +196,11 @@ export const promptsRouter = router({
         }
       }
 
-      // JSON fields handled automatically by Drizzle
+      // Normalizar tags: sempre converter para array
       if (input.tags) {
-        updates.tags = input.tags as any;
+        updates.tags = (typeof input.tags === 'string' 
+          ? input.tags.split(',').map(t => t.trim()).filter(Boolean)
+          : input.tags) as any;
       }
       if (input.variables) {
         updates.variables = input.variables as any;
