@@ -564,28 +564,76 @@ router.post('/models/:id/load', async (req: Request, res: Response) => {
       return res.status(404).json(errorResponse('Model not found'));
     }
     
-    // Update model status to loaded
-    await db.update(aiModels)
-      .set({ 
-        isLoaded: true,
-        updatedAt: new Date(),
-      })
-      .where(eq(aiModels.id, id));
-    
-    // In production, this would call LM Studio API to actually load the model
-    // Example: await fetch('http://localhost:1234/v1/models/load', { ... })
-    
-    const loadResult = {
-      modelId: model.id,
-      modelName: model.name,
-      status: 'loaded',
-      message: `Model ${model.name} loaded successfully`,
-      timestamp: new Date().toISOString(),
-      // Simulated response - in production would return actual LM Studio response
-      simulated: true,
-    };
-    
-    res.json(successResponse(loadResult, 'Model loaded'));
+    // REAL INTEGRATION: Verify if model is actually loaded in LM Studio
+    try {
+      const lmResponse = await fetch('http://localhost:1234/v1/models', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(5000),
+      });
+      
+      if (!lmResponse.ok) {
+        throw new Error(`LM Studio returned ${lmResponse.status}`);
+      }
+      
+      const lmData = await lmResponse.json();
+      const loadedModels = lmData.data || [];
+      
+      // Check if model is actually loaded (modelId matches any loaded model)
+      const isActuallyLoaded = loadedModels.some((m: any) => 
+        m.id === model.modelId || m.id.includes(model.modelId || '')
+      );
+      
+      // Update database with REAL state
+      await db.update(aiModels)
+        .set({ 
+          isLoaded: isActuallyLoaded,
+          updatedAt: new Date(),
+        })
+        .where(eq(aiModels.id, id));
+      
+      if (!isActuallyLoaded) {
+        // Model is NOT loaded in LM Studio
+        return res.status(400).json({
+          success: false,
+          error: 'Model not loaded in LM Studio',
+          message: `Model '${model.modelId}' is not currently loaded in LM Studio. Please load it first using LM Studio UI or CLI: lms load ${model.modelId}`,
+          instruction: `Run in terminal: lms load ${model.modelId}`,
+          availableModels: loadedModels.map((m: any) => m.id),
+          simulated: false,
+        });
+      }
+      
+      // Model IS loaded - success!
+      const loadResult = {
+        modelId: model.id,
+        modelName: model.name,
+        status: 'loaded',
+        message: `Model ${model.name} is loaded and ready`,
+        timestamp: new Date().toISOString(),
+        lmStudioModelId: loadedModels.find((m: any) => m.id === model.modelId || m.id.includes(model.modelId || ''))?.id,
+        simulated: false, // REAL integration!
+      };
+      
+      console.log(`✅ Model ${model.name} verified as loaded in LM Studio`);
+      res.json(successResponse(loadResult, 'Model loaded'));
+      
+    } catch (lmError: any) {
+      console.error('LM Studio API error:', lmError.message);
+      
+      // Mark as not loaded
+      await db.update(aiModels)
+        .set({ isLoaded: false, updatedAt: new Date() })
+        .where(eq(aiModels.id, id));
+      
+      return res.status(503).json({
+        success: false,
+        error: 'LM Studio not available',
+        message: 'LM Studio is not running or not accessible on port 1234',
+        instruction: 'Please start LM Studio and ensure it is running on http://localhost:1234',
+        simulated: false,
+      });
+    }
   } catch (error) {
     console.error('Error loading model:', error);
     const err = errorResponse(error);
@@ -611,29 +659,143 @@ router.post('/models/:id/unload', async (req: Request, res: Response) => {
       return res.status(404).json(errorResponse('Model not found'));
     }
     
-    // Update model status to unloaded
-    await db.update(aiModels)
-      .set({ isLoaded: false, updatedAt: new Date() })
-      .where(eq(aiModels.id, id));
-    
-    // In production, this would call LM Studio API to actually unload the model
-    // Example: await fetch('http://localhost:1234/v1/models/unload', { ... })
-    
-    const unloadResult = {
-      modelId: model.id,
-      modelName: model.name,
-      status: 'unloaded',
-      message: `Model ${model.name} unloaded successfully`,
-      timestamp: new Date().toISOString(),
-      // Simulated response - in production would return actual LM Studio response
-      simulated: true,
-    };
-    
-    res.json(successResponse(unloadResult, 'Model unloaded'));
+    // REAL INTEGRATION: Verify current state in LM Studio
+    try {
+      const lmResponse = await fetch('http://localhost:1234/v1/models', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(5000),
+      });
+      
+      if (!lmResponse.ok) {
+        throw new Error(`LM Studio returned ${lmResponse.status}`);
+      }
+      
+      const lmData = await lmResponse.json();
+      const loadedModels = lmData.data || [];
+      
+      // Check if model is still loaded
+      const isStillLoaded = loadedModels.some((m: any) => 
+        m.id === model.modelId || m.id.includes(model.modelId || '')
+      );
+      
+      // Update database to NOT loaded
+      await db.update(aiModels)
+        .set({ isLoaded: false, updatedAt: new Date() })
+        .where(eq(aiModels.id, id));
+      
+      if (isStillLoaded) {
+        // Model is STILL loaded in LM Studio
+        return res.status(400).json({
+          success: false,
+          error: 'Model still loaded in LM Studio',
+          message: `Model '${model.modelId}' is still loaded in LM Studio. To unload it, please use LM Studio UI or CLI: lms unload ${model.modelId}`,
+          instruction: `Run in terminal: lms unload ${model.modelId}`,
+          simulated: false,
+        });
+      }
+      
+      // Model is NOT loaded - success!
+      const unloadResult = {
+        modelId: model.id,
+        modelName: model.name,
+        status: 'unloaded',
+        message: `Model ${model.name} is unloaded`,
+        timestamp: new Date().toISOString(),
+        simulated: false, // REAL integration!
+      };
+      
+      console.log(`✅ Model ${model.name} verified as unloaded from LM Studio`);
+      res.json(successResponse(unloadResult, 'Model unloaded'));
+      
+    } catch (lmError: any) {
+      console.error('LM Studio API error:', lmError.message);
+      
+      // Mark as not loaded anyway (safe assumption)
+      await db.update(aiModels)
+        .set({ isLoaded: false, updatedAt: new Date() })
+        .where(eq(aiModels.id, id));
+      
+      return res.status(503).json({
+        success: false,
+        error: 'LM Studio not available',
+        message: 'LM Studio is not running or not accessible on port 1234. Model marked as unloaded in database.',
+        simulated: false,
+      });
+    }
   } catch (error) {
     console.error('Error unloading model:', error);
     const err = errorResponse(error);
     res.status(err.status).json(err);
+  }
+});
+
+// POST /api/models/sync - Synchronize ALL models with LM Studio
+router.post('/models/sync', async (req: Request, res: Response) => {
+  try {
+    // REAL INTEGRATION: Get currently loaded models from LM Studio
+    const lmResponse = await fetch('http://localhost:1234/v1/models', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(5000),
+    });
+    
+    if (!lmResponse.ok) {
+      throw new Error(`LM Studio returned ${lmResponse.status}`);
+    }
+    
+    const lmData = await lmResponse.json();
+    const loadedModels = lmData.data || [];
+    const loadedModelIds = new Set(loadedModels.map((m: any) => m.id));
+    
+    // Get all models from database
+    const allModels = await db.select().from(aiModels);
+    
+    // Synchronize each model
+    let syncedCount = 0;
+    let changedCount = 0;
+    
+    for (const model of allModels) {
+      const isActuallyLoaded = loadedModelIds.has(model.modelId || '');
+      
+      // Update only if state changed
+      if (model.isLoaded !== isActuallyLoaded) {
+        await db.update(aiModels)
+          .set({ 
+            isLoaded: isActuallyLoaded,
+            updatedAt: new Date(),
+          })
+          .where(eq(aiModels.id, model.id));
+        
+        changedCount++;
+        console.log(`🔄 Synced model ${model.name}: ${model.isLoaded} → ${isActuallyLoaded}`);
+      }
+      
+      syncedCount++;
+    }
+    
+    const syncResult = {
+      totalModels: allModels.length,
+      syncedModels: syncedCount,
+      changedModels: changedCount,
+      loadedInLMStudio: loadedModels.length,
+      loadedModelIds: Array.from(loadedModelIds),
+      timestamp: new Date().toISOString(),
+      simulated: false,
+    };
+    
+    console.log(`✅ Synchronized ${syncedCount} models with LM Studio (${changedCount} changed)`);
+    res.json(successResponse(syncResult, 'Models synchronized'));
+    
+  } catch (lmError: any) {
+    console.error('LM Studio API error:', lmError.message);
+    
+    return res.status(503).json({
+      success: false,
+      error: 'LM Studio not available',
+      message: 'LM Studio is not running or not accessible on port 1234',
+      simulated: false,
+    });
   }
 });
 

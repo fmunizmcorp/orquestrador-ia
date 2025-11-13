@@ -79,7 +79,7 @@ const Layout = () => {
         {/* Header */}
         <div className="p-4 border-b border-slate-700 flex items-center justify-between">
           {sidebarOpen && (
-            <h1 className="text-xl font-bold text-white">Orquestrador v3.5.2</h1>
+            <h1 className="text-xl font-bold text-white">Orquestrador v3.6.0</h1>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -157,7 +157,7 @@ const Layout = () => {
                 </button>
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                v3.5.2 - Sistema de Orquestração
+                v3.6.0 - Sistema de Orquestração
               </div>
             </div>
           ) : (
