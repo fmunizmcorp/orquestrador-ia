@@ -197,17 +197,19 @@ export const promptsRouter = router({
       }
 
       // Normalizar tags: sempre converter para array
+      const updateData: any = { ...updates, updatedAt: new Date() };
+      
       if (input.tags) {
-        updates.tags = (typeof input.tags === 'string' 
+        updateData.tags = typeof input.tags === 'string' 
           ? input.tags.split(',').map(t => t.trim()).filter(Boolean)
-          : input.tags) as any;
+          : input.tags;
       }
       if (input.variables) {
-        updates.variables = input.variables as any;
+        updateData.variables = input.variables;
       }
 
       await db.update(prompts)
-        .set({ ...updates, updatedAt: new Date() })
+        .set(updateData)
         .where(eq(prompts.id, id));
 
       const [updated] = await db.select().from(prompts).where(eq(prompts.id, id)).limit(1);

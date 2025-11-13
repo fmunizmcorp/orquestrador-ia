@@ -247,10 +247,6 @@ const Models = () => {
       });
     }
   };
-    onError: (error) => {
-      alert(`Erro ao importar modelo: ${error.message}`);
-    },
-  });
 
   // ==================================================
   // HANDLERS
