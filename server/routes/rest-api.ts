@@ -1502,28 +1502,97 @@ router.post('/prompts/execute/stream', async (req: Request, res: Response) => {
       ) || loadedModels[0];
       
       console.log(`🎯 [PROMPT EXECUTE STREAM] Using model: ${targetModel.id}`);
+      
+      // TEST: Check if model responds quickly (not loading)
+      console.log(`🔍 [PROMPT EXECUTE STREAM] Testing model readiness...`);
+      let modelReady = false;
+      try {
+        await Promise.race([
+          fetch('http://localhost:1234/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: targetModel.id,
+              messages: [{ role: 'user', content: 'test' }],
+              max_tokens: 1,
+              stream: false,
+            }),
+          }).then(() => { modelReady = true; }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Model loading')), 10000) // 10s test
+          ),
+        ]);
+      } catch (testError: any) {
+        console.warn(`⚠️  [PROMPT EXECUTE STREAM] Model appears to be loading...`);
+        res.write(`data: ${JSON.stringify({
+          type: 'model_loading',
+          message: 'Model is loading into memory. This may take 30-120 seconds. Please wait...',
+          estimatedTime: 60000,
+        })}\n\n`);
+      }
+      
       console.log(`🌊 [PROMPT EXECUTE STREAM] Starting stream...`);
       
       const startTime = Date.now();
       let totalChunks = 0;
       let fullOutput = '';
+      let hasReceivedChunks = false;
       
-      // Stream from LM Studio
-      for await (const chunk of lmStudio.chatCompletionStream({
+      // Keep-alive interval (send SSE comments to keep connection alive)
+      const keepAliveInterval = setInterval(() => {
+        if (!hasReceivedChunks) {
+          res.write(': keep-alive\n\n');
+        }
+      }, 5000); // Every 5 seconds
+      
+      // Timeout protection (120s for model loading)
+      const streamTimeout = setTimeout(() => {
+        if (!hasReceivedChunks) {
+          clearInterval(keepAliveInterval);
+          console.error(`❌ [PROMPT EXECUTE STREAM] Timeout - no chunks received in 120s`);
+          res.write(`data: ${JSON.stringify({
+            type: 'error',
+            message: 'Model loading timeout (120s). The model may be too large or system overloaded. Please try a smaller model or try again later.',
+            code: 'MODEL_LOAD_TIMEOUT',
+          })}\n\n`);
+          res.end();
+        }
+      }, 120000); // 120s timeout
+      
+      try {
+        // Stream from LM Studio
+        for await (const chunk of lmStudio.chatCompletionStream({
         model: targetModel.id,
         messages: [{ role: 'user', content: processedContent }],
         temperature: 0.7,
         max_tokens: 2000,
       })) {
-        fullOutput += chunk;
-        totalChunks++;
+          // First chunk received - clear timeouts and intervals
+          if (!hasReceivedChunks) {
+            hasReceivedChunks = true;
+            clearTimeout(streamTimeout);
+            clearInterval(keepAliveInterval);
+            console.log(`✅ [PROMPT EXECUTE STREAM] First chunk received after ${Date.now() - startTime}ms`);
+          }
+          
+          fullOutput += chunk;
+          totalChunks++;
+          
+          // Send chunk to client
+          res.write(`data: ${JSON.stringify({
+            type: 'chunk',
+            content: chunk,
+            chunkNumber: totalChunks,
+          })}\n\n`);
+        }
         
-        // Send chunk to client
-        res.write(`data: ${JSON.stringify({
-          type: 'chunk',
-          content: chunk,
-          chunkNumber: totalChunks,
-        })}\n\n`);
+        // Clean up timeouts/intervals
+        clearTimeout(streamTimeout);
+        clearInterval(keepAliveInterval);
+      } catch (streamLoopError: any) {
+        clearTimeout(streamTimeout);
+        clearInterval(keepAliveInterval);
+        throw streamLoopError;
       }
       
       const duration = Date.now() - startTime;
@@ -1545,10 +1614,18 @@ router.post('/prompts/execute/stream', async (req: Request, res: Response) => {
       res.end();
     } catch (streamError: any) {
       console.error(`❌ [PROMPT EXECUTE STREAM] Stream error:`, streamError.message);
-      res.write(`data: ${JSON.stringify({
-        type: 'error',
-        message: streamError.message
-      })}\n\n`);
+      
+      // Ensure error event is sent
+      try {
+        res.write(`data: ${JSON.stringify({
+          type: 'error',
+          message: streamError.message || 'Streaming error occurred',
+          code: streamError.code || 'STREAM_ERROR',
+        })}\n\n`);
+      } catch (writeError) {
+        console.error(`❌ [PROMPT EXECUTE STREAM] Failed to write error:`, writeError);
+      }
+      
       res.end();
     }
   } catch (error: any) {
@@ -1563,6 +1640,54 @@ router.post('/prompts/execute/stream', async (req: Request, res: Response) => {
       // Response already ended, nothing we can do
       console.error('❌ Failed to send error to client:', writeError);
     }
+  }
+});
+
+// POST /api/models/warmup - Pre-warm a model to avoid loading delay
+router.post('/models/warmup', async (req: Request, res: Response) => {
+  try {
+    const { modelId } = req.body;
+    
+    if (!modelId) {
+      return res.status(400).json(errorResponse('modelId is required'));
+    }
+    
+    console.log(`🔥 [MODEL WARMUP] Starting warmup for model: ${modelId}`);
+    
+    const warmupStart = Date.now();
+    
+    // Send minimal request to force model load
+    const response = await fetch('http://localhost:1234/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: modelId,
+        messages: [{ role: 'user', content: 'ready' }],
+        max_tokens: 1,
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(120000), // 120s timeout
+    });
+    
+    const warmupDuration = Date.now() - warmupStart;
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ [MODEL WARMUP] Failed:`, errorText);
+      return res.status(500).json(errorResponse(`Model warmup failed: ${errorText}`));
+    }
+    
+    console.log(`✅ [MODEL WARMUP] Model ${modelId} warmed up in ${warmupDuration}ms`);
+    
+    res.json(successResponse({
+      modelId,
+      warmupDuration,
+      ready: true,
+    }, `Model ${modelId} is now ready`));
+  } catch (error: any) {
+    console.error(`❌ [MODEL WARMUP] Error:`, error.message);
+    const err = errorResponse(error);
+    res.status(err.status).json(err);
   }
 });
 

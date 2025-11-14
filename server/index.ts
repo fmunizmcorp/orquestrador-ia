@@ -59,10 +59,37 @@ app.get('/api/health', async (req, res) => {
     const dbOk = await testConnection();
     const systemHealth = await systemMonitorService.healthCheck();
     
+    // Check LM Studio status
+    let lmStudioStatus = 'unknown';
+    let lmStudioModels = 0;
+    try {
+      const lmResponse = await fetch('http://localhost:1234/v1/models', {
+        signal: AbortSignal.timeout(2000),
+      });
+      
+      if (lmResponse.ok) {
+        const lmData = await lmResponse.json();
+        lmStudioModels = lmData.data?.length || 0;
+        lmStudioStatus = lmStudioModels > 0 ? 'ok' : 'no_models';
+      } else {
+        lmStudioStatus = 'error';
+      }
+    } catch (lmError) {
+      lmStudioStatus = 'unreachable';
+    }
+    
+    const overallStatus = dbOk && systemHealth.healthy && lmStudioStatus === 'ok' 
+      ? 'ok' 
+      : 'degraded';
+    
     res.json({
-      status: 'ok',
+      status: overallStatus,
       database: dbOk ? 'connected' : 'error',
       system: systemHealth.healthy ? 'healthy' : 'issues',
+      lmStudio: {
+        status: lmStudioStatus,
+        modelsLoaded: lmStudioModels,
+      },
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
