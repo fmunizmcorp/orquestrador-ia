@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { trpc } from '../lib/trpc';
 import { useAuth } from '../contexts/AuthContext';
+import StreamingPromptExecutor from '../components/StreamingPromptExecutor';
 
 interface PromptFormData {
   title: string;
@@ -283,7 +284,18 @@ export default function Prompts() {
                 </div>
               )}
               
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                {/* Execute Button - Always visible */}
+                <div className="w-full">
+                  <StreamingPromptExecutor
+                    promptId={prompt.id}
+                    promptTitle={prompt.title}
+                    promptContent={prompt.content}
+                    modelId={1}
+                  />
+                </div>
+                
+                {/* Edit/Delete Buttons - Only for owner */}
                 {prompt.userId === user?.id && (
                   <>
                     <button
@@ -301,6 +313,8 @@ export default function Prompts() {
                     </button>
                   </>
                 )}
+                
+                {/* Duplicate Button - Always visible */}
                 <button
                   onClick={() => handleDuplicate(prompt)}
                   disabled={createPromptMutation.isLoading}
