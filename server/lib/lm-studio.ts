@@ -42,7 +42,7 @@ export class LMStudioClient {
   private baseUrl: string;
   private timeout: number;
   
-  constructor(baseUrl: string = 'http://localhost:1234', timeout: number = 30000) {
+  constructor(baseUrl: string = 'http://localhost:1234', timeout: number = 120000) {
     this.baseUrl = baseUrl;
     this.timeout = timeout;
   }
