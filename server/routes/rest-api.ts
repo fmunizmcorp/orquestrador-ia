@@ -1401,6 +1401,171 @@ router.post('/prompts/execute', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/prompts/execute/stream - Execute prompt with STREAMING (SSE)
+router.post('/prompts/execute/stream', async (req: Request, res: Response) => {
+  try {
+    const { promptId, variables = {}, modelId = 1 } = req.body;
+    
+    console.log(`🌊 [PROMPT EXECUTE STREAM] Starting streaming execution - promptId: ${promptId}, modelId: ${modelId}`);
+    
+    if (!promptId) {
+      return res.status(400).json(errorResponse('promptId is required'));
+    }
+    
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+    
+    // Get prompt from database
+    const [prompt] = await db.select()
+      .from(prompts)
+      .where(eq(prompts.id, promptId))
+      .limit(1);
+    
+    if (!prompt) {
+      console.error(`❌ [PROMPT EXECUTE STREAM] Prompt not found: ${promptId}`);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Prompt not found' })}\n\n`);
+      return res.end();
+    }
+    
+    console.log(`✅ [PROMPT EXECUTE STREAM] Prompt found: "${prompt.title}"`);
+    
+    // Get model from database
+    const [model] = await db.select()
+      .from(aiModels)
+      .where(eq(aiModels.id, modelId))
+      .limit(1);
+    
+    if (!model) {
+      console.error(`❌ [PROMPT EXECUTE STREAM] Model not found: ${modelId}`);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Model not found' })}\n\n`);
+      return res.end();
+    }
+    
+    console.log(`✅ [PROMPT EXECUTE STREAM] Model found: ${model.name}`);
+    
+    // Replace variables in prompt content
+    let processedContent = prompt.content || '';
+    Object.entries(variables).forEach(([key, value]) => {
+      const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+      processedContent = processedContent.replace(regex, String(value));
+    });
+    
+    // Send initial metadata event
+    res.write(`data: ${JSON.stringify({
+      type: 'start',
+      promptId,
+      promptTitle: prompt.title,
+      modelId: model.id,
+      modelName: model.name,
+      lmStudioModelId: model.modelId,
+    })}\n\n`);
+    
+    try {
+      // Check if LM Studio is available
+      const isLMStudioAvailable = await lmStudio.isAvailable();
+      
+      if (!isLMStudioAvailable) {
+        console.warn(`⚠️  [PROMPT EXECUTE STREAM] LM Studio not available`);
+        res.write(`data: ${JSON.stringify({
+          type: 'error',
+          message: 'LM Studio not available'
+        })}\n\n`);
+        return res.end();
+      }
+      
+      // Get loaded models to verify which one to use
+      const lmResponse = await fetch('http://localhost:1234/v1/models', {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000),
+      });
+      
+      const lmData = await lmResponse.json();
+      const loadedModels = lmData.data || [];
+      
+      if (loadedModels.length === 0) {
+        console.error(`❌ [PROMPT EXECUTE STREAM] No models loaded in LM Studio`);
+        res.write(`data: ${JSON.stringify({
+          type: 'error',
+          message: 'No models loaded in LM Studio'
+        })}\n\n`);
+        return res.end();
+      }
+      
+      // Find target model (fuzzy match or fallback to first)
+      let targetModel = loadedModels.find((m: any) => 
+        m.id === model.modelId || 
+        m.id.includes(model.modelId || '') ||
+        (model.modelId && m.id.toLowerCase().includes(model.modelId.toLowerCase()))
+      ) || loadedModels[0];
+      
+      console.log(`🎯 [PROMPT EXECUTE STREAM] Using model: ${targetModel.id}`);
+      console.log(`🌊 [PROMPT EXECUTE STREAM] Starting stream...`);
+      
+      const startTime = Date.now();
+      let totalChunks = 0;
+      let fullOutput = '';
+      
+      // Stream from LM Studio
+      for await (const chunk of lmStudio.chatCompletionStream({
+        model: targetModel.id,
+        messages: [{ role: 'user', content: processedContent }],
+        temperature: 0.7,
+        max_tokens: 2000,
+      })) {
+        fullOutput += chunk;
+        totalChunks++;
+        
+        // Send chunk to client
+        res.write(`data: ${JSON.stringify({
+          type: 'chunk',
+          content: chunk,
+          chunkNumber: totalChunks,
+        })}\n\n`);
+      }
+      
+      const duration = Date.now() - startTime;
+      console.log(`✅ [PROMPT EXECUTE STREAM] Stream completed - ${totalChunks} chunks, ${duration}ms, ${fullOutput.length} chars`);
+      
+      // Send completion event
+      res.write(`data: ${JSON.stringify({
+        type: 'done',
+        totalChunks,
+        duration,
+        outputLength: fullOutput.length,
+      })}\n\n`);
+      
+      // Increment use count
+      await db.update(prompts)
+        .set({ useCount: sql`${prompts.useCount} + 1` })
+        .where(eq(prompts.id, promptId));
+      
+      res.end();
+    } catch (streamError: any) {
+      console.error(`❌ [PROMPT EXECUTE STREAM] Stream error:`, streamError.message);
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
+        message: streamError.message
+      })}\n\n`);
+      res.end();
+    }
+  } catch (error: any) {
+    console.error('❌ [PROMPT EXECUTE STREAM] Fatal error:', error);
+    try {
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
+        message: error.message || 'Internal server error'
+      })}\n\n`);
+      res.end();
+    } catch (writeError) {
+      // Response already ended, nothing we can do
+      console.error('❌ Failed to send error to client:', writeError);
+    }
+  }
+});
+
 // GET /api/system/metrics - System metrics (CPU, Memory, Disk)
 router.get('/system/metrics', async (req: Request, res: Response) => {
   try {

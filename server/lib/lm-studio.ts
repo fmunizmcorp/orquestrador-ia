@@ -135,6 +135,74 @@ export class LMStudioClient {
   }
   
   /**
+   * Generate chat completion with streaming (SSE)
+   * @returns AsyncGenerator that yields content chunks as they arrive
+   */
+  async *chatCompletionStream(request: LMStudioRequest): AsyncGenerator<string, void, unknown> {
+    try {
+      const response = await fetch(`${this.baseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: request.model || 'local-model',
+          messages: request.messages,
+          temperature: request.temperature || 0.7,
+          max_tokens: request.max_tokens || 2000,
+          stream: true,  // Enable streaming
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`LM Studio API error: ${response.status} - ${errorText}`);
+      }
+      
+      if (!response.body) {
+        throw new Error('No response body for streaming');
+      }
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        // Keep the last incomplete line in buffer
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+          
+          const data = trimmed.slice(6); // Remove 'data: ' prefix
+          if (data === '[DONE]') return;
+          
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              yield content;
+            }
+          } catch (e) {
+            // Skip invalid JSON
+            console.warn('Failed to parse SSE chunk:', e);
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Stream error:', error);
+      throw error;
+    }
+  }
+  
+  /**
    * Generate simple completion (for backward compatibility)
    * @param prompt - The user prompt
    * @param systemPrompt - Optional system prompt
