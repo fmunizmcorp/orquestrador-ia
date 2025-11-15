@@ -174,9 +174,35 @@ export const monitoringRouter = router({
   getServiceStatus: publicProcedure
     .query(async () => {
       const metrics = await systemMonitorService.getMetrics();
+      
+      // BUGFIX RODADA 35 - BUG 3: Check actual service status instead of hardcoded values
+      let databaseStatus = false;
+      let lmstudioStatus = false;
+      
+      // Check database connection
+      try {
+        await db.execute(sql`SELECT 1`);
+        databaseStatus = true;
+      } catch (dbError: any) {
+        logger.error({ error: dbError }, 'Database connection failed');
+        databaseStatus = false;
+      }
+      
+      // Check LM Studio availability
+      try {
+        const lmResponse = await fetch('http://localhost:1234/v1/models', {
+          method: 'GET',
+          signal: AbortSignal.timeout(2000),
+        });
+        lmstudioStatus = lmResponse.ok;
+      } catch (lmError: any) {
+        logger.debug({ error: lmError }, 'LM Studio not available');
+        lmstudioStatus = false;
+      }
+      
       const status = {
-        database: true,
-        lmstudio: false,
+        database: databaseStatus,
+        lmstudio: lmstudioStatus,
         redis: false,
         services: metrics,
       };

@@ -141,8 +141,7 @@ export const AnalyticsDashboard: React.FC = () => {
     };
   };
 
-  const stats = calculateStats();
-
+  // BUGFIX RODADA 35 - BUG 1: Define calculateSystemHealth BEFORE calculateStats
   // Calculate system health
   const calculateSystemHealth = () => {
     if (!metrics?.metrics) return { status: 'unknown', color: 'text-gray-500', label: 'Desconhecido' };
@@ -164,6 +163,8 @@ export const AnalyticsDashboard: React.FC = () => {
     }
   };
 
+  // BUGFIX RODADA 35 - BUG 1: Call calculateStats AFTER calculateSystemHealth is defined
+  const stats = calculateStats();
   const health = calculateSystemHealth();
 
   // Chart data preparation

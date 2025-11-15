@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/Toast';
 import Layout from './components/Layout';
+import { ErrorBoundary } from './components/ErrorBoundary'; // BUGFIX RODADA 35 - BUG 1
 
 // SPRINT 28: Lazy loading de todas as páginas para reduzir bundle inicial
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -80,7 +81,8 @@ function App() {
             <Route path="/terminal" element={<Terminal />} />
             <Route path="/model-training" element={<ModelTraining />} />
             <Route path="/lmstudio" element={<LMStudio />} />
-            <Route path="/analytics" element={<Analytics />} />
+            {/* BUGFIX RODADA 35 - BUG 1: Wrap Analytics with ErrorBoundary */}
+            <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
           </Route>
           </Routes>
           </Suspense>

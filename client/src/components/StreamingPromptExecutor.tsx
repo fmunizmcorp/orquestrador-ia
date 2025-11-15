@@ -14,6 +14,7 @@
 
 import { useState } from 'react';
 import { useStreamingPrompt } from '../hooks/useStreamingPrompt';
+import { trpc } from '../lib/trpc';
 
 interface StreamingPromptExecutorProps {
   promptId: number;
@@ -51,6 +52,13 @@ export default function StreamingPromptExecutor({
   const [isExecuteModalOpen, setIsExecuteModalOpen] = useState(false);
   const [variablesInput, setVariablesInput] = useState<Record<string, any>>(variables);
   const [selectedModelId, setSelectedModelId] = useState<number>(modelId);
+
+  // BUGFIX RODADA 35 - BUG 4: Fetch available models dynamically
+  const { data: modelsData } = trpc.models.list.useQuery({
+    isActive: true,
+    limit: 100,
+    offset: 0,
+  });
 
   const handleExecute = async () => {
     try {
@@ -192,9 +200,17 @@ export default function StreamingPromptExecutor({
                     value={selectedModelId}
                     onChange={(e) => setSelectedModelId(Number(e.target.value))}
                     className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled={!modelsData?.items || modelsData.items.length === 0}
                   >
-                    <option value={1}>Modelo Padrão (ID: 1)</option>
-                    <option value={2}>Modelo Alternativo (ID: 2)</option>
+                    {modelsData && modelsData.items.length > 0 ? (
+                      modelsData.items.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name} {model.provider ? `(${model.provider})` : ''} - {model.modelId}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={1}>Carregando modelos...</option>
+                    )}
                   </select>
                   {modelName && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">

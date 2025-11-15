@@ -1590,6 +1590,11 @@ router.post('/prompts/execute/stream', async (req: Request, res: Response) => {
             content: chunk,
             chunkNumber: totalChunks,
           })}\n\n`);
+          
+          // BUGFIX RODADA 35: Flush immediately to prevent buffering
+          if (typeof (res as any).flush === 'function') {
+            (res as any).flush();
+          }
         }
         
         // Clean up timeouts/intervals
