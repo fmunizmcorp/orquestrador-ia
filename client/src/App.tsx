@@ -1,42 +1,53 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/Toast';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import Projects from './pages/Projects';
-import Teams from './pages/Teams';
-import Providers from './pages/Providers';
-import Models from './pages/Models';
-import SpecializedAIs from './pages/SpecializedAIs';
-import Credentials from './pages/Credentials';
-import Tasks from './pages/Tasks';
-import Subtasks from './pages/Subtasks';
-import Prompts from './pages/Prompts';
-import Templates from './pages/Templates';
-import Workflows from './pages/Workflows';
-import Instructions from './pages/Instructions';
-import KnowledgeBase from './pages/KnowledgeBase';
-import KnowledgeSources from './pages/KnowledgeSources';
-import ExecutionLogs from './pages/ExecutionLogs';
-import Chat from './pages/Chat';
-import ExternalAPIAccounts from './pages/ExternalAPIAccounts';
-import Services from './pages/Services';
-import Monitoring from './pages/Monitoring';
-import Settings from './pages/Settings';
-import Terminal from './pages/Terminal';
-import ModelTraining from './pages/ModelTraining';
-import LMStudio from './pages/LMStudio';
-import { Analytics } from './pages/Analytics';
-import { WorkflowBuilder } from './pages/WorkflowBuilder';
+
+// SPRINT 28: Lazy loading de todas as páginas para reduzir bundle inicial
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Projects = lazy(() => import('./pages/Projects'));
+const Teams = lazy(() => import('./pages/Teams'));
+const Providers = lazy(() => import('./pages/Providers'));
+const Models = lazy(() => import('./pages/Models'));
+const SpecializedAIs = lazy(() => import('./pages/SpecializedAIs'));
+const Credentials = lazy(() => import('./pages/Credentials'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const Subtasks = lazy(() => import('./pages/Subtasks'));
+const Prompts = lazy(() => import('./pages/Prompts'));
+const Templates = lazy(() => import('./pages/Templates'));
+const Workflows = lazy(() => import('./pages/Workflows'));
+const Instructions = lazy(() => import('./pages/Instructions'));
+const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase'));
+const KnowledgeSources = lazy(() => import('./pages/KnowledgeSources'));
+const ExecutionLogs = lazy(() => import('./pages/ExecutionLogs'));
+const Chat = lazy(() => import('./pages/Chat'));
+const ExternalAPIAccounts = lazy(() => import('./pages/ExternalAPIAccounts'));
+const Services = lazy(() => import('./pages/Services'));
+const Monitoring = lazy(() => import('./pages/Monitoring'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Terminal = lazy(() => import('./pages/Terminal'));
+const ModelTraining = lazy(() => import('./pages/ModelTraining'));
+const LMStudio = lazy(() => import('./pages/LMStudio'));
+const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m.Analytics })));
+const WorkflowBuilder = lazy(() => import('./pages/WorkflowBuilder').then(m => ({ default: m.WorkflowBuilder })));
 
 function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
         <AuthProvider>
-          <Routes>
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
+              </div>
+            </div>
+          }>
+            <Routes>
           {/* Redirecionar login e register para dashboard */}
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/register" element={<Navigate to="/" replace />} />
@@ -72,6 +83,7 @@ function App() {
             <Route path="/analytics" element={<Analytics />} />
           </Route>
           </Routes>
+          </Suspense>
         </AuthProvider>
       </ToastProvider>
     </ThemeProvider>

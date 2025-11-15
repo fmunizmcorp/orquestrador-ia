@@ -1,10 +1,19 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig({
   root: './client',
-  plugins: [react()],
+  plugins: [
+    react(),
+    visualizer({
+      filename: '../bundle-stats.html',
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+    }) as any,
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './client/src'),
@@ -28,5 +37,24 @@ export default defineConfig({
   build: {
     outDir: '../dist/client',
     emptyOutDir: true,
+    // SPRINT 28: Bundle Optimization
+    chunkSizeWarningLimit: 500,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor splitting
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'trpc-vendor': ['@trpc/client', '@trpc/react-query', '@tanstack/react-query'],
+        },
+      },
+    },
   },
 });

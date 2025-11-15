@@ -4,6 +4,7 @@
  */
 
 import express from 'express';
+import compression from 'compression';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
@@ -23,6 +24,12 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// SPRINT 28: Compression middleware para Gzip/Brotli
+app.use(compression({
+  level: 6, // Balance between speed and compression
+  threshold: 1024, // Only compress responses > 1KB
+}));
 
 // Middleware
 app.use(express.json({ limit: '50mb' }));
@@ -79,7 +86,16 @@ if (process.env.NODE_ENV === 'production') {
   console.log('📁 __dirname:', __dirname);
   console.log('📁 Resolved client path:', clientPath);
   
-  app.use(express.static(clientPath));
+  // SPRINT 28: Cache headers for static assets
+  app.use('/assets', express.static(path.join(clientPath, 'assets'), {
+    maxAge: '1y', // Cache assets for 1 year (they have hash in filename)
+    immutable: true,
+  }));
+  
+  // Serve other static files with shorter cache
+  app.use(express.static(clientPath, {
+    maxAge: '1h', // Cache other files for 1 hour
+  }));
 
 // REST API
 app.use('/api', restApiRouter);
