@@ -84,6 +84,18 @@ export class LMStudioClient {
   }
   
   /**
+   * Validate and normalize max_tokens parameter
+   * @param maxTokens - Raw max_tokens value
+   * @returns Normalized value between 50 and 4096
+   */
+  private validateMaxTokens(maxTokens?: number): number {
+    if (maxTokens === undefined) return 1024; // Default
+    if (maxTokens < 50) return 50; // Minimum
+    if (maxTokens > 4096) return 4096; // Maximum
+    return Math.floor(maxTokens);
+  }
+  
+  /**
    * Generate chat completion
    */
   async chatCompletion(request: LMStudioRequest): Promise<string> {
@@ -100,7 +112,7 @@ export class LMStudioClient {
           model: request.model || 'local-model',
           messages: request.messages,
           temperature: request.temperature || 0.7,
-          max_tokens: request.max_tokens || 2000,
+          max_tokens: this.validateMaxTokens(request.max_tokens),
           stream: false,
         }),
         signal: controller.signal,
@@ -149,7 +161,7 @@ export class LMStudioClient {
           model: request.model || 'local-model',
           messages: request.messages,
           temperature: request.temperature || 0.7,
-          max_tokens: request.max_tokens || 2000,
+          max_tokens: this.validateMaxTokens(request.max_tokens),
           stream: true,  // Enable streaming
         }),
       });

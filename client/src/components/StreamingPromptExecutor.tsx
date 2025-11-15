@@ -84,6 +84,31 @@ export default function StreamingPromptExecutor({
     return `${(ms / 1000).toFixed(1)}s`;
   };
 
+  /**
+   * Calculate estimated time remaining based on chunks per second
+   * Assumes average response is 1024 tokens (~1024 chunks)
+   */
+  const calculateETA = () => {
+    if (progress.chunks === 0 || progress.duration === 0) return null;
+    
+    const chunksPerSecond = progress.chunks / (progress.duration / 1000);
+    const estimatedTotalChunks = 1024; // Average based on max_tokens default
+    const remainingChunks = Math.max(0, estimatedTotalChunks - progress.chunks);
+    const etaSeconds = remainingChunks / chunksPerSecond;
+    
+    if (!isFinite(etaSeconds) || etaSeconds < 0) return null;
+    
+    return Math.ceil(etaSeconds);
+  };
+
+  /**
+   * Calculate progress percentage based on estimated total
+   */
+  const calculateProgress = () => {
+    const estimatedTotal = 1024;
+    return Math.min(100, Math.round((progress.chunks / estimatedTotal) * 100));
+  };
+
   const openExecuteModal = () => {
     reset();
     setIsExecuteModalOpen(true);
@@ -208,17 +233,20 @@ export default function StreamingPromptExecutor({
                   {/* Streaming Progress */}
                   {isStreaming && !isModelLoading && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                           <div className="flex-shrink-0">
                             <div className="animate-pulse h-3 w-3 rounded-full bg-blue-600"></div>
                           </div>
                           <div>
                             <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200">
-                              Streaming em Progresso
+                              Streaming em Progresso ({calculateProgress()}%)
                             </h4>
                             <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                               {progress.chunks} chunks • {formatDuration(progress.duration)} • {progress.outputLength} caracteres
+                              {calculateETA() && (
+                                <span className="ml-2">• ~{calculateETA()}s restantes</span>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -228,6 +256,13 @@ export default function StreamingPromptExecutor({
                         >
                           Cancelar
                         </button>
+                      </div>
+                      {/* Progress Bar */}
+                      <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${calculateProgress()}%` }}
+                        ></div>
                       </div>
                     </div>
                   )}

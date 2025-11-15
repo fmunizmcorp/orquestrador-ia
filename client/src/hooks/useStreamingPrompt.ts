@@ -29,6 +29,8 @@ interface ExecuteOptions {
   promptId: number;
   variables?: Record<string, any>;
   modelId?: number;
+  maxTokens?: number;     // NEW: Max tokens limit (default: 1024)
+  timeout?: number;        // NEW: Client-side timeout in ms (default: 120000)
 }
 
 export const useStreamingPrompt = () => {
@@ -49,7 +51,7 @@ export const useStreamingPrompt = () => {
   const startTimeRef = useRef<number>(0);
 
   const execute = useCallback(async (options: ExecuteOptions) => {
-    const { promptId, variables, modelId } = options;
+    const { promptId, variables, modelId, maxTokens = 1024, timeout = 120000 } = options;
 
     // Reset state
     setState({
@@ -69,6 +71,18 @@ export const useStreamingPrompt = () => {
     abortControllerRef.current = new AbortController();
     startTimeRef.current = Date.now();
 
+    // Client-side timeout protection
+    const clientTimeout = setTimeout(() => {
+      console.warn(`⏰ Client-side timeout (${timeout}ms) - aborting request`);
+      abortControllerRef.current?.abort();
+      setState(prev => ({
+        ...prev,
+        error: `Request timeout after ${timeout / 1000}s`,
+        isStreaming: false,
+        isModelLoading: false,
+      }));
+    }, timeout);
+
     try {
       const response = await fetch('/api/prompts/execute/stream', {
         method: 'POST',
@@ -79,6 +93,8 @@ export const useStreamingPrompt = () => {
           promptId,
           variables: variables || {},
           modelId: modelId || 1,
+          maxTokens,  // NEW: Pass maxTokens to backend
+          timeout,    // NEW: Pass timeout to backend
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -218,6 +234,8 @@ export const useStreamingPrompt = () => {
         }));
       }
     } finally {
+      // Clear client-side timeout
+      clearTimeout(clientTimeout);
       abortControllerRef.current = null;
     }
   }, []);

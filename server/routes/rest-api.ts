@@ -1404,9 +1404,15 @@ router.post('/prompts/execute', async (req: Request, res: Response) => {
 // POST /api/prompts/execute/stream - Execute prompt with STREAMING (SSE)
 router.post('/prompts/execute/stream', async (req: Request, res: Response) => {
   try {
-    const { promptId, variables = {}, modelId = 1 } = req.body;
+    const { 
+      promptId, 
+      variables = {}, 
+      modelId = 1,
+      maxTokens = 1024,  // NEW: Max tokens limit (default: 1024)
+      timeout = 120000   // NEW: Timeout in ms (default: 120s)
+    } = req.body;
     
-    console.log(`🌊 [PROMPT EXECUTE STREAM] Starting streaming execution - promptId: ${promptId}, modelId: ${modelId}`);
+    console.log(`🌊 [PROMPT EXECUTE STREAM] Starting streaming execution - promptId: ${promptId}, modelId: ${modelId}, maxTokens: ${maxTokens}, timeout: ${timeout}ms`);
     
     if (!promptId) {
       return res.status(400).json(errorResponse('promptId is required'));
@@ -1545,19 +1551,19 @@ router.post('/prompts/execute/stream', async (req: Request, res: Response) => {
         }
       }, 5000); // Every 5 seconds
       
-      // Timeout protection (120s for model loading)
+      // Timeout protection (configurable)
       const streamTimeout = setTimeout(() => {
         if (!hasReceivedChunks) {
           clearInterval(keepAliveInterval);
-          console.error(`❌ [PROMPT EXECUTE STREAM] Timeout - no chunks received in 120s`);
+          console.error(`❌ [PROMPT EXECUTE STREAM] Timeout - no chunks received in ${timeout}ms`);
           res.write(`data: ${JSON.stringify({
             type: 'error',
-            message: 'Model loading timeout (120s). The model may be too large or system overloaded. Please try a smaller model or try again later.',
-            code: 'MODEL_LOAD_TIMEOUT',
+            message: `Streaming timeout (${timeout}ms). The model may be loading or response is too long. Please try again.`,
+            code: 'STREAM_TIMEOUT',
           })}\n\n`);
           res.end();
         }
-      }, 120000); // 120s timeout
+      }, timeout); // Configurable timeout
       
       try {
         // Stream from LM Studio
@@ -1565,7 +1571,7 @@ router.post('/prompts/execute/stream', async (req: Request, res: Response) => {
         model: targetModel.id,
         messages: [{ role: 'user', content: processedContent }],
         temperature: 0.7,
-        max_tokens: 2000,
+        max_tokens: maxTokens,  // Use configurable maxTokens
       })) {
           // First chunk received - clear timeouts and intervals
           if (!hasReceivedChunks) {
