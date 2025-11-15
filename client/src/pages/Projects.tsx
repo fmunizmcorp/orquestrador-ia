@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { trpc } from '../lib/trpc';
 import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '../components/Toast';
 
 interface ProjectFormData {
   name: string;
@@ -28,7 +27,6 @@ const statusLabels = {
 
 export default function Projects() {
   const { user } = useAuth();
-  const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
   const [formData, setFormData] = useState<ProjectFormData>({
@@ -55,21 +53,11 @@ export default function Projects() {
     onSuccess: () => {
       refetch();
       closeModal();
-      showToast({
-        type: 'success',
-        title: 'Projeto criado!',
-        message: 'O projeto foi criado com sucesso.',
-        duration: 5000,
-      });
+      alert('✅ Projeto criado com sucesso!');
     },
     onError: (error) => {
       console.error('Erro ao criar projeto:', error);
-      showToast({
-        type: 'error',
-        title: 'Erro ao criar projeto',
-        message: error.message || 'Ocorreu um erro inesperado.',
-        duration: 7000,
-      });
+      alert('❌ Erro ao criar projeto: ' + error.message);
     },
   });
 
@@ -77,42 +65,22 @@ export default function Projects() {
     onSuccess: () => {
       refetch();
       closeModal();
-      showToast({
-        type: 'success',
-        title: 'Projeto atualizado!',
-        message: 'As alterações foram salvas com sucesso.',
-        duration: 5000,
-      });
+      alert('✅ Projeto atualizado com sucesso!');
     },
     onError: (error) => {
       console.error('Erro ao atualizar projeto:', error);
-      showToast({
-        type: 'error',
-        title: 'Erro ao atualizar projeto',
-        message: error.message || 'Ocorreu um erro inesperado.',
-        duration: 7000,
-      });
+      alert('❌ Erro ao atualizar projeto: ' + error.message);
     },
   });
 
   const deleteProjectMutation = trpc.projects.delete.useMutation({
     onSuccess: () => {
       refetch();
-      showToast({
-        type: 'success',
-        title: 'Projeto excluído!',
-        message: 'O projeto foi removido com sucesso.',
-        duration: 5000,
-      });
+      alert('✅ Projeto excluído com sucesso!');
     },
     onError: (error) => {
       console.error('Erro ao excluir projeto:', error);
-      showToast({
-        type: 'error',
-        title: 'Erro ao excluir projeto',
-        message: error.message || 'Ocorreu um erro inesperado.',
-        duration: 7000,
-      });
+      alert('❌ Erro ao excluir projeto: ' + error.message);
     },
   });
 
@@ -304,8 +272,8 @@ export default function Projects() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center p-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 {editingProject ? 'Editar Projeto' : 'Novo Projeto'}
               </h2>
@@ -319,8 +287,8 @@ export default function Projects() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-              <div className="space-y-4 p-6 overflow-y-auto flex-1">
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Nome do Projeto *
@@ -388,18 +356,18 @@ export default function Projects() {
                 </div>
               </div>
 
-              <div className="flex gap-3 p-6 pt-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-b-lg">
+              <div className="flex gap-3 mt-6">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={createProjectMutation.isLoading || updateProjectMutation.isLoading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
                   {createProjectMutation.isLoading || updateProjectMutation.isLoading
                     ? 'Salvando...'

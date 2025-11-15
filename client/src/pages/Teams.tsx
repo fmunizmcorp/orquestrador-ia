@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { trpc } from '../lib/trpc';
 import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '../components/Toast';
 
 interface TeamFormData {
   name: string;
@@ -10,7 +9,6 @@ interface TeamFormData {
 
 export default function Teams() {
   const { user } = useAuth();
-  const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<any>(null);
   const [formData, setFormData] = useState<TeamFormData>({
@@ -30,21 +28,11 @@ export default function Teams() {
     onSuccess: () => {
       refetch();
       closeModal();
-      showToast({
-        type: 'success',
-        title: 'Equipe criada!',
-        message: 'A equipe foi criada com sucesso.',
-        duration: 5000,
-      });
+      alert('✅ Equipe criada com sucesso!');
     },
     onError: (error) => {
       console.error('Erro ao criar equipe:', error);
-      showToast({
-        type: 'error',
-        title: 'Erro ao criar equipe',
-        message: error.message || 'Ocorreu um erro inesperado.',
-        duration: 7000,
-      });
+      alert('❌ Erro ao criar equipe: ' + error.message);
     },
   });
 
@@ -52,42 +40,22 @@ export default function Teams() {
     onSuccess: () => {
       refetch();
       closeModal();
-      showToast({
-        type: 'success',
-        title: 'Equipe atualizada!',
-        message: 'As alterações foram salvas com sucesso.',
-        duration: 5000,
-      });
+      alert('✅ Equipe atualizada com sucesso!');
     },
     onError: (error) => {
       console.error('Erro ao atualizar equipe:', error);
-      showToast({
-        type: 'error',
-        title: 'Erro ao atualizar equipe',
-        message: error.message || 'Ocorreu um erro inesperado.',
-        duration: 7000,
-      });
+      alert('❌ Erro ao atualizar equipe: ' + error.message);
     },
   });
 
   const deleteTeamMutation = trpc.teams.delete.useMutation({
     onSuccess: () => {
       refetch();
-      showToast({
-        type: 'success',
-        title: 'Equipe excluída!',
-        message: 'A equipe foi removida com sucesso.',
-        duration: 5000,
-      });
+      alert('✅ Equipe excluída com sucesso!');
     },
     onError: (error) => {
       console.error('Erro ao excluir equipe:', error);
-      showToast({
-        type: 'error',
-        title: 'Erro ao excluir equipe',
-        message: error.message || 'Ocorreu um erro inesperado.',
-        duration: 7000,
-      });
+      alert('❌ Erro ao excluir equipe: ' + error.message);
     },
   });
 
@@ -251,9 +219,8 @@ export default function Teams() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <div className="flex justify-between items-center p-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 {editingTeam ? 'Editar Equipe' : 'Nova Equipe'}
               </h2>
@@ -267,9 +234,8 @@ export default function Teams() {
               </button>
             </div>
 
-            {/* Content */}
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-              <div className="space-y-4 p-6 overflow-y-auto flex-1">
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     Nome da Equipe *
@@ -299,19 +265,18 @@ export default function Teams() {
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="flex gap-3 p-6 pt-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 rounded-b-lg">
+              <div className="flex gap-3 mt-6">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={createTeamMutation.isLoading || updateTeamMutation.isLoading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
                   {createTeamMutation.isLoading || updateTeamMutation.isLoading
                     ? 'Salvando...'

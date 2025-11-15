@@ -14,9 +14,9 @@ import { createContext } from './trpc.js';
 import { testConnection } from './db/index.js';
 import { initDefaultUser } from './db/init-default-user.js';
 import { systemMonitorService } from './services/systemMonitorService.js';
+import restApiRouter from './routes/rest-api.js';
 import { handleMessage, connectionManager, broadcastTaskUpdate } from './websocket/handlers.js';
 import { setBroadcastCallback } from './services/orchestratorService.js';
-import restApiRouter from './routes/rest-api.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,9 +41,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// REST API Routes (for compatibility)
-app.use('/api', restApiRouter);
-
 // tRPC
 app.use(
   '/api/trpc',
@@ -59,37 +56,10 @@ app.get('/api/health', async (req, res) => {
     const dbOk = await testConnection();
     const systemHealth = await systemMonitorService.healthCheck();
     
-    // Check LM Studio status
-    let lmStudioStatus = 'unknown';
-    let lmStudioModels = 0;
-    try {
-      const lmResponse = await fetch('http://localhost:1234/v1/models', {
-        signal: AbortSignal.timeout(2000),
-      });
-      
-      if (lmResponse.ok) {
-        const lmData = await lmResponse.json();
-        lmStudioModels = lmData.data?.length || 0;
-        lmStudioStatus = lmStudioModels > 0 ? 'ok' : 'no_models';
-      } else {
-        lmStudioStatus = 'error';
-      }
-    } catch (lmError) {
-      lmStudioStatus = 'unreachable';
-    }
-    
-    const overallStatus = dbOk && systemHealth.healthy && lmStudioStatus === 'ok' 
-      ? 'ok' 
-      : 'degraded';
-    
     res.json({
-      status: overallStatus,
+      status: 'ok',
       database: dbOk ? 'connected' : 'error',
       system: systemHealth.healthy ? 'healthy' : 'issues',
-      lmStudio: {
-        status: lmStudioStatus,
-        modelsLoaded: lmStudioModels,
-      },
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -110,6 +80,9 @@ if (process.env.NODE_ENV === 'production') {
   console.log('📁 Resolved client path:', clientPath);
   
   app.use(express.static(clientPath));
+
+// REST API
+app.use('/api', restApiRouter);
   
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api') && !req.path.startsWith('/ws')) {
@@ -187,7 +160,7 @@ async function start() {
     server.listen(Number(PORT), HOST, () => {
       console.log('');
       console.log('╔════════════════════════════════════════════╗');
-      console.log('║   🚀 Orquestrador de IAs V3.6.0           ║');
+      console.log('║   🚀 Orquestrador de IAs V3.5.1           ║');
       console.log('║   🔓 Sistema Aberto (Sem Autenticação)    ║');
       console.log('╚════════════════════════════════════════════╝');
       console.log('');
