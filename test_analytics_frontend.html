@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Analytics - Sprint 68</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>Teste do Analytics Dashboard - Verificação React Error #310</h1>
+    <div id="status">Carregando...</div>
+    <div id="results"></div>
+    
+    <script>
+        console.log('[TESTE SPRINT 68] Iniciando teste do Analytics...');
+        
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        
+        let requestCount = 0;
+        let successCount = 0;
+        let errorCount = 0;
+        let lastError = null;
+        
+        // Função para fazer requisição à API
+        async function testAPI() {
+            try {
+                requestCount++;
+                console.log(`[TESTE] Requisição #${requestCount}`);
+                
+                const response = await fetch('http://localhost:3001/api/trpc/monitoring.getCurrentMetrics');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    successCount++;
+                    console.log(`[TESTE] ✅ Sucesso #${successCount}:`, data);
+                    return { success: true, data };
+                } else {
+                    errorCount++;
+                    console.error(`[TESTE] ❌ Erro HTTP ${response.status}`);
+                    return { success: false, error: `HTTP ${response.status}` };
+                }
+            } catch (error) {
+                errorCount++;
+                lastError = error;
+                console.error('[TESTE] ❌ Erro na requisição:', error);
+                return { success: false, error: error.message };
+            }
+        }
+        
+        // Teste: 10 requisições consecutivas para detectar loop infinito
+        async function runTest() {
+            console.log('[TESTE] Iniciando 10 requisições consecutivas...');
+            statusDiv.textContent = 'Executando teste...';
+            
+            const startTime = Date.now();
+            
+            for (let i = 0; i < 10; i++) {
+                await testAPI();
+                await new Promise(resolve => setTimeout(resolve, 500)); // 500ms entre requisições
+            }
+            
+            const endTime = Date.now();
+            const duration = ((endTime - startTime) / 1000).toFixed(2);
+            
+            // Resultado
+            const result = `
+                <h2>Resultado do Teste:</h2>
+                <ul>
+                    <li><strong>Total de requisições:</strong> ${requestCount}</li>
+                    <li><strong>Sucessos:</strong> ${successCount} ✅</li>
+                    <li><strong>Erros:</strong> ${errorCount} ❌</li>
+                    <li><strong>Duração total:</strong> ${duration}s</li>
+                    <li><strong>Média por requisição:</strong> ${(duration / requestCount).toFixed(3)}s</li>
+                </ul>
+                
+                <h2>Diagnóstico:</h2>
+                <p>${errorCount === 0 ? 
+                    '<strong style="color: green;">✅ SUCESSO TOTAL - Nenhum erro detectado!</strong>' : 
+                    '<strong style="color: red;">❌ FALHOU - ' + errorCount + ' erro(s) detectado(s)</strong>'
+                }</p>
+                
+                <p>${successCount === 10 ? 
+                    '<strong style="color: green;">✅ SEM LOOP INFINITO - Todas as 10 requisições foram bem-sucedidas</strong>' : 
+                    '<strong style="color: orange;">⚠️ POSSÍVEL PROBLEMA - Nem todas as requisições tiveram sucesso</strong>'
+                }</p>
+                
+                ${lastError ? `<p><strong>Último erro:</strong> ${lastError.message}</p>` : ''}
+            `;
+            
+            statusDiv.textContent = 'Teste concluído!';
+            resultsDiv.innerHTML = result;
+            
+            console.log('[TESTE] Teste concluído:', {
+                total: requestCount,
+                success: successCount,
+                errors: errorCount,
+                duration: duration + 's'
+            });
+        }
+        
+        // Executar teste automaticamente
+        window.onload = () => {
+            setTimeout(runTest, 1000);
+        };
+    </script>
+</body>
+</html>
