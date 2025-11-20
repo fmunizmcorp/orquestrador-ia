@@ -1,0 +1,194 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Orquestrador v3.7.0" [level=1] [ref=e6]
+      - button [ref=e7] [cursor=pointer]:
+        - img [ref=e8]
+    - navigation [ref=e11]:
+      - link "Dashboard" [ref=e12] [cursor=pointer]:
+        - /url: /
+        - img [ref=e13]
+        - generic [ref=e18]: Dashboard
+      - link "Analytics" [ref=e19] [cursor=pointer]:
+        - /url: /analytics
+        - img [ref=e20]
+        - generic [ref=e23]: Analytics
+      - link "Equipes" [ref=e24] [cursor=pointer]:
+        - /url: /teams
+        - img [ref=e25]
+        - generic [ref=e30]: Equipes
+      - link "Projetos" [ref=e31] [cursor=pointer]:
+        - /url: /projects
+        - img [ref=e32]
+        - generic [ref=e34]: Projetos
+      - link "Tarefas" [ref=e35] [cursor=pointer]:
+        - /url: /tasks
+        - img [ref=e36]
+        - generic [ref=e39]: Tarefas
+      - link "Prompts" [ref=e40] [cursor=pointer]:
+        - /url: /prompts
+        - img [ref=e41]
+        - generic [ref=e43]: Prompts
+      - link "Provedores" [ref=e44] [cursor=pointer]:
+        - /url: /providers
+        - img [ref=e45]
+        - generic [ref=e49]: Provedores
+      - link "Modelos" [ref=e50] [cursor=pointer]:
+        - /url: /models
+        - img [ref=e51]
+        - generic [ref=e54]: Modelos
+      - link "IAs Especializadas" [ref=e55] [cursor=pointer]:
+        - /url: /specialized-ais
+        - img [ref=e56]
+        - generic [ref=e59]: IAs Especializadas
+      - link "Credenciais" [ref=e60] [cursor=pointer]:
+        - /url: /credentials
+        - img [ref=e61]
+        - generic [ref=e65]: Credenciais
+      - link "Templates" [ref=e66] [cursor=pointer]:
+        - /url: /templates
+        - img [ref=e67]
+        - generic [ref=e70]: Templates
+      - link "Workflows" [ref=e71] [cursor=pointer]:
+        - /url: /workflows
+        - img [ref=e72]
+        - generic [ref=e76]: Workflows
+      - link "Instruções" [ref=e77] [cursor=pointer]:
+        - /url: /instructions
+        - img [ref=e78]
+        - generic [ref=e81]: Instruções
+      - link "Base de Conhecimento" [ref=e82] [cursor=pointer]:
+        - /url: /knowledge-base
+        - img [ref=e83]
+        - generic [ref=e85]: Base de Conhecimento
+      - link "Chat" [ref=e86] [cursor=pointer]:
+        - /url: /chat
+        - img [ref=e87]
+        - generic [ref=e89]: Chat
+      - link "Serviços Externos" [ref=e90] [cursor=pointer]:
+        - /url: /services
+        - img [ref=e91]
+        - generic [ref=e93]: Serviços Externos
+      - link "Contas API" [ref=e94] [cursor=pointer]:
+        - /url: /external-api-accounts
+        - img [ref=e95]
+        - generic [ref=e97]: Contas API
+      - link "Monitoramento" [ref=e98] [cursor=pointer]:
+        - /url: /monitoring
+        - img [ref=e99]
+        - generic [ref=e101]: Monitoramento
+      - link "Logs" [ref=e102] [cursor=pointer]:
+        - /url: /execution-logs
+        - img [ref=e103]
+        - generic [ref=e108]: Logs
+      - link "Terminal" [ref=e109] [cursor=pointer]:
+        - /url: /terminal
+        - img [ref=e110]
+        - generic [ref=e112]: Terminal
+      - link "Treinamento" [ref=e113] [cursor=pointer]:
+        - /url: /model-training
+        - img [ref=e114]
+        - generic [ref=e117]: Treinamento
+      - link "Configurações" [ref=e118] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e119]
+        - generic [ref=e122]: Configurações
+    - generic [ref=e124]:
+      - generic [ref=e125]:
+        - generic [ref=e126]: A
+        - generic [ref=e127]:
+          - paragraph [ref=e128]: Administrador
+          - paragraph [ref=e129]: admin@orquestrador.local
+      - button "Escuro" [ref=e131] [cursor=pointer]:
+        - img [ref=e132]
+        - text: Escuro
+      - generic [ref=e134]:
+        - link "Perfil" [ref=e135] [cursor=pointer]:
+          - /url: /profile
+          - img [ref=e136]
+          - text: Perfil
+        - button "Sair" [ref=e139] [cursor=pointer]:
+          - img [ref=e140]
+          - text: Sair
+      - generic [ref=e143]: v3.7.0 - Sistema de Orquestração
+  - main [ref=e144]:
+    - generic [ref=e146]:
+      - generic [ref=e147]:
+        - generic [ref=e148]:
+          - heading "Chat com IA" [level=1] [ref=e149]
+          - paragraph [ref=e150]: Converse com o assistente do Orquestrador V3.2
+        - generic [ref=e151]:
+          - generic "Conectado" [ref=e152]
+          - generic [ref=e153]: Online
+      - generic [ref=e154]:
+        - generic [ref=e156]:
+          - paragraph [ref=e157]: Você
+          - paragraph [ref=e158]: Test message from Sprint 46 validation
+          - paragraph [ref=e159]: 00:17:33
+        - generic [ref=e161]:
+          - paragraph [ref=e162]: Você
+          - paragraph [ref=e163]: Test message from Sprint 46 validation
+          - paragraph [ref=e164]: 04:33:35
+        - generic [ref=e166]:
+          - paragraph [ref=e167]: Você
+          - paragraph [ref=e168]: Test message from Sprint 46 validation
+          - paragraph [ref=e169]: 10:31:31
+        - generic [ref=e171]:
+          - paragraph [ref=e172]: Você
+          - paragraph [ref=e173]: Test message from Sprint 46 validation
+          - paragraph [ref=e174]: 10:37:23
+        - generic [ref=e176]:
+          - paragraph [ref=e177]: Você
+          - paragraph [ref=e178]: Test message for Enter key
+          - paragraph [ref=e179]: 12:20:38
+        - generic [ref=e181]:
+          - paragraph [ref=e182]: Você
+          - paragraph [ref=e183]: Testing handleSend useCallback
+          - paragraph [ref=e184]: 12:20:46
+        - generic [ref=e186]:
+          - paragraph [ref=e187]: Você
+          - paragraph [ref=e188]: Message that should clear
+          - paragraph [ref=e189]: 12:20:48
+        - generic [ref=e191]:
+          - paragraph [ref=e192]: Você
+          - paragraph [ref=e193]: First message
+          - paragraph [ref=e194]: 12:20:50
+        - generic [ref=e196]:
+          - paragraph [ref=e197]: Você
+          - paragraph [ref=e198]: Test error detection
+          - paragraph [ref=e199]: 12:21:05
+        - generic [ref=e201]:
+          - paragraph [ref=e202]: Você
+          - paragraph [ref=e203]: Test message for Enter key
+          - paragraph [ref=e204]: 12:23:50
+        - generic [ref=e206]:
+          - paragraph [ref=e207]: Você
+          - paragraph [ref=e208]: Testing handleSend useCallback
+          - paragraph [ref=e209]: 12:23:58
+        - generic [ref=e211]:
+          - paragraph [ref=e212]: Você
+          - paragraph [ref=e213]: Message that should clear
+          - paragraph [ref=e214]: 12:24:01
+        - generic [ref=e216]:
+          - paragraph [ref=e217]: Você
+          - paragraph [ref=e218]: First message
+          - paragraph [ref=e219]: 15:24:02
+        - generic [ref=e221]:
+          - paragraph [ref=e222]: Você
+          - paragraph [ref=e223]: First message
+          - paragraph [ref=e224]: 12:24:02
+      - generic [ref=e225]:
+        - generic [ref=e226]:
+          - textbox "Digite sua mensagem... (Enter para enviar)" [disabled] [ref=e227]
+          - button "Enviar" [disabled] [ref=e228]:
+            - img [ref=e229]
+            - text: Enviar
+        - paragraph [ref=e232]: IA está respondendo...
+        - paragraph [ref=e234]: "Debug: WS State = OPEN | Connected = ✅ | Streaming = 🔄"
+  - button "👥 2" [ref=e236] [cursor=pointer]:
+    - generic [ref=e237]: 👥
+    - generic [ref=e238]: "2"
+```

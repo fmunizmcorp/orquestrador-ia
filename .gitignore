@@ -13,6 +13,9 @@ out/
 .env.local
 .env.*.local
 
+# SSH credentials (tracked for team documentation)
+# .ssh-config is TRACKED - contains infrastructure docs
+
 # Logs
 logs/
 *.log

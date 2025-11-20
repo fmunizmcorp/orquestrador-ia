@@ -99,22 +99,33 @@ export async function handleChatSend(
   ws: WebSocket,
   data: { message: string; conversationId?: number }
 ): Promise<void> {
+  console.log('🟢 [SPRINT 45] handleChatSend called with:', {
+    message: data.message,
+    conversationId: data.conversationId,
+    messageLength: data.message?.length
+  });
+  
   try {
     // 1. Salvar mensagem do usuário
+    console.log('🟢 [SPRINT 45] Saving user message to database...');
     const result: any = await db.insert(chatMessages).values({
       conversationId: data.conversationId || 1,
       role: 'user',
       content: data.message,
     });
+    console.log('🟢 [SPRINT 45] User message saved. Insert result:', result);
 
     const messageId = result[0]?.insertId || result.insertId;
+    console.log('🟢 [SPRINT 45] Message ID:', messageId);
+    
     const [userMessage] = await db.select()
       .from(chatMessages)
       .where(eq(chatMessages.id, messageId))
       .limit(1);
+    console.log('🟢 [SPRINT 45] User message retrieved:', userMessage);
 
     // Enviar confirmação
-    ws.send(JSON.stringify({
+    const confirmationPayload = {
       type: 'chat:message',
       data: {
         id: userMessage.id,
@@ -122,7 +133,9 @@ export async function handleChatSend(
         content: userMessage.content,
         timestamp: userMessage.createdAt.toISOString(),
       },
-    }));
+    };
+    console.log('🟢 [SPRINT 45] Sending confirmation to client:', confirmationPayload);
+    ws.send(JSON.stringify(confirmationPayload));
 
     // 2. Buscar contexto (últimas 10 mensagens)
     const history = await db.select()
@@ -201,12 +214,15 @@ export async function handleChatSend(
     }));
 
   } catch (error) {
-    console.error('Erro ao processar chat:', error);
+    console.error('🔴 [SPRINT 45] ERROR in handleChatSend:', error);
+    console.error('🔴 [SPRINT 45] Error stack:', (error as Error).stack);
     ws.send(JSON.stringify({
       type: 'error',
       data: { message: `Erro ao processar mensagem: ${error}` },
     }));
   }
+  
+  console.log('🟢 [SPRINT 45] handleChatSend completed successfully');
 }
 
 /**
@@ -290,10 +306,13 @@ export async function broadcastTaskUpdate(taskId: number): Promise<void> {
  */
 export async function handleMessage(ws: WebSocket, message: string): Promise<void> {
   try {
+    console.log('🔵 [SPRINT 45] handleMessage received:', message.substring(0, 100));
     const parsed: WSMessage = JSON.parse(message);
+    console.log('🔵 [SPRINT 45] Parsed message type:', parsed.type);
 
     switch (parsed.type) {
       case 'chat:send':
+        console.log('🔵 [SPRINT 45] Routing to handleChatSend with data:', parsed.data);
         await handleChatSend(ws, parsed.data);
         break;
 

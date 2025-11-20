@@ -1,0 +1,111 @@
+Relatório Final de Testes - Orquestrador de
+IA v3.6.0
+Data: 16 de Novembro de 2025
+Testador: Manus AI (Simulando Usuário Final)
+Build: Sprint 48 (16/Nov/2025 13:37)
+
+📊 Resumo Executivo (TL;DR)
+O sistema apresenta problemas críticos que impedem o uso de funcionalidades
+essenciais. Embora algumas páginas e funcionalidades de visualização estejam
+operacionais e com boa performance (como o Dashboard e a listagem de Modelos), as
+funcionalidades de criação e interação estão, em sua maioria, quebradas. A plataforma
+não está pronta para produção ou para uso por usuários finais.
+🔥 Problemas Críticos (Bloqueadores)
+1. Chat Principal NÃO FUNCIONA: A funcionalidade de chat, que é central para a
+   plataforma, está inoperante. Mensagens não são enviadas.
+2. Criação de PROMPTS FALHA: Impossível criar novos prompts (Erro 400).
+3. Criação de PROVIDERS FALHA: Impossível adicionar novos provedores de IA (Erro de
+   procedure no backend).
+4. Chat de FOLLOW-UP (Pós-Execução) NÃO FUNCIONA: A conversa contínua após
+   executar um prompt está quebrada.
+5. Inconsistência de Rotas (Português vs. Inglês): Múltiplas páginas (Modelos,
+   Provedores, etc.) só funcionam com URLs em inglês ( /models ), enquanto o menu
+   aponta para URLs em português ( /modelos ), resultando em páginas em branco.
+✅ O Que Funciona Bem
+ • Dashboard: Métricas, status e atividades recentes são exibidos corretamente.
+ • Execução de Prompts: O streaming de respostas de IA é excelente, com métricas em
+   tempo real funcionando perfeitamente.
+ • Visualização de Modelos: A página de listagem de modelos é completa e funcional.
+ • Interface Geral: O design é profissional, responsivo e a performance de navegação é
+   boa.
+📉 Nota Geral do Sistema: 3/10 (Crítico)
+📄 Relatório Detalhado por Funcionalidade
+1. Conexão e Acesso
+ • Status: ✅ Perfeito
+ • Detalhes: Conexão via túnel SSH estabelecida com sucesso, sistema respondendo
+   (HTTP 200).
+2. Dashboard ( / )
+ • Status: ✅ Excelente
+ • O Que Funciona: Todos os widgets, métricas (Equipes, Projetos, Prompts), status de
+   sistema (Banco de Dados, API, LM Studio), atividade recente e gráficos carregam e
+   exibem dados corretamente.
+ • Problemas: Nenhum.
+3. Chat ( /chat )
+ • Status: ❌ Crítico - Não Funciona
+ • O Que Funciona: A página carrega e exibe o histórico antigo.
+ • Problemas:
+    • Envio de Mensagem: Não funciona ao pressionar Enter ou clicar no botão "Enviar".
+    • Causa Raiz: O código da Sprint 48 não foi carregado corretamente pelo navegador,
+       provavelmente devido a cache. O WebSocket não é inicializado.
+4. Prompts ( /prompts )
+ • Status: ⚠️ Parcialmente Funcional - Problemas Críticos
+ • O Que Funciona:
+       ✅
+    • Listagem de Prompts: Perfeita.
+       ✅
+    • Execução de Prompt: Streaming em tempo real é EXCELENTE, com métricas
+      precisas e ótima performance.
+ • Problemas:
+    • ❌ Criação de Prompt: Falha com Erro 400 (Bad Request). Impossível salvar novos
+      prompts.
+    •   ❌ Chat Conversacional (Follow-up): Após a execução de um prompt, o campo
+        para continuar a conversa não funciona.
+5. Modelos ( /models )
+ • Status: ✅ Excelente (com ressalvas)
+ • O Que Funciona: A página /models (em inglês) funciona perfeitamente, listando 22
+   modelos com detalhes (parâmetros, contexto, prioridade) e ações (Editar, Desativar,
+   Excluir).
+ • Problemas:
+    • ❌ Problema de Rota: A URL /modelos (em português, usada no menu) leva a uma
+       página em branco. Apenas a rota em inglês funciona.
+6. Provedores ( /providers )
+ • Status: ❌ Crítico - Não Funciona
+ • O Que Funciona: A página /providers (em inglês) carrega a interface, que é bem
+   estruturada.
+ • Problemas:
+    • ❌ Criação de Provider: Falha com erro de backend: No 'mutation' procedure on path
+       'providers.create' . Impede completamente a configuração de novas APIs (OpenAI,
+       Anthropic, etc.).
+    • ⚠️ Inconsistência de Dados: A página de Modelos indica "1 Provider", mas a lista
+       de providers está vazia.
+    • ❌ Problema de Rota: A URL /provedores (em português) leva a uma página em
+       branco.
+
+🎯 Recomendações Priorizadas para a Equipe de
+Desenvolvimento
+Prioridade P0 (Bloqueadores - Ações Imediatas)
+1. Corrigir Criação de Providers: Implementar a procedure providers.create no backend.
+   Sem isso, o sistema é inutilizável para novos usuários.
+2. Corrigir o Chat Principal: Investigar o problema de cache e garantir que o build mais
+   recente (Sprint 48) seja sempre carregado pelos usuários. Considerar adicionar cache-
+   busting (hash no nome dos arquivos JS/CSS).
+3. Corrigir Criação de Prompts: Depurar o Erro 400 no backend para permitir que
+   usuários salvem novos prompts.
+Prioridade P1 (Bugs Críticos)
+1. Corrigir Chat de Follow-up: Conectar a interface de continuação da conversa à sua
+   respectiva funcionalidade no backend.
+2. Padronizar Rotas: Decidir entre português ou inglês para as URLs e garantir que o
+   menu lateral e o roteador Vue estejam consistentes para eliminar as páginas em branco.
+Prioridade P2 (Melhorias Importantes)
+1. Resolver Inconsistência de Dados: Garantir que a contagem de "Providers" na página
+   de Modelos reflita a lista real da página de Provedores.
+2. Validação de Variáveis em Prompts: Implementar um modal ou passo intermediário
+   para que o usuário preencha as variáveis (ex: {{texto}} ) antes de executar um prompt.
+
+Conclusão
+A versão v3.6.0 (Sprint 48) do Orquestrador de IA possui uma base de interface sólida e
+funcionalidades de visualização performáticas. No entanto, falhas críticas nas
+funcionalidades de criação e interação tornam a plataforma instável e inadequada para
+uso. A correção dos problemas P0 é mandatória para que o sistema possa ser
+minimamente funcional.
+

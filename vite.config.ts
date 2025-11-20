@@ -38,13 +38,14 @@ export default defineConfig({
     outDir: '../dist/client',
     emptyOutDir: true,
     // SPRINT 28: Bundle Optimization
+    // SPRINT 54: TEMPORARILY disabled console removal for debugging Sprint 53 logs
     chunkSizeWarningLimit: 500,
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
+        drop_console: false, // SPRINT 54: Keep console.log for debugging
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        pure_funcs: [], // SPRINT 54: Allow all console methods
       },
     },
     rollupOptions: {

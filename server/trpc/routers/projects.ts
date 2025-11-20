@@ -112,7 +112,7 @@ export const projectsRouter = router({
     }),
 
   /**
-   * 3. Create new project
+   * 3. Create new project (SPRINT 49 - P2-1: Enhanced description handling)
    */
   create: publicProcedure
     .input(z.object({
@@ -124,12 +124,23 @@ export const projectsRouter = router({
       budget: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
-      logger.info({ input }, 'Creating project with input');
+      logger.info({ input }, '[SPRINT 49 P2-1] Creating project with input');
+      
+      // SPRINT 49 - P2-1: Explicitly handle description (convert empty string to null)
+      const descriptionValue = input.description && input.description.trim() 
+        ? input.description.trim() 
+        : null;
+      
+      logger.info({ 
+        originalDescription: input.description,
+        processedDescription: descriptionValue,
+        hasDescription: !!descriptionValue
+      }, '[SPRINT 49 P2-1] Description processing');
       
       const result: any = await db.insert(projects).values({
         userId: 1, // TODO: Get from context
         name: input.name,
-        description: input.description,
+        description: descriptionValue, // SPRINT 49 - P2-1: Use processed description
         teamId: input.teamId,
         status: 'active',
         startDate: input.startDate ? new Date(input.startDate) : null,
@@ -137,36 +148,43 @@ export const projectsRouter = router({
         budget: input.budget,
       } as any);
 
-      logger.info({ result }, 'Insert result received');
+      logger.info({ result }, '[SPRINT 49 P2-1] Insert result received');
       
       const projId = result[0]?.insertId || result.insertId;
-      logger.info({ projId }, 'Project ID extracted');
+      logger.info({ projId }, '[SPRINT 49 P2-1] Project ID extracted');
       
       if (!projId) {
-        logger.error({ result }, 'Failed to get project ID from insert result');
+        logger.error({ result }, '[SPRINT 49 P2-1] Failed to get project ID from insert result');
         throw new Error('Failed to create project - no ID returned');
       }
       
       const [project] = await db.select().from(projects).where(eq(projects.id, projId)).limit(1);
-      logger.info({ project }, 'Project retrieved from database');
+      logger.info({ 
+        project,
+        savedDescription: project.description
+      }, '[SPRINT 49 P2-1] Project retrieved from database with description');
 
       return { success: true, project };
     }),
 
   /**
-   * 4. Update project
+   * 4. Update project (SPRINT 49 - P0-7: Fixed missing status values and teamId)
    */
   update: publicProcedure
     .input(z.object({
       id: z.number(),
       name: z.string().optional(),
       description: z.string().optional(),
-      status: z.enum(['active', 'completed', 'archived']).optional(),
+      // SPRINT 49 - P0-7: Added missing 'planning' and 'on_hold' status values
+      status: z.enum(['planning', 'active', 'on_hold', 'completed', 'archived']).optional(),
+      teamId: z.number().optional(), // SPRINT 49 - P0-7: Added missing teamId
       startDate: z.string().optional(),
       endDate: z.string().optional(),
       budget: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
+      logger.info({ input }, '[SPRINT 49 P0-7] Updating project with input');
+      
       const { id, ...updates } = input;
 
       const finalUpdates: any = { ...updates };
@@ -178,25 +196,48 @@ export const projectsRouter = router({
       if (input.endDate) {
         finalUpdates.endDate = new Date(input.endDate);
       }
+      
+      // SPRINT 49 - P0-7: Enhanced logging
+      logger.info({ id, finalUpdates }, '[SPRINT 49 P0-7] Executing update with final updates');
 
       await db.update(projects)
         .set(finalUpdates)
         .where(eq(projects.id, id));
 
       const [updated] = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
+      
+      logger.info({ updated }, '[SPRINT 49 P0-7] Project updated successfully');
 
       return { success: true, project: updated };
     }),
 
   /**
-   * 5. Delete project
+   * 5. Delete project (SPRINT 49 - P0-8: Enhanced with logging)
    */
   delete: publicProcedure
     .input(z.object({
       id: z.number(),
     }))
     .mutation(async ({ input }) => {
+      logger.info({ projectId: input.id }, '[SPRINT 49 P0-8] Deleting project');
+      
+      // SPRINT 49 - P0-8: Check if project exists before deleting
+      const [existingProject] = await db.select()
+        .from(projects)
+        .where(eq(projects.id, input.id))
+        .limit(1);
+      
+      if (!existingProject) {
+        logger.error({ projectId: input.id }, '[SPRINT 49 P0-8] Project not found');
+        throw new Error(`Projeto com ID ${input.id} não encontrado`);
+      }
+      
+      logger.info({ project: existingProject }, '[SPRINT 49 P0-8] Project found, proceeding with deletion');
+      
       await db.delete(projects).where(eq(projects.id, input.id));
+      
+      logger.info({ projectId: input.id }, '[SPRINT 49 P0-8] Project deleted successfully');
+      
       return { success: true, message: 'Project deleted' };
     }),
 

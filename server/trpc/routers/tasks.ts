@@ -353,17 +353,22 @@ export const tasksRouter = router({
 
   /**
    * 15. Estatísticas de tarefas
+   * SPRINT 55 - BUG #3 FIX: Tornar input completamente opcional para Analytics
    */
   getStats: publicProcedure
     .input(z.object({
       projectId: z.number().optional(),
-    }))
+    }).optional())  // SPRINT 55: Permite useQuery({}) sem erro
     .query(async ({ input }) => {
-      const query = input.projectId
+      console.log('[SPRINT 55] tasks.getStats called with input:', input);
+      
+      const query = input?.projectId
         ? db.select().from(tasks).where(eq(tasks.projectId, input.projectId))
         : db.select().from(tasks);
 
       const allTasks = await query;
+      
+      console.log('[SPRINT 55] tasks.getStats - found', allTasks.length, 'tasks');
 
       const stats = {
         total: allTasks.length,
@@ -377,6 +382,8 @@ export const tasksRouter = router({
           ? (allTasks.filter(t => t.status === 'completed').length / allTasks.length) * 100 
           : 0,
       };
+      
+      console.log('[SPRINT 55] tasks.getStats - returning stats:', stats);
 
       return { success: true, stats };
     }),

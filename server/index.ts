@@ -87,14 +87,39 @@ if (process.env.NODE_ENV === 'production') {
   console.log('📁 Resolved client path:', clientPath);
   
   // SPRINT 28: Cache headers for static assets
+  // SPRINT 62: TEMPORARILY disabled cache for debugging deployment issues
   app.use('/assets', express.static(path.join(clientPath, 'assets'), {
-    maxAge: '1y', // Cache assets for 1 year (they have hash in filename)
-    immutable: true,
+    maxAge: 0, // SPRINT 62: No cache during deployment debugging
+    etag: false,
+    lastModified: false,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    },
   }));
   
-  // Serve other static files with shorter cache
+  // SPRINT 49 - P0-3: Enhanced cache control for HTML files
   app.use(express.static(clientPath, {
-    maxAge: '1h', // Cache other files for 1 hour
+    maxAge: 0, // No cache for HTML files
+    etag: false, // Disable ETag to prevent 304 responses with stale content
+    lastModified: false, // Disable Last-Modified header
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        // CRITICAL: Force complete revalidation for HTML files
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        res.setHeader('Surrogate-Control', 'no-store');
+      } else if (filePath.includes('/assets/')) {
+        // Assets with hash already have proper cache from the /assets middleware
+        // This is a fallback for assets served through this middleware
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        // Short cache for other files (CSS without hash, favicon, etc)
+        res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+      }
+    }
   }));
 
 // REST API
@@ -104,6 +129,15 @@ app.use('/api', restApiRouter);
     if (!req.path.startsWith('/api') && !req.path.startsWith('/ws')) {
       const indexPath = path.join(clientPath, 'index.html');
       console.log('📄 Sending:', indexPath);
+      
+      // SPRINT 49 - P0-3: CRITICAL cache prevention for index.html
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+      // Add timestamp to force freshness
+      res.setHeader('X-Content-Version', Date.now().toString());
+      
       res.sendFile(indexPath);
     }
   });
@@ -116,7 +150,8 @@ const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 wss.on('connection', (ws) => {
-  console.log('✅ Cliente WebSocket conectado');
+  console.log('✅ [SPRINT 45] Cliente WebSocket conectado');
+  console.log('✅ [SPRINT 45] WebSocket readyState:', ws.readyState);
 
   // Registrar conexão
   connectionManager.register(ws);
@@ -138,6 +173,7 @@ wss.on('connection', (ws) => {
 
   // Handler de mensagens
   ws.on('message', async (message: string) => {
+    console.log('📨 [SPRINT 45] Message received on server:', message.toString().substring(0, 100));
     await handleMessage(ws, message.toString());
   });
 
@@ -161,12 +197,14 @@ async function start() {
     const dbConnected = await testConnection();
     
     if (!dbConnected) {
-      console.error('❌ Falha ao conectar com o banco de dados');
-      process.exit(1);
+      console.warn('⚠️  MySQL não disponível - servidor iniciará em modo degradado');
+      console.warn('⚠️  Funcionalidades que dependem do banco estarão limitadas');
+      // SPRINT 62: Não fazer exit(1) - permitir servidor iniciar sem MySQL
+    } else {
+      console.log('✅ MySQL conectado com sucesso');
+      // Inicializar usuário padrão (sistema sem autenticação)
+      await initDefaultUser();
     }
-
-    // Inicializar usuário padrão (sistema sem autenticação)
-    await initDefaultUser();
 
     // Configurar callback de broadcast
     setBroadcastCallback(broadcastTaskUpdate);
