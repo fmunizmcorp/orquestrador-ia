@@ -278,13 +278,34 @@ export const AnalyticsDashboard: React.FC = () => {
     );
   }
 
-  // Ultra-defensive data extraction with fallback to empty arrays
-  const tasks = Array.isArray(tasksData?.tasks) ? tasksData.tasks : [];
-  const projects = Array.isArray(projectsData?.data) ? projectsData.data : [];
-  const workflows = Array.isArray(workflowsData?.items) ? workflowsData.items : [];
-  const templates = Array.isArray(templatesData?.items) ? templatesData.items : [];
-  const prompts = Array.isArray(promptsData?.data) ? promptsData.data : [];
-  const teams = Array.isArray(teamsData?.data) ? teamsData.data : [];
+  // SPRINT 69: FIX React Error #310 - Memoize data arrays to prevent new references
+  // CAUSA RAIZ DEFINITIVA: Array.isArray(...) ? ... : [] cria novos arrays a cada render
+  // Isso causa mudança de referência, triggando re-render infinito no useMemo de stats
+  // SOLUÇÃO: Memoizar cada array individualmente com dependência nos dados brutos
+  const tasks = useMemo(() => 
+    Array.isArray(tasksData?.tasks) ? tasksData.tasks : [], 
+    [tasksData]
+  );
+  const projects = useMemo(() => 
+    Array.isArray(projectsData?.data) ? projectsData.data : [], 
+    [projectsData]
+  );
+  const workflows = useMemo(() => 
+    Array.isArray(workflowsData?.items) ? workflowsData.items : [], 
+    [workflowsData]
+  );
+  const templates = useMemo(() => 
+    Array.isArray(templatesData?.items) ? templatesData.items : [], 
+    [templatesData]
+  );
+  const prompts = useMemo(() => 
+    Array.isArray(promptsData?.data) ? promptsData.data : [], 
+    [promptsData]
+  );
+  const teams = useMemo(() => 
+    Array.isArray(teamsData?.data) ? teamsData.data : [], 
+    [teamsData]
+  );
 
   // Auto-refresh clock
   useEffect(() => {
