@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Analytics Test - Sprint 57</title>
+  <script>
+    async function testAnalytics() {
+      const output = document.getElementById('output');
+      output.innerHTML = '<p>🔄 Testing tRPC queries...</p>';
+      
+      try {
+        // Test batch query like the Analytics dashboard does
+        const batch = [
+          'tasks.getStats',
+          'tasks.list',
+          'projects.getStats',
+          'projects.list'
+        ];
+        
+        const input = {};
+        batch.forEach((_, i) => input[i] = {});
+        
+        const url = `http://localhost:3001/api/trpc/${batch.join(',')}?batch=1&input=${encodeURIComponent(JSON.stringify(input))}`;
+        
+        output.innerHTML += `<p>📡 Request URL: ${url.substring(0, 100)}...</p>`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        output.innerHTML += `<p>✅ Response received! Status: ${response.status}</p>`;
+        output.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        
+        // Check for data in responses
+        let successCount = 0;
+        data.forEach((item, idx) => {
+          if (item.result && item.result.data) {
+            successCount++;
+            output.innerHTML += `<p>✅ Query ${idx} (${batch[idx]}): SUCCESS</p>`;
+          } else if (item.error) {
+            output.innerHTML += `<p>❌ Query ${idx} (${batch[idx]}): ERROR - ${item.error.json.message}</p>`;
+          }
+        });
+        
+        output.innerHTML += `<h3>Summary: ${successCount}/${batch.length} queries successful</h3>`;
+        
+      } catch (error) {
+        output.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+        console.error('Test error:', error);
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>Sprint 57 - Analytics tRPC Test</h1>
+  <button onclick="testAnalytics()">Run Test</button>
+  <div id="output"></div>
+</body>
+</html>

@@ -18,6 +18,7 @@ const Credentials = lazy(() => import('./pages/Credentials'));
 const Tasks = lazy(() => import('./pages/Tasks'));
 const Subtasks = lazy(() => import('./pages/Subtasks'));
 const Prompts = lazy(() => import('./pages/Prompts'));
+const PromptChat = lazy(() => import('./pages/PromptChat'));
 const Templates = lazy(() => import('./pages/Templates'));
 const Workflows = lazy(() => import('./pages/Workflows'));
 const Instructions = lazy(() => import('./pages/Instructions'));
@@ -59,13 +60,23 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/teams" element={<Teams />} />
+            
+            {/* SPRINT 49 - P0-5: Primary routes in English */}
             <Route path="/providers" element={<Providers />} />
             <Route path="/models" element={<Models />} />
             <Route path="/specialized-ais" element={<SpecializedAIs />} />
+            
+            {/* SPRINT 49 - P0-5: Portuguese aliases for compatibility */}
+            <Route path="/provedores" element={<Navigate to="/providers" replace />} />
+            <Route path="/modelos" element={<Navigate to="/models" replace />} />
+            <Route path="/ias-especializadas" element={<Navigate to="/specialized-ais" replace />} />
+            <Route path="/configuracoes" element={<Navigate to="/settings" replace />} />
+            
             <Route path="/credentials" element={<Credentials />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/tasks/:id/subtasks" element={<Subtasks />} />
             <Route path="/prompts" element={<Prompts />} />
+            <Route path="/prompt-chat" element={<PromptChat />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/workflows" element={<Workflows />} />
             <Route path="/workflows/builder" element={<WorkflowBuilder />} />

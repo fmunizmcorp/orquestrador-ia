@@ -12,7 +12,7 @@
  * - Metadata display
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useStreamingPrompt } from '../hooks/useStreamingPrompt';
 import { trpc } from '../lib/trpc';
 
@@ -52,13 +52,33 @@ export default function StreamingPromptExecutor({
   const [isExecuteModalOpen, setIsExecuteModalOpen] = useState(false);
   const [variablesInput, setVariablesInput] = useState<Record<string, any>>(variables);
   const [selectedModelId, setSelectedModelId] = useState<number>(modelId);
+  
+  // SPRINT 35 - Chat Conversational: Conversation history state
+  const [conversationHistory, setConversationHistory] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
+  const [followUpMessage, setFollowUpMessage] = useState('');
 
   // BUGFIX RODADA 35 - BUG 4: Fetch available models dynamically
-  const { data: modelsData } = trpc.models.list.useQuery({
-    isActive: true,
-    limit: 100,
-    offset: 0,
-  });
+  // BUGFIX RODADA 36 - SPRINT 30: Add error/loading handling to prevent component crash
+  const { 
+    data: modelsData, 
+    isLoading: modelsLoading, 
+    isError: modelsError 
+  } = trpc.models.list.useQuery(
+    {
+      isActive: true,
+      limit: 100,
+      offset: 0,
+    },
+    {
+      // Retry configuration to handle transient errors
+      retry: 2,
+      retryDelay: 1000,
+      // Prevent query from blocking render
+      staleTime: 30000, // 30 seconds
+      // Disable background refetching to prevent unnecessary requests
+      refetchOnWindowFocus: false,
+    }
+  );
 
   const handleExecute = async () => {
     try {
@@ -67,6 +87,14 @@ export default function StreamingPromptExecutor({
         variables: variablesInput,
         modelId: selectedModelId,
       });
+
+      // SPRINT 35 - Chat Conversational: Add initial prompt to history
+      if (promptContent && content) {
+        setConversationHistory([
+          { role: 'user', content: promptContent },
+          { role: 'assistant', content: content }
+        ]);
+      }
 
       if (onComplete && content) {
         onComplete(content, metadata);
@@ -84,7 +112,112 @@ export default function StreamingPromptExecutor({
 
   const handleReset = () => {
     reset();
+    setConversationHistory([]);
+    setFollowUpMessage('');
     setIsExecuteModalOpen(false);
+  };
+
+  // SPRINT 35 - Chat Conversational: Handle follow-up message
+  // SPRINT 48 - Added comprehensive logging for debugging
+  // SPRINT 49 - P0-4: Fixed to properly capture response content
+  // SPRINT 49 ROUND 3 - CRITICAL FIX: Memoize with useCallback to prevent stale closure
+  const handleSendFollowUp = useCallback(async () => {
+    console.log('🚀 [SPRINT 49 ROUND 3] handleSendFollowUp called (via useCallback)', {
+      followUpMessage: followUpMessage.trim(),
+      followUpLength: followUpMessage.trim().length,
+      isStreaming,
+      conversationHistoryLength: conversationHistory.length,
+      currentContentLength: content?.length || 0,
+    });
+    
+    if (!followUpMessage.trim() || isStreaming) {
+      console.warn('⚠️ [SPRINT 49] Follow-up blocked:', {
+        emptyMessage: !followUpMessage.trim(),
+        isStreaming,
+      });
+      return;
+    }
+
+    // Add user message to history
+    const userMessage = followUpMessage.trim();
+    const newHistory = [
+      ...conversationHistory,
+      { role: 'user' as const, content: userMessage }
+    ];
+    
+    console.log('📝 [SPRINT 49] Updating conversation history:', {
+      oldHistoryLength: conversationHistory.length,
+      newHistoryLength: newHistory.length,
+      userMessage: userMessage.substring(0, 50),
+    });
+    
+    setConversationHistory(newHistory);
+    setFollowUpMessage('');
+
+    try {
+      // Build context from conversation history
+      const context = newHistory.map(msg => 
+        `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+      ).join('\n\n');
+
+      console.log('🔄 [SPRINT 49] Executing prompt with context:', {
+        promptId,
+        modelId: selectedModelId,
+        contextLength: context.length,
+        variablesCount: Object.keys(variablesInput).length,
+      });
+
+      // SPRINT 49 - P0-4: Reset content before execution to get fresh response
+      reset();
+      
+      // Execute with conversation context
+      const result = await execute({
+        promptId,
+        variables: { ...variablesInput, conversationContext: context },
+        modelId: selectedModelId,
+      });
+
+      console.log('✅ [SPRINT 49] Execute completed successfully');
+      
+      // SPRINT 49 - P0-4: Wait a bit for content state to update
+      // The useStreamingPrompt hook updates content asynchronously
+      setTimeout(() => {
+        console.log('📥 [SPRINT 49] Content after execute:', {
+          contentLength: content?.length || 0,
+          contentPreview: content?.substring(0, 100) || 'NO CONTENT',
+        });
+        
+        // Add assistant response to history if available
+        if (content && content.trim()) {
+          console.log('✅ [SPRINT 49] Adding assistant response to history');
+          setConversationHistory(prev => [
+            ...prev,
+            { role: 'assistant' as const, content: content }
+          ]);
+          
+          if (onComplete) {
+            console.log('🎯 [SPRINT 49] Calling onComplete callback');
+            onComplete(content, metadata);
+          }
+        } else {
+          console.warn('⚠️ [SPRINT 49] No content available after timeout');
+        }
+      }, 500); // Wait 500ms for content state to update
+
+    } catch (err: any) {
+      console.error('❌ [SPRINT 49] Error in handleSendFollowUp:', err);
+      console.error('❌ [SPRINT 49] Error stack:', err.stack);
+      if (onError) {
+        onError(err.message || 'Execution failed');
+      }
+    }
+  }, [followUpMessage, isStreaming, conversationHistory, content, promptId, selectedModelId, variablesInput, execute, reset, metadata, onComplete, onError]); // CRITICAL: useCallback dependencies
+
+  // SPRINT 35 - Chat Conversational: Clear conversation history
+  const handleClearConversation = () => {
+    setConversationHistory([]);
+    setFollowUpMessage('');
+    reset();
   };
 
   const formatDuration = (ms: number) => {
@@ -200,18 +333,33 @@ export default function StreamingPromptExecutor({
                     value={selectedModelId}
                     onChange={(e) => setSelectedModelId(Number(e.target.value))}
                     className="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    disabled={!modelsData?.items || modelsData.items.length === 0}
+                    disabled={modelsLoading || modelsError || !modelsData?.data || modelsData.data.length === 0}
                   >
-                    {modelsData && modelsData.items.length > 0 ? (
-                      modelsData.items.map((model) => (
+                    {modelsLoading ? (
+                      <option value={selectedModelId}>⏳ Carregando modelos...</option>
+                    ) : modelsError ? (
+                      <option value={selectedModelId}>❌ Erro ao carregar modelos</option>
+                    ) : modelsData && modelsData.data.length > 0 ? (
+                      modelsData.data.map((model) => (
                         <option key={model.id} value={model.id}>
                           {model.name} {model.provider ? `(${model.provider})` : ''} - {model.modelId}
                         </option>
                       ))
                     ) : (
-                      <option value={1}>Carregando modelos...</option>
+                      <option value={selectedModelId}>⚠️ Nenhum modelo disponível</option>
                     )}
                   </select>
+                  {/* BUGFIX RODADA 36 - SPRINT 30: Add user feedback for loading/error states */}
+                  {modelsError && (
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                      ⚠️ Erro ao buscar modelos. Usando modelo padrão (ID: {selectedModelId}).
+                    </p>
+                  )}
+                  {modelsLoading && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      ⏳ Buscando modelos disponíveis...
+                    </p>
+                  )}
                   {modelName && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       LM Studio: {modelName}
@@ -379,6 +527,62 @@ export default function StreamingPromptExecutor({
                       <span>
                         📊 {progress.outputLength} caracteres
                       </span>
+                    </div>
+                  )}
+                  
+                  {/* SPRINT 35 - Chat Conversational: Follow-up input */}
+                  {!isStreaming && content && (
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-start gap-3">
+                        <textarea
+                          value={followUpMessage}
+                          onChange={(e) => {
+                            console.log('[SPRINT 49 ROUND 3] Follow-up onChange triggered:', e.target.value);
+                            setFollowUpMessage(e.target.value);
+                          }}
+                          onKeyDown={(e) => {
+                            console.log('[SPRINT 49 ROUND 3] Follow-up onKeyDown:', e.key, 'Shift:', e.shiftKey);
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              console.log('[SPRINT 49 ROUND 3] Enter detected - calling handleSendFollowUp');
+                              e.preventDefault();
+                              handleSendFollowUp();
+                            }
+                          }}
+                          placeholder="Continue a conversa... (Enter para enviar, Shift+Enter para nova linha)"
+                          className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+                          rows={2}
+                        />
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => {
+                              console.log('[SPRINT 49 ROUND 3] Follow-up BUTTON CLICKED!');
+                              handleSendFollowUp();
+                            }}
+                            disabled={!followUpMessage.trim() || isStreaming}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                            title="Enviar mensagem"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            </svg>
+                            Enviar
+                          </button>
+                          {conversationHistory.length > 0 && (
+                            <button
+                              onClick={handleClearConversation}
+                              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                              title="Limpar conversa"
+                            >
+                              🗑️ Limpar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {conversationHistory.length > 0 && (
+                        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          💬 {conversationHistory.length} mensagem(ns) no histórico
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

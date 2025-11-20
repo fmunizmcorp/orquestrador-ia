@@ -89,9 +89,19 @@ class SystemMonitorService {
   private alertIdCounter = 0;
 
   // Cache de métricas (Sprint 11 - Rodada 23)
+  // SPRINT 60: Increased cache TTL from 5s to 30s for better performance
   private metricsCache: SystemMetrics | null = null;
   private cacheTimestamp: number = 0;
-  private readonly CACHE_TTL = 5000; // 5 segundos
+  private readonly CACHE_TTL = 30000; // SPRINT 60: 30 segundos (was 5s)
+  
+  // SPRINT 60: Separate cache for expensive operations
+  private gpuCache: any = null;
+  private gpuCacheTimestamp: number = 0;
+  private readonly GPU_CACHE_TTL = 60000; // 60 seconds for GPU (very slow)
+  
+  private processCache: any = null;
+  private processCacheTimestamp: number = 0;
+  private readonly PROCESS_CACHE_TTL = 45000; // 45 seconds for processes
 
   /**
    * Coleta métricas completas do sistema (com cache)
@@ -117,25 +127,36 @@ class SystemMonitorService {
 
   /**
    * Coleta métricas do sistema (sem cache - método privado)
+   * SPRINT 60: Optimized with separate caching for slow operations
    */
   private async collectMetrics(): Promise<SystemMetrics> {
     try {
-      const [
-        cpuData,
-        memData,
-        cpuTemp,
-        diskData,
-        networkData,
-        processes,
-        graphics,
-      ] = await Promise.all([
-        si.currentLoad(),
-        si.mem(),
-        si.cpuTemperature(),
-        si.fsSize(),
-        si.networkStats(),
-        si.processes(),
-        si.graphics(),
+      // SPRINT 60: Collect fast metrics first (always fresh)
+      const fastMetrics = await Promise.race([
+        Promise.all([
+          si.currentLoad(),
+          si.mem(),
+          si.fsSize(),
+          si.networkStats(),
+        ]),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Fast metrics timeout')), 5000)
+        )
+      ]);
+
+      const [cpuData, memData, diskData, networkData] = fastMetrics;
+
+      // SPRINT 60: Collect slow metrics with separate caching and timeout
+      const [cpuTemp, processes, graphics] = await Promise.all([
+        // CPU temp - medium speed
+        Promise.race([
+          si.cpuTemperature(),
+          new Promise<any>((resolve) => setTimeout(() => resolve({ main: null }), 2000))
+        ]),
+        // Processes - very slow, use cache
+        this.getCachedProcesses(),
+        // Graphics - extremely slow, use cache
+        this.getCachedGraphics(),
       ]);
 
       // CPU
@@ -155,7 +176,7 @@ class SystemMonitorService {
       };
 
       // GPU
-      const gpu = graphics.controllers.map(controller => ({
+      const gpu = graphics.controllers.map((controller: any) => ({
         vendor: controller.vendor || 'Unknown',
         model: controller.model || 'Unknown',
         vramTotal: controller.vram || 0,
@@ -191,7 +212,7 @@ class SystemMonitorService {
       };
 
       // Verificar processos LM Studio
-      const lmstudioProc = processes.list.find(p =>
+      const lmstudioProc = processes.list.find((p: any) =>
         p.name.toLowerCase().includes('lmstudio') ||
         p.name.toLowerCase().includes('llama') ||
         p.command.toLowerCase().includes('lmstudio')
@@ -221,9 +242,77 @@ class SystemMonitorService {
 
       return metrics as any;
     } catch (error) {
-      console.error('Erro ao coletar métricas do sistema:', error);
-      throw error;
+      console.error('[SPRINT 60] Erro ao coletar métricas do sistema:', error);
+      // SPRINT 60: Return fallback metrics instead of crashing
+      return this.getFallbackMetrics();
     }
+  }
+
+  /**
+   * SPRINT 60: Get cached processes or fetch new
+   */
+  private async getCachedProcesses(): Promise<any> {
+    const now = Date.now();
+    if (this.processCache && (now - this.processCacheTimestamp) < this.PROCESS_CACHE_TTL) {
+      console.log('[SPRINT 60] Using cached processes');
+      return this.processCache;
+    }
+
+    try {
+      const processes = await Promise.race([
+        si.processes(),
+        new Promise<any>((resolve) => 
+          setTimeout(() => resolve({ list: [] }), 3000)
+        )
+      ]);
+      this.processCache = processes;
+      this.processCacheTimestamp = Date.now();
+      return processes;
+    } catch (error) {
+      console.error('[SPRINT 60] Error fetching processes:', error);
+      return this.processCache || { list: [] };
+    }
+  }
+
+  /**
+   * SPRINT 60: Get cached graphics or fetch new
+   */
+  private async getCachedGraphics(): Promise<any> {
+    const now = Date.now();
+    if (this.gpuCache && (now - this.gpuCacheTimestamp) < this.GPU_CACHE_TTL) {
+      console.log('[SPRINT 60] Using cached GPU data');
+      return this.gpuCache;
+    }
+
+    try {
+      const graphics = await Promise.race([
+        si.graphics(),
+        new Promise<any>((resolve) => 
+          setTimeout(() => resolve({ controllers: [] }), 5000)
+        )
+      ]);
+      this.gpuCache = graphics;
+      this.gpuCacheTimestamp = Date.now();
+      return graphics;
+    } catch (error) {
+      console.error('[SPRINT 60] Error fetching graphics:', error);
+      return this.gpuCache || { controllers: [] };
+    }
+  }
+
+  /**
+   * SPRINT 60: Fallback metrics when collection fails
+   */
+  private getFallbackMetrics(): SystemMetrics {
+    console.warn('[SPRINT 60] Returning fallback metrics');
+    return {
+      cpu: { usage: 0, temperature: null, cores: 0, speed: 0 },
+      memory: { total: 0, used: 0, free: 0, usagePercent: 0 },
+      gpu: [],
+      disk: { total: 0, used: 0, free: 0, usagePercent: 0 },
+      network: { rx: 0, tx: 0 },
+      processes: { lmstudio: false },
+    };
   }
 
   /**

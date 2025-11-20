@@ -1,0 +1,101 @@
+# CONFIGURAÇÃO DE INFRAESTRUTURA SSH
+# Orquestrador IA V3 - Produção
+
+## ARQUITETURA DE REDE
+
+### Servidor de Produção (INTERNO)
+- **IP Local**: 192.168.1.247 (rede interna, não acessível externamente)
+- **Porta Aplicação**: 3001
+- **Acesso**: Apenas via rede interna ou túnel SSH
+
+### Servidor Gateway SSH (EXTERNO)
+- **IP Público**: 31.97.64.43
+- **Porta SSH**: 2224
+- **Usuário**: flavio
+- **Senha**: sshflavioia
+- **Função**: Forwarding/Gateway para servidor interno via SSH
+
+### Acesso à Aplicação
+- **Externo**: Não disponível diretamente
+- **Interno (via SSH)**: http://localhost:3001
+- **Método**: SSH tunnel para testes/desenvolvimento
+
+## CONFIGURAÇÃO SSH
+
+### Comando de Acesso SSH
+```bash
+ssh -p 2224 flavio@31.97.64.43
+# Senha: sshflavioia
+```
+
+### Túnel SSH (Port Forwarding) - Se necessário
+```bash
+# Forward porta 3001 do servidor interno para localhost
+ssh -p 2224 -L 3001:192.168.1.247:3001 flavio@31.97.64.43
+# Depois acessar: http://localhost:3001
+```
+
+## ENDPOINTS DE ACESSO
+
+### Para Testes Automatizados (dentro do servidor)
+- **Frontend**: http://localhost:3001
+- **API tRPC**: http://localhost:3001/api/trpc
+- **Health Check**: http://localhost:3001/api/health
+- **WebSocket**: ws://localhost:3001/ws
+
+### Para Acesso Manual (rede interna)
+- **Frontend**: http://192.168.1.247:3001
+- **API tRPC**: http://192.168.1.247:3001/api/trpc
+
+## IMPORTANTE
+
+⚠️ **NUNCA** tentar acessar via 31.97.64.43:3001
+   - Esse IP:porta roda outro serviço
+   - Não está configurado para o Orquestrador IA
+
+✅ **SEMPRE** usar localhost:3001 para testes automatizados
+   - Os testes rodam dentro do servidor via SSH
+   - Acesso via localhost é o correto
+
+🔒 **SEGURANÇA**
+   - Aplicação acessível apenas na rede interna
+   - SSH gateway para acesso remoto quando necessário
+   - Credenciais SSH documentadas para automação
+
+## DEPLOYMENT
+
+### PM2 Process Manager
+- **Nome do Processo**: orquestrador-v3
+- **Comando Start**: `pm2 start ecosystem.config.js`
+- **Comando Restart**: `pm2 restart orquestrador-v3 --update-env`
+- **Logs**: `pm2 logs orquestrador-v3`
+
+### Build e Deploy
+```bash
+# 1. Build frontend
+npm run build
+
+# 2. Restart aplicação
+pm2 restart orquestrador-v3 --update-env
+
+# 3. Verificar status
+pm2 status
+```
+
+## TROUBLESHOOTING
+
+### Problema: Connection Refused ao testar
+**Causa**: Tentando acessar IP externo (31.97.64.43:3001)
+**Solução**: Usar localhost:3001 nos testes automatizados
+
+### Problema: Playwright não consegue capturar console
+**Causa**: Tentando acessar via IP público
+**Solução**: Testes devem ser via curl/API no localhost
+
+### Problema: SSH timeout
+**Causa**: Porta 2224 ou credenciais incorretas
+**Solução**: Verificar porta e senha sshflavioia
+
+---
+Última atualização: 2025-11-20 - Sprint 67
+Responsável: GenSpark AI Developer

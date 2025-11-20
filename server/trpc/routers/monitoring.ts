@@ -29,13 +29,21 @@ const logger = pino({ level: env.LOG_LEVEL, transport: isDevelopment ? { target:
 export const monitoringRouter = router({
   /**
    * 1. Get current system metrics
+   * SPRINT 60: Added router-level timeout (10s) for additional safety
    */
   getCurrentMetrics: publicProcedure
     .query(async () => {
       try {
-        console.log('[DEBUG] Getting metrics from systemMonitorService...');
-        const fullMetrics = await systemMonitorService.getMetrics();
-        console.log('[DEBUG] Metrics received:', typeof fullMetrics, Object.keys(fullMetrics || {}));
+        console.log('[SPRINT 60] Getting metrics from systemMonitorService...');
+        
+        // SPRINT 60: Router-level timeout wrapper (10 seconds max)
+        const metricsPromise = systemMonitorService.getMetrics();
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('[SPRINT 60] Router timeout after 10s')), 10000);
+        });
+        
+        const fullMetrics = await Promise.race([metricsPromise, timeoutPromise]);
+        console.log('[SPRINT 60] Metrics received:', typeof fullMetrics, Object.keys(fullMetrics || {}));
         
         // Map to simplified format expected by frontend
         const metrics = {
@@ -47,7 +55,7 @@ export const monitoringRouter = router({
         
         return { success: true, metrics };
       } catch (error) {
-        console.error('[ERROR] Failed to get metrics:', error);
+        console.error('[SPRINT 60] Failed to get metrics:', error);
         // Return safe defaults on error to prevent crashes
         return {
           success: false,

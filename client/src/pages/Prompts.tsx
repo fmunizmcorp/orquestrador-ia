@@ -199,17 +199,18 @@ export default function Prompts() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
+      {/* SPRINT 42: Mobile responsive header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Biblioteca de Prompts</h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-1">
+        <div className="flex-1">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Biblioteca de Prompts</h1>
+          <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 mt-1">
             Gerencie seus prompts para IAs
           </p>
         </div>
         <button
           onClick={() => openModal()}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          className="w-full md:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm md:text-base"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -237,33 +238,34 @@ export default function Prompts() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
-        <div className="flex gap-2">
+        {/* SPRINT 42: Mobile responsive filter buttons */}
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-3 md:px-4 py-2 rounded-lg text-sm md:text-base font-medium transition-colors ${
               filter === 'all'
                 ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
             }`}
           >
             Todos
           </button>
           <button
             onClick={() => setFilter('mine')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-3 md:px-4 py-2 rounded-lg text-sm md:text-base font-medium transition-colors ${
               filter === 'mine'
                 ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
             }`}
           >
             Meus Prompts
           </button>
           <button
             onClick={() => setFilter('public')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-3 md:px-4 py-2 rounded-lg text-sm md:text-base font-medium transition-colors ${
               filter === 'public'
                 ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
             }`}
           >
             Públicos
@@ -299,32 +301,41 @@ export default function Prompts() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        /* SPRINT 42: Improved mobile responsiveness */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {filteredPrompts.map((prompt: any) => (
-            <div key={prompt.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex-1 line-clamp-1">
-                  {prompt.title}
-                </h3>
-                {prompt.isPublic && (
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full ml-2">
-                    Público
-                  </span>
-                )}
+            <div key={prompt.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:p-6 hover:shadow-lg transition-shadow flex flex-col">
+              {/* SPRINT 44: Mobile-responsive header - FINAL FIX */}
+              <div className="flex flex-col gap-2 mb-3">
+                <div className="flex items-start gap-2">
+                  <h3 className="text-sm md:text-base lg:text-lg font-semibold text-gray-900 dark:text-white flex-1 line-clamp-2 break-words min-w-0 overflow-wrap-anywhere">
+                    {prompt.title}
+                  </h3>
+                  {prompt.isPublic && (
+                    <span className="text-[10px] sm:text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full whitespace-nowrap flex-shrink-0 self-start">
+                      Público
+                    </span>
+                  )}
+                </div>
               </div>
               
+              {/* SPRINT 42/44: Mobile-friendly category badge - IMPROVED */}
               {prompt.category && (
-                <span className="inline-block text-xs bg-gray-100 text-gray-700 dark:text-gray-200 px-2 py-1 rounded mb-3">
-                  {prompt.category}
-                </span>
+                <div className="mb-3">
+                  <span className="inline-block text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-1 rounded max-w-full truncate">
+                    {prompt.category}
+                  </span>
+                </div>
               )}
               
-              <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-3 mb-4">
+              {/* SPRINT 42: Mobile-responsive content preview */}
+              <p className="text-gray-600 dark:text-gray-300 text-xs md:text-sm line-clamp-3 mb-4 break-words flex-grow">
                 {prompt.content || 'Sem conteúdo'}
               </p>
               
+              {/* SPRINT 42: Mobile-responsive tags */}
               {prompt.tags && (
-                <div className="flex flex-wrap gap-1 mb-4">
+                <div className="flex flex-wrap gap-1.5 mb-4">
                   {(() => {
                     // Normalizar tags: pode ser string ou array
                     const tagsArray = typeof prompt.tags === 'string' 
@@ -336,7 +347,7 @@ export default function Prompts() {
                     return tagsArray.slice(0, 3).map((tag: string, index: number) => (
                       <span
                         key={index}
-                        className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded"
+                        className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded break-all"
                       >
                         {tag}
                       </span>
@@ -345,9 +356,11 @@ export default function Prompts() {
                 </div>
               )}
               
-              <div className="flex flex-wrap gap-2">
-                {/* Execute Button - Always visible */}
-                <div className="w-full">
+              {/* SPRINT 38: Fixed execute button layout - prevent clipping */}
+              {/* SPRINT 42: Enhanced mobile responsiveness */}
+              <div className="flex flex-col gap-2 mt-auto">
+                {/* Execute Button - Always visible, full width */}
+                <div className="w-full overflow-visible">
                   <StreamingPromptExecutor
                     promptId={prompt.id}
                     promptTitle={prompt.title}
@@ -356,43 +369,46 @@ export default function Prompts() {
                   />
                 </div>
                 
-                {/* Edit/Delete Buttons - Only for owner */}
-                {prompt.userId === user?.id && (
-                  <>
-                    <button
-                      onClick={() => openModal(prompt)}
-                      className="flex-1 text-blue-600 hover:text-blue-700 text-sm font-medium border border-blue-600 rounded px-3 py-1 hover:bg-blue-50 transition-colors"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(prompt.id)}
-                      disabled={deletePromptMutation.isLoading}
-                      className="flex-1 text-red-600 hover:text-red-700 text-sm font-medium border border-red-600 rounded px-3 py-1 hover:bg-red-50 transition-colors disabled:opacity-50"
-                    >
-                      Excluir
-                    </button>
-                  </>
-                )}
-                
-                {/* Duplicate Button - Always visible */}
-                <button
-                  onClick={() => handleDuplicate(prompt)}
-                  disabled={createPromptMutation.isLoading}
-                  className="flex-1 text-gray-600 hover:text-gray-700 dark:text-gray-200 text-sm font-medium border border-gray-600 rounded px-3 py-1 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  Duplicar
-                </button>
+                {/* Action Buttons Row - SPRINT 44: FINAL MOBILE FIX - Guaranteed full-width */}
+                <div className="w-full flex flex-col gap-2">
+                  {/* Edit/Delete Buttons - Only for owner - FULL WIDTH ON MOBILE */}
+                  {prompt.userId === user?.id && (
+                    <div className="w-full flex flex-col sm:flex-row gap-2">
+                      <button
+                        onClick={() => openModal(prompt)}
+                        className="w-full sm:flex-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-xs sm:text-sm font-medium border border-blue-600 dark:border-blue-400 rounded px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-center min-h-[42px]"
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(prompt.id)}
+                        disabled={deletePromptMutation.isLoading}
+                        className="w-full sm:flex-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs sm:text-sm font-medium border border-red-600 dark:border-red-400 rounded px-3 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 text-center min-h-[42px]"
+                      >
+                        🗑️ Excluir
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Duplicate Button - Always visible, full width on mobile */}
+                  <button
+                    onClick={() => handleDuplicate(prompt)}
+                    disabled={createPromptMutation.isLoading}
+                    className="w-full text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200 text-xs sm:text-sm font-medium border border-gray-600 dark:border-gray-500 rounded px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 text-center min-h-[42px]"
+                  >
+                    Duplicar
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal - SPRINT 42: Mobile responsive */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex justify-between items-center p-6 pb-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">

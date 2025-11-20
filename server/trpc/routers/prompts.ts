@@ -110,6 +110,7 @@ export const promptsRouter = router({
 
   /**
    * 3. Criar novo prompt
+   * SPRINT 49 - P0-2: Enhanced error handling and validation
    */
   create: publicProcedure
     .input(z.object({
@@ -123,36 +124,68 @@ export const promptsRouter = router({
       isPublic: z.boolean().optional().default(false),
     }))
     .mutation(async ({ input }) => {
-      // Normalizar tags: sempre converter para array
-      const tagsArray = typeof input.tags === 'string' 
-        ? input.tags.split(',').map(t => t.trim()).filter(Boolean)
-        : input.tags || [];
+      try {
+        logger.info({ input: { ...input, content: input.content.substring(0, 100) + '...' } }, 'Creating prompt');
 
-      const result: any = await db.insert(prompts).values({
-        userId: input.userId,
-        title: input.title,
-        description: input.description,
-        content: input.content,
-        category: input.category,
-        tags: tagsArray as any,
-        variables: input.variables as any,
-        isPublic: input.isPublic,
-        currentVersion: 1,
-      });
+        // Normalizar tags: sempre converter para array
+        const tagsArray = typeof input.tags === 'string' 
+          ? input.tags.split(',').map(t => t.trim()).filter(Boolean)
+          : input.tags || [];
 
-      const promptId = result[0]?.insertId || result.insertId;
-      const [prompt] = await db.select().from(prompts).where(eq(prompts.id, promptId)).limit(1);
+        const result: any = await db.insert(prompts).values({
+          userId: input.userId,
+          title: input.title,
+          description: input.description || null,
+          content: input.content,
+          category: input.category || null,
+          tags: tagsArray as any,
+          variables: input.variables as any,
+          isPublic: input.isPublic ?? false,
+          currentVersion: 1,
+        });
 
-      // Criar primeira versão
-      await db.insert(promptVersions).values({
-        promptId: prompt.id,
-        version: 1,
-        content: input.content,
-        changelog: 'Versão inicial',
-        createdByUserId: input.userId,
-      });
+        const promptId = result[0]?.insertId || result.insertId;
+        
+        if (!promptId) {
+          throw createStandardError(
+            'INTERNAL_SERVER_ERROR',
+            ErrorCodes.INTERNAL_DATABASE_ERROR,
+            'Falha ao criar prompt',
+            {
+              context: { title: input.title },
+              technicalMessage: 'Failed to get insertId after prompt insert',
+              suggestion: 'Tente novamente',
+            }
+          );
+        }
+        
+        const [prompt] = await db.select().from(prompts).where(eq(prompts.id, promptId)).limit(1);
 
-      return { success: true, prompt };
+        // Criar primeira versão
+        await db.insert(promptVersions).values({
+          promptId: prompt.id,
+          version: 1,
+          content: input.content,
+          changelog: 'Versão inicial',
+          createdByUserId: input.userId,
+        });
+
+        logger.info({ promptId }, 'Prompt created successfully');
+
+        return { success: true, prompt };
+      } catch (error) {
+        logger.error({ error, input: { title: input.title, userId: input.userId } }, 'Error creating prompt');
+        
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error;
+        }
+        
+        throw handleDatabaseError(error, {
+          resourceType: 'Prompt',
+          context: { title: input.title },
+          suggestion: 'Verifique se todos os campos estão preenchidos corretamente',
+        });
+      }
     }),
 
   /**

@@ -15,6 +15,7 @@ import { tasksRouter } from './routers/tasks.js';
 import { chatRouter } from './routers/chat.js';
 import { promptsRouter } from './routers/prompts.js';
 import { modelsRouter } from './routers/models.js';
+import { providersRouter } from './routers/providers.js';
 import { lmstudioRouter } from './routers/lmstudio.js';
 import { trainingRouter } from './routers/training.js';
 import { servicesRouter } from './routers/services.js';
@@ -23,6 +24,7 @@ import { workflowsRouter } from './routers/workflows.js';
 import { templatesRouter } from './routers/templates.js';
 import { knowledgebaseRouter } from './routers/knowledgebase.js';
 import { settingsRouter } from './routers/settings.js';
+import { modelManagementRouter } from './routers/modelManagementRouter.js';
 
 /**
  * Main application router
@@ -56,6 +58,9 @@ export const appRouter = router({
   // SPRINT 9 - Models Management (10 endpoints)
   models: modelsRouter,
 
+  // SPRINT 49 - Providers Management (7 endpoints) - P0-1 FIX
+  providers: providersRouter,
+
   // SPRINT 10 - Model Training (22 endpoints)
   training: trainingRouter,
 
@@ -76,6 +81,8 @@ export const appRouter = router({
 
   // SPRINT 16 - System Settings (25 endpoints)
   settings: settingsRouter,
+  // SPRINT 50 - Model Management (7 endpoints) - Intelligent loading
+  modelManagement: modelManagementRouter,
 });
 
 /**
