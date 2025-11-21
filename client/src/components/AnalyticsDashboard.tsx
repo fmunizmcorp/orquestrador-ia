@@ -119,7 +119,8 @@ export const AnalyticsDashboard: React.FC = () => {
   const { data: metrics, refetch: refetchMetrics, error: metricsError, isLoading: metricsLoading } = trpc.monitoring.getCurrentMetrics.useQuery(
     undefined,
     { 
-      refetchInterval: refreshInterval,
+      // SPRINT 70: Temporarily disable refetchInterval to isolate Bug #3
+      // refetchInterval: refreshInterval,
       // SPRINT 58: Increase timeout for slow metrics collection
       retry: 1,
       retryDelay: 2000,
