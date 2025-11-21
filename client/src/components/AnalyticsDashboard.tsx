@@ -304,18 +304,15 @@ export const AnalyticsDashboard: React.FC = () => {
   // Calculate system health with useMemo - MUST be before stats (stats depends on health)
   const health = useMemo(() => {
     try {
-      console.log('[SPRINT 66] calculateSystemHealth with useMemo, metrics:', metrics ? 'exists' : 'null');
+      // SPRINT 73: Removed console.logs to prevent side-effects within useMemo
       
       if (!metrics?.metrics) {
-        console.warn('[SPRINT 66] metrics.metrics is null/undefined');
         return { status: 'unknown', color: 'text-gray-500', label: 'Desconhecido', icon: '?' };
       }
 
       const cpu = metrics.metrics.cpu || 0;
       const memory = metrics.metrics.memory || 0;
       const disk = metrics.metrics.disk || 0;
-
-      console.log('[SPRINT 66] System metrics:', { cpu, memory, disk });
 
       const cpuHealth = cpu < 80;
       const memoryHealth = memory < 85;
@@ -329,7 +326,7 @@ export const AnalyticsDashboard: React.FC = () => {
         return { status: 'critical', color: 'text-red-500', label: 'Crítico', icon: '✗' };
       }
     } catch (error) {
-      console.error('[SPRINT 66] Error in calculateSystemHealth:', error);
+      // SPRINT 73: Removed console.error to prevent side-effects
       return { status: 'error', color: 'text-red-500', label: 'Erro', icon: '✗' };
     }
   }, [metrics]); // Only recalculate when metrics change
@@ -337,13 +334,7 @@ export const AnalyticsDashboard: React.FC = () => {
   // Calculate comprehensive statistics with useMemo
   const stats = useMemo(() => {
     try {
-      console.log('[SPRINT 66] calculateStats with useMemo, called with:', {
-        tasksCount: tasks.length,
-        projectsCount: projects.length,
-        workflowsCount: workflows.length,
-        templatesCount: templates.length,
-        teamsCount: teams.length,
-      });
+      // SPRINT 73: Removed console.logs to prevent side-effects within useMemo
       
       // Task statistics
       const totalTasks = tasks.length;
@@ -429,7 +420,7 @@ export const AnalyticsDashboard: React.FC = () => {
         systemHealth: health, // Use memoized health
       };
     } catch (error) {
-      console.error('[SPRINT 66] Error in calculateStats:', error);
+      // SPRINT 73: Removed console.error to prevent side-effects
       // Return safe default stats
       return {
         totalTasks: 0,
