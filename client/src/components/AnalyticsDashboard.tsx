@@ -119,8 +119,9 @@ export const AnalyticsDashboard: React.FC = () => {
   const { data: metrics, refetch: refetchMetrics, error: metricsError, isLoading: metricsLoading } = trpc.monitoring.getCurrentMetrics.useQuery(
     undefined,
     { 
-      // SPRINT 71: Re-enable refetchInterval after fixing root cause (memoized chart data)
-      refetchInterval: refreshInterval,
+      // SPRINT 71.1: DISABLE refetchInterval - It causes metrics to change constantly,
+      // which triggers health recalc, which triggers stats recalc, causing infinite loop
+      // refetchInterval: refreshInterval,
       // SPRINT 58: Increase timeout for slow metrics collection
       retry: 1,
       retryDelay: 2000,
@@ -323,21 +324,21 @@ export const AnalyticsDashboard: React.FC = () => {
   // CAUSA RAIZ: calculateStats() e calculateSystemHealth() eram chamadas diretamente
   // no corpo do componente, criando novos objetos a cada render e causando loop infinito
   
-  // Calculate system health with useMemo - MUST be before stats (stats depends on health)
+  // SPRINT 71.1: Extract metrics values to prevent unnecessary recalculations
+  // This ensures health only recalculates when actual metric VALUES change, not when metrics object reference changes
+  const cpu = metrics?.metrics?.cpu || 0;
+  const memory = metrics?.metrics?.memory || 0;
+  const disk = metrics?.metrics?.disk || 0;
+  
+  // Calculate system health with useMemo
   const health = useMemo(() => {
     try {
-      console.log('[SPRINT 66] calculateSystemHealth with useMemo, metrics:', metrics ? 'exists' : 'null');
+      console.log('[SPRINT 71.1] calculateSystemHealth with useMemo, metrics:', { cpu, memory, disk });
       
       if (!metrics?.metrics) {
-        console.warn('[SPRINT 66] metrics.metrics is null/undefined');
+        console.warn('[SPRINT 71.1] metrics.metrics is null/undefined');
         return { status: 'unknown', color: 'text-gray-500', label: 'Desconhecido', icon: '?' };
       }
-
-      const cpu = metrics.metrics.cpu || 0;
-      const memory = metrics.metrics.memory || 0;
-      const disk = metrics.metrics.disk || 0;
-
-      console.log('[SPRINT 66] System metrics:', { cpu, memory, disk });
 
       const cpuHealth = cpu < 80;
       const memoryHealth = memory < 85;
@@ -351,15 +352,16 @@ export const AnalyticsDashboard: React.FC = () => {
         return { status: 'critical', color: 'text-red-500', label: 'Crítico', icon: '✗' };
       }
     } catch (error) {
-      console.error('[SPRINT 66] Error in calculateSystemHealth:', error);
+      console.error('[SPRINT 71.1] Error in calculateSystemHealth:', error);
       return { status: 'error', color: 'text-red-500', label: 'Erro', icon: '✗' };
     }
-  }, [metrics]); // Only recalculate when metrics change
+  }, [cpu, memory, disk, metrics]); // SPRINT 71.1: Depend on actual values, not the entire metrics object
 
-  // Calculate comprehensive statistics with useMemo
+  // SPRINT 71.1: Calculate comprehensive statistics with useMemo
+  // Removed 'health' from dependencies to break infinite loop chain
   const stats = useMemo(() => {
     try {
-      console.log('[SPRINT 66] calculateStats with useMemo, called with:', {
+      console.log('[SPRINT 71.1] calculateStats with useMemo, called with:', {
         tasksCount: tasks.length,
         projectsCount: projects.length,
         workflowsCount: workflows.length,
@@ -446,9 +448,6 @@ export const AnalyticsDashboard: React.FC = () => {
         // Productivity metrics
         avgTasksPerProject,
         avgPromptsPerProject,
-        
-        // System metrics
-        systemHealth: health, // Use memoized health
       };
     } catch (error) {
       console.error('[SPRINT 66] Error in calculateStats:', error);
@@ -477,10 +476,9 @@ export const AnalyticsDashboard: React.FC = () => {
         totalMembers: 0,
         avgTasksPerProject: 0,
         avgPromptsPerProject: 0,
-        systemHealth: { status: 'unknown', color: 'text-gray-500', label: 'Erro', icon: '⚠️' },
       };
     }
-  }, [tasks, projects, workflows, templates, prompts, teams, health]); // Only recalculate when dependencies change
+  }, [tasks, projects, workflows, templates, prompts, teams]); // SPRINT 71.1: Removed 'health' from dependencies - it was causing infinite loop!
 
   // SPRINT 71: FIX React Error #310 - DEFINITIVO - Memoize chart data arrays
   // CAUSA RAIZ DEFINITIVA: Chart data era recalculado a cada render sem memoização
