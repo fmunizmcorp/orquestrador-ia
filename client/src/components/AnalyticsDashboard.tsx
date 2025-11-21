@@ -119,8 +119,8 @@ export const AnalyticsDashboard: React.FC = () => {
   const { data: metrics, refetch: refetchMetrics, error: metricsError, isLoading: metricsLoading } = trpc.monitoring.getCurrentMetrics.useQuery(
     undefined,
     { 
-      // SPRINT 70: Temporarily disable refetchInterval to isolate Bug #3
-      // refetchInterval: refreshInterval,
+      // SPRINT 71: Re-enable refetchInterval after fixing root cause (memoized chart data)
+      refetchInterval: refreshInterval,
       // SPRINT 58: Increase timeout for slow metrics collection
       retry: 1,
       retryDelay: 2000,
@@ -482,8 +482,11 @@ export const AnalyticsDashboard: React.FC = () => {
     }
   }, [tasks, projects, workflows, templates, prompts, teams, health]); // Only recalculate when dependencies change
 
-  // Chart data preparation
-  const taskStatusData: ChartData = {
+  // SPRINT 71: FIX React Error #310 - DEFINITIVO - Memoize chart data arrays
+  // CAUSA RAIZ DEFINITIVA: Chart data era recalculado a cada render sem memoização
+  // Isso criava novos objetos a cada render, causando loop infinito
+  // SOLUÇÃO: Usar useMemo para memoizar os dados dos gráficos
+  const taskStatusData: ChartData = useMemo(() => ({
     labels: ['Pendente', 'Em Progresso', 'Concluída', 'Bloqueada', 'Falhou'],
     values: [
       tasks.filter(t => t.status === 'pending').length,
@@ -492,9 +495,9 @@ export const AnalyticsDashboard: React.FC = () => {
       tasks.filter(t => t.status === 'blocked').length,
       tasks.filter(t => t.status === 'failed').length,
     ],
-  };
+  }), [tasks]);
 
-  const taskPriorityData: ChartData = {
+  const taskPriorityData: ChartData = useMemo(() => ({
     labels: ['Baixa', 'Média', 'Alta', 'Urgente'],
     values: [
       tasks.filter(t => t.priority === 'low').length,
@@ -502,9 +505,9 @@ export const AnalyticsDashboard: React.FC = () => {
       tasks.filter(t => t.priority === 'high').length,
       tasks.filter(t => t.priority === 'urgent').length,
     ],
-  };
+  }), [tasks]);
 
-  const projectStatusData: ChartData = {
+  const projectStatusData: ChartData = useMemo(() => ({
     labels: ['Planejamento', 'Ativo', 'Em Espera', 'Concluído', 'Arquivado'],
     values: [
       projects.filter(p => p.status === 'planning').length,
@@ -513,7 +516,7 @@ export const AnalyticsDashboard: React.FC = () => {
       projects.filter(p => p.status === 'completed').length,
       projects.filter(p => p.status === 'archived').length,
     ],
-  };
+  }), [projects]);
 
   // SPRINT 65: Removed component definitions from inside render
   // Components now defined outside to prevent infinite re-creation
