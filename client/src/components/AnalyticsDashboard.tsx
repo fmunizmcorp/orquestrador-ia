@@ -115,15 +115,22 @@ export const AnalyticsDashboard: React.FC = () => {
   // SPRINT 49 - ROUND 3: Enhanced queries with loading and error tracking
   // SPRINT 56 - CRITICAL FIX: Corrected refetchInterval → refreshInterval
   // SPRINT 58 - TIMEOUT FIX: Increased timeout to 60s for slow system metrics query
+  // SPRINT 74 - CRITICAL FIX: Memoize query options to prevent infinite re-render loop
+  // Root cause: refreshInterval state was used directly in query options, causing
+  // React Query to reconfigure on every render → infinite loop (React Error #310)
+  const metricsQueryOptions = useMemo(
+    () => ({
+      refetchInterval: refreshInterval,
+      retry: 1,
+      retryDelay: 2000,
+    }),
+    [refreshInterval]
+  );
+
   // Queries - todas as queries necessárias
   const { data: metrics, refetch: refetchMetrics, error: metricsError, isLoading: metricsLoading } = trpc.monitoring.getCurrentMetrics.useQuery(
     undefined,
-    { 
-      refetchInterval: refreshInterval,
-      // SPRINT 58: Increase timeout for slow metrics collection
-      retry: 1,
-      retryDelay: 2000,
-    }
+    metricsQueryOptions // SPRINT 74: Now stable - prevents infinite loop!
   );
   
   // SPRINT 58 - CRITICAL FIX: Changed limit from 1000 to 100 to match backend validation
