@@ -60,7 +60,7 @@ fi
 
 # 8. Reiniciar PM2
 echo "🔄 Reiniciando PM2..."
-pm2 restart orquestrador-v3
+pm2 restart orquestrador-ia
 
 # 9. Aguardar serviço iniciar
 echo "⏳ Aguardando 5 segundos..."
@@ -79,11 +79,11 @@ fi
 
 # 11. Verificar logs
 echo "📋 Últimas linhas dos logs:"
-pm2 logs orquestrador-v3 --nostream --lines 20 | tail -10
+pm2 logs orquestrador-ia --nostream --lines 20 | tail -10
 
 # 12. Verificar Error #310
 echo "🔍 Verificando Error #310..."
-if pm2 logs orquestrador-v3 --nostream --lines 50 | grep -q "Error #310"; then
+if pm2 logs orquestrador-ia --nostream --lines 50 | grep -q "Error #310"; then
     echo "❌ Error #310 ainda presente!"
     exit 1
 else
