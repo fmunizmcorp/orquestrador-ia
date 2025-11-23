@@ -179,15 +179,26 @@ export const AnalyticsDashboard: React.FC = () => {
     workflowsStatsLoading || templatesStatsLoading;
   // Note: metricsLoading removed - metrics query is optional and slow
   
-  const queryErrors = [
+  // SPRINT 82: FIX React Error #310 - Wrap error arrays in useMemo
+  // CAUSA RAIZ: Arrays recriados a cada render causando infinite loop!
+  const queryErrors = useMemo(() => [
     metricsError, tasksError, projectsError, workflowsError,
     templatesError, promptsError, teamsError, tasksStatsError,
     workflowsStatsError, templatesStatsError
-  ].filter((err) => err !== undefined && err !== null);
+  ].filter((err) => err !== undefined && err !== null), [
+    metricsError, tasksError, projectsError, workflowsError,
+    templatesError, promptsError, teamsError, tasksStatsError,
+    workflowsStatsError, templatesStatsError
+  ]);
 
   // SPRINT 59: Graceful degradation - remove metricsError from critical errors
   // Metrics query is optional (can timeout), should not block page rendering
-  const criticalErrors = [tasksError].filter((err) => err !== undefined && err !== null);
+  // SPRINT 82: Wrap in useMemo to prevent infinite loop
+  const criticalErrors = useMemo(() => 
+    [tasksError].filter((err) => err !== undefined && err !== null),
+    [tasksError]
+  );
+  
   const error = criticalErrors.length > 0 
     ? `Erro ao carregar dados críticos: ${criticalErrors[0]?.message || 'Erro desconhecido'}` 
     : null;

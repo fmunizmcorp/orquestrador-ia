@@ -12,7 +12,7 @@ const Instructions = () => {
         title="Instruções"
         columns={[
           { key: 'id', label: 'ID' },
-          { key: 'name', label: 'Nome' },
+          { key: 'title', label: 'Nome' },
         ]}
         data={data?.items || []}
         loading={isLoading}

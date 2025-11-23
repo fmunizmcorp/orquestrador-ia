@@ -12,7 +12,7 @@ const ExecutionLogs = () => {
         title="Logs de Execução"
         columns={[
           { key: 'id', label: 'ID' },
-          { key: 'name', label: 'Nome' },
+          { key: 'message', label: 'Nome' },
         ]}
         data={data?.items || []}
         loading={isLoading}

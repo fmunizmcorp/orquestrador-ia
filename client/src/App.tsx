@@ -72,6 +72,12 @@ function App() {
             <Route path="/ias-especializadas" element={<Navigate to="/specialized-ais" replace />} />
             <Route path="/configuracoes" element={<Navigate to="/settings" replace />} />
             
+            {/* SPRINT 81: Additional Portuguese aliases for failed pages */}
+            <Route path="/projetos" element={<Navigate to="/projects" replace />} />
+            <Route path="/equipes" element={<Navigate to="/teams" replace />} />
+            <Route path="/tarefas" element={<Navigate to="/tasks" replace />} />
+            <Route path="/monitoramento" element={<Navigate to="/monitoring" replace />} />
+            
             <Route path="/credentials" element={<Credentials />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/tasks/:id/subtasks" element={<Subtasks />} />
@@ -92,6 +98,7 @@ function App() {
             <Route path="/terminal" element={<Terminal />} />
             <Route path="/model-training" element={<ModelTraining />} />
             <Route path="/lmstudio" element={<LMStudio />} />
+            <Route path="/lm-studio" element={<Navigate to="/lmstudio" replace />} />
             {/* BUGFIX RODADA 35 - BUG 1: Wrap Analytics with ErrorBoundary */}
             <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
           </Route>
