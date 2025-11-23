@@ -3,6 +3,7 @@ import mysql from 'mysql2/promise';
 import * as schema from './schema.js';
 
 // Configuração da conexão
+// SPRINT 82: UTF-8 charset configuration to fix encoding issues (Bug #2)
 const poolConnection = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '3306'),
@@ -12,6 +13,7 @@ const poolConnection = mysql.createPool({
   connectionLimit: 10,
   waitForConnections: true,
   queueLimit: 0,
+  charset: 'utf8mb4', // Proper UTF-8 support for Portuguese characters
 });
 
 // Criar instância do Drizzle

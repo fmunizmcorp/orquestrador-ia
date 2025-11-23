@@ -316,8 +316,8 @@ const LMStudio = () => {
   const filteredModels = modelsData?.models.filter((model: ModelInfo) => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      model.name.toLowerCase().includes(searchLower) ||
-      model.id.toLowerCase().includes(searchLower) ||
+      model.name?.toLowerCase().includes(searchLower) ||
+      model.id?.toLowerCase().includes(searchLower) ||
       model.quantization?.toLowerCase().includes(searchLower)
     );
   }) || [];

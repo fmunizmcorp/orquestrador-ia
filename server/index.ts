@@ -32,6 +32,11 @@ app.use(compression({
 }));
 
 // Middleware
+// SPRINT 82: UTF-8 encoding middleware to fix character display issues (Bug #2)
+app.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
